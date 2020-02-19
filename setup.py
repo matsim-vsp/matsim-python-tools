@@ -1,4 +1,5 @@
 import pathlib
+
 from setuptools import setup
 
 # The directory containing this file
@@ -19,7 +20,7 @@ setup(
     author_email="laudan@tu-berlin.de",
     license="GPL-3",
     classifiers=[
-        "License :: OSI Approved :: GPL License",
+        "License :: OSI Approved :: GNU General Public License (GPL)",
         "Programming Language :: Python :: 3",
     ],
     packages=["matsim_tools"],
