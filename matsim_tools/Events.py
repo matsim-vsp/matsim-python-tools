@@ -44,7 +44,7 @@ class EventsHandler(ContentHandler):
     def startElement(self, name, attrs):
         if name == 'event':
             time = float(attrs['time'])
-            type = attrs['type']
+            type = attrs['event_type']
 
             self.delegate(time, type, attrs)
 

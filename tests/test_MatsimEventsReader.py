@@ -14,4 +14,4 @@ class TestEventsHandler(TestCase):
 
     def callback(self, time, type, attrs):
         self.assertLessEqual(21510, time)
-        self.assertTrue(type in actTypes, 'type ' + type + ' was not in act types')
+        self.assertTrue(type in actTypes, 'event_type ' + type + ' was not in act types')
