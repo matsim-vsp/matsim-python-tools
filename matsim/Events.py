@@ -1,3 +1,8 @@
+import gzip
+from xml import sax
+from xml.sax import ContentHandler
+
+
 class Event:
 
     def __init__(self, time):
@@ -22,11 +27,6 @@ class LinkLeaveEvent(LinkEvent):
 
     def __init__(self, time, attrs):
         super().__init__(time, attrs)
-
-
-import gzip
-from xml import sax
-from xml.sax import ContentHandler
 
 
 class EventsHandler(ContentHandler):

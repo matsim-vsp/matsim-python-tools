@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from matsim_tools.Events import LinkEnterEvent, LinkLeaveEvent
+from matsim.Events import LinkEnterEvent, LinkLeaveEvent
 
 
 class TestMatsimEvents(TestCase):
