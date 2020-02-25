@@ -1,2 +1,5 @@
-import matsim_tools.Events
-import matsim_tools.Network
+from . import Events
+from . import Network
+from . import TripEventHandler
+
+read_network = Network.read_network

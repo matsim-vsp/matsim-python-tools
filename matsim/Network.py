@@ -1,115 +1,108 @@
 import gzip
-import xml.sax
-from xml import sax
-
-
-class Entity:
-
-    def __init__(self, entity_id):
-        self.id = entity_id
-
-
-class Node(Entity):
-
-    def __init__(self, entity_id, x, y):
-        super().__init__(entity_id)
-        self.x = float(x)
-        self.y = float(y)
-        self.in_links = set()
-        self.out_links = set()
-
-    def add_in_link(self, link):
-        self.in_links.add(link)
-
-    def add_out_link(self, link):
-        self.out_links.add(link)
-
-
-class Link(Entity):
-
-    def __init__(self, entity_id, from_node, to_node, length, capacity, freespeed, permlanes, modes):
-        super().__init__(entity_id)
-        self.modes = modes
-        self.permlanes = float(permlanes)
-        self.freespeed = float(freespeed)
-        self.capacity = float(capacity)
-        self.length = float(length)
-        self.to_node = to_node
-        self.from_node = from_node
+import xml.etree.ElementTree as ET
+import pandas as pd
+import geopandas as gpd
+import shapely.geometry as shp
+from collections import namedtuple
 
 
 class Network:
 
-    @property
-    def links(self):
-        return self._links.copy()
+    def __init__(self, nodes, links, link_attrs, node_attrs):
+        self.nodes = nodes
+        self.links = links
+        self.link_attrs = link_attrs
+        self.node_attrs = node_attrs
 
-    @property
-    def nodes(self):
-        return self._nodes.copy()
+    def as_geo_dataframe(self, projection):
 
-    def __init__(self, nodes, links):
-        self._nodes = nodes
-        self._links = links
+        # attach xy to links
+        full_net = (self.links
+        .merge(self.nodes,
+                left_on='from_node',
+                right_on='node_id') # [['link_id', 'from_node', 'to_node', 'x', 'y']]
+        .merge(self.nodes,
+                left_on='to_node',
+                right_on='node_id',
+                suffixes=('_from_node', '_to_node')) # [['link_id', 'from_node', 'to_node','x_from_node', 'y_from_node','x_to_node', 'y_to_node']]
+        )
 
-    @classmethod
-    def from_links(cls, links):
-        nodes = {}
-        for link in links.values():
-            # setdefault => f key is in the dictionary, return its value. If not, insert key with a value of default and return default. default defaults to None.
-            from_node = nodes.setdefault(link.from_node.id, link.from_node)
-            from_node.add_out_link(link)
-            to_node = nodes.setdefault(link.to_node.id, link.to_node)
-            to_node.add_in_link(link)
+        # create the geometry column from coordinates
+        geometry = [shp.LineString([(ox,oy), (dx,dy)]) for ox, oy, dx, dy in zip(full_net.x_from_node, full_net.y_from_node, full_net.x_to_node, full_net.y_to_node)]
 
-        return Network(nodes, links)
+        # build the geopandas geodataframe
+        geo_net = (gpd.GeoDataFrame(full_net,
+            geometry=geometry,
+            crs = {'init': projection})
+            .drop(columns=['x_from_node','y_from_node','node_id_from_node','node_id_to_node','x_to_node','y_to_node'])
+            )
 
+        return geo_net
 
-class NetworkHandler(xml.sax.ContentHandler):
-    NODE = 'node'
-    NODES = 'nodes'
-    LINK = 'link'
-    LINKS = 'links'
+def read_network(filename, skip_attributes=False):
+    tree = ET.iterparse(gzip.open(filename, 'r'))
+    nodes = []
+    links = []
+    node_attrs = []
+    link_attrs = []
 
-    def links(self):
-        return self._links.copy()
+    attributes = node_attrs
+    attr_label = 'node_id'
+    current_id = None
 
-    def nodes(self):
-        return self._nodes.copy()
+    for xml_event, elem in tree:
+        # the nodes element CLOSES at the end of the nodes, followed by links:
+        if elem.tag == 'nodes':
+            attributes = link_attrs
+            attr_label = 'link_id'
 
-    def __init__(self):
-        super().__init__()
-        self._nodes = {}
-        self._links = {}
+        elif elem.tag == 'node':
+            atts = elem.attrib
+            current_id = atts['id']
 
-    def startElement(self, name, attrs):
-        if name == NetworkHandler.NODE:
-            node = Node(attrs.get('id'), attrs.get('x'), attrs.get('y'))
-            self._nodes[node.id] = node
-        elif name == NetworkHandler.LINK:
-            link = Link(attrs.get('id'),
-                        self._nodes[attrs.get('from')],
-                        self._nodes[attrs.get('to')],
-                        attrs.get('length'),
-                        attrs.get('capacity'),
-                        attrs.get('freespeed'),
-                        attrs.get('permlanes'),
-                        str(attrs.get('modes')).split(','))
-            self._links[link.id] = link
-        else:
-            print('start element', name, ' ', str(attrs))
+            atts['node_id'] = atts.pop('id')
+            atts['x'] = float(atts['x'])
+            atts['y'] = float(atts['y'])
+            if 'z' in atts: atts['z'] = float(atts['z'])
 
-    def characters(self, content):
-        # don't do anything here, but skip all the characters to save some memory
-        pass
+            nodes.append(atts)
 
+        elif elem.tag == 'link':
+            atts = elem.attrib
+            current_id = atts['id']
 
-""" Reads a Matsim network xml file. Currently, custom attributes are not parsed.
-"""
+            atts['link_id'] = atts.pop('id')
+            atts['from_node'] = atts.pop('from')
+            atts['to_node'] = atts.pop('to')
 
+            atts['length'] = float(atts['length'])
+            atts['freespeed'] = float(atts['freespeed'])
+            atts['capacity'] = float(atts['capacity'])
+            atts['permlanes'] = float(atts['permlanes'])
 
-def read(filepath):
-    handler = NetworkHandler()
-    with gzip.open(filepath) as file:
-        sax.parse(file, handler)
-    return Network.from_links(handler.links())
+            if 'volume' in atts: atts['volume'] = float(atts['volume'])
+
+            links.append(atts)
+
+        elif elem.tag == 'attribute':
+            if not skip_attributes:
+                atts = {}
+                atts[attr_label] = current_id
+                atts['name'] = elem.attrib['name']
+                atts['value'] = elem.text
+
+                # TODO: pandas will make the value column "object" since we're mixing types
+                if 'class' in elem.attrib and elem.attrib['class'] == 'java.lang.Long':
+                    atts['value'] = float(elem.text)
+
+                attributes.append(atts)
+
+        # clear the element when we're done, to keep memory usage low
+        elem.clear()
+
+    nodes = pd.DataFrame.from_records(nodes)
+    links = pd.DataFrame.from_records(links)
+    node_attrs = pd.DataFrame.from_records(node_attrs)
+    link_attrs = pd.DataFrame.from_records(link_attrs)
+
+    return Network(nodes, links, node_attrs, link_attrs)

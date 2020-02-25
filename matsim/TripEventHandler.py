@@ -37,3 +37,5 @@ class TripEventHandler:
 
     def is_stage_activity(self, type):
         return type.endswith("interaction")
+
+

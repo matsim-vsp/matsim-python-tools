@@ -1,12 +1,12 @@
 from unittest import TestCase
 
-import matsim_tools.Network
+import matsim.Network
 
 
 class TestNetworkHandler(TestCase):
 
     def test(self):
-        network = matsim_tools.Network.read('test_network.xml.gz')
+        network = matsim.Network.read_network('tests/test_network.xml.gz')
 
         # we know how many links and nodes the test network has
         self.assertEqual(15, len(network.nodes))
