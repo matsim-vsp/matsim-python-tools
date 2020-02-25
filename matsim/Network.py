@@ -8,13 +8,26 @@ from collections import namedtuple
 
 class Network:
 
-    def __init__(self, nodes, links, link_attrs, node_attrs):
+    _crsTag = 'coordinateReferenceSystem'
+
+    def __init__(self, nodes, links, node_attrs, link_attrs, net_attrs=None):
         self.nodes = nodes
         self.links = links
         self.link_attrs = link_attrs
         self.node_attrs = node_attrs
 
-    def as_geo_dataframe(self, projection):
+        self.network_attrs = {}
+        if net_attrs: self.network_attrs = net_attrs
+
+
+    def as_geo(self, projection=None):
+        """Return a GeoPandas GeoDataFrame containing link geometries suitable for plotting."""
+
+        if projection==None and Network._crsTag not in self.network_attrs:
+            raise ValueError('No CRS projection specified')
+
+        if not projection:
+            projection = self.network_attrs[Network._crsTag]
 
         # attach xy to links
         full_net = (self.links
@@ -40,11 +53,16 @@ class Network:
         return geo_net
 
 def read_network(filename, skip_attributes=False):
+    """Read a MATSim network.xml.gz file. Returns a Network object with dataframes
+    for nodes, links, node_attributes, and link_attributes. If the network has a CRS
+    projection set, it will be available in network_attrs."""
     tree = ET.iterparse(gzip.open(filename, 'r'))
     nodes = []
     links = []
     node_attrs = []
     link_attrs = []
+
+    network_attrs = {}
 
     attributes = node_attrs
     attr_label = 'node_id'
@@ -85,7 +103,10 @@ def read_network(filename, skip_attributes=False):
             links.append(atts)
 
         elif elem.tag == 'attribute':
-            if not skip_attributes:
+            if elem.attrib['name'] == Network._crsTag:
+                network_attrs[Network._crsTag] = elem.text
+
+            elif not skip_attributes:
                 atts = {}
                 atts[attr_label] = current_id
                 atts['name'] = elem.attrib['name']
@@ -105,4 +126,4 @@ def read_network(filename, skip_attributes=False):
     node_attrs = pd.DataFrame.from_records(node_attrs)
     link_attrs = pd.DataFrame.from_records(link_attrs)
 
-    return Network(nodes, links, node_attrs, link_attrs)
+    return Network(nodes, links, node_attrs, link_attrs, network_attrs)
