@@ -23,21 +23,23 @@ class Network:
     def as_geo(self, projection=None):
         """Return a GeoPandas GeoDataFrame containing link geometries suitable for plotting."""
 
-        if projection==None and Network._crsTag not in self.network_attrs:
-            raise ValueError('No CRS projection specified')
-
-        if not projection:
-            projection = self.network_attrs[Network._crsTag]
+        # Project the coords, if CRS is specified somehow
+        if projection:
+            crs = {'init': projection}
+        elif Network._crsTag in self.network_attrs:
+            crs = self.network_attrs[Network._crsTag]
+        else:
+            crs = None
 
         # attach xy to links
         full_net = (self.links
         .merge(self.nodes,
                 left_on='from_node',
-                right_on='node_id') # [['link_id', 'from_node', 'to_node', 'x', 'y']]
+                right_on='node_id')
         .merge(self.nodes,
                 left_on='to_node',
                 right_on='node_id',
-                suffixes=('_from_node', '_to_node')) # [['link_id', 'from_node', 'to_node','x_from_node', 'y_from_node','x_to_node', 'y_to_node']]
+                suffixes=('_from_node', '_to_node'))
         )
 
         # create the geometry column from coordinates
@@ -46,7 +48,7 @@ class Network:
         # build the geopandas geodataframe
         geo_net = (gpd.GeoDataFrame(full_net,
             geometry=geometry,
-            crs = {'init': projection})
+            crs = crs)
             .drop(columns=['x_from_node','y_from_node','node_id_from_node','node_id_to_node','x_to_node','y_to_node'])
             )
 
