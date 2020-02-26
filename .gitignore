@@ -1,4 +1,6 @@
 __pycache__
+build/
 *.gz
+*.egg-info
 .ipynb_checkpoints
 
