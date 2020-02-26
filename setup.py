@@ -10,8 +10,8 @@ README = (HERE / "README.md").read_text()
 
 # This call to setup() does all the work
 setup(
-    name="matsim_tools",
-    version="0.0.1",
+    name="matsim-tools",
+    version="0.0.3",
     description="Tools for working with the MATSim Agent-Based Transportation Simulation framework",
     long_description=README,
     long_description_content_type="text/markdown",
@@ -23,7 +23,7 @@ setup(
         "License :: OSI Approved :: GNU General Public License (GPL)",
         "Programming Language :: Python :: 3",
     ],
-    packages=["matsim_tools"],
-    install_requires=[],
+    packages=["matsim"],
+    install_requires=['pandas'], # ,'geopandas','shapely'],
     entry_points={},
 )
