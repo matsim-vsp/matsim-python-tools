@@ -1,7 +1,9 @@
-import gzip
+# -*- coding: utf-8 -*-
+
 from xml import sax
 from xml.sax import ContentHandler
 
+from xopen import xopen
 
 class Event:
 
@@ -54,5 +56,5 @@ class EventsHandler(ContentHandler):
 
 def read(filepath, callback):
     handler = EventsHandler(callback)
-    with gzip.open(filepath) as file:
+    with xopen(filepath) as file:
         sax.parse(file, handler)

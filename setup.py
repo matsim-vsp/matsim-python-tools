@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import pathlib
 
 from setuptools import setup
@@ -10,7 +12,7 @@ README = (HERE / "README.md").read_text()
 
 # This call to setup() does all the work
 setup(
-    name="matsim_tools",
+    name="matsim_tools",  # TODO: should be matsim-tools ?
     version="0.0.1",
     description="Tools for working with the MATSim Agent-Based Transportation Simulation framework",
     long_description=README,
