@@ -1,8 +1,6 @@
 import gzip
 import xml.etree.ElementTree as ET
 import pandas as pd
-import geopandas as gpd
-import shapely.geometry as shp
 from collections import namedtuple
 
 
@@ -21,6 +19,9 @@ class Network:
 
 
     def as_geo(self, projection=None):
+        import geopandas as gpd
+        import shapely.geometry as shp
+
         """Return a GeoPandas GeoDataFrame containing link geometries suitable for plotting."""
 
         # Project the coords, if CRS is specified somehow
