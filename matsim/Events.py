@@ -12,8 +12,9 @@ def event_reader(filename, filter=None):
     """
 
     # set up event filter - so that we only yield useful events
-    keep = None
-    if isinstance(filter, set) or isinstance(filter, list):
+    if filter == None:
+        keep = None
+    elif isinstance(filter, set) or isinstance(filter, list):
         keep = filter
     else:
         keep = set(filter.split(','))
