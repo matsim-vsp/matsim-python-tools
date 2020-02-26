@@ -17,6 +17,11 @@ class Network:
         self.network_attrs = {}
         if net_attrs: self.network_attrs = net_attrs
 
+    def __str__(self):
+        return 'Network: {nodes} nodes, {links} links, {crs}'.format(
+            nodes=len(self.nodes),
+            links=len(self.links),
+            crs=Network._crsTag in self.network_attrs and self.network_attrs[Network._crsTag] or 'No CRS')
 
     def as_geo(self, projection=None):
         import geopandas as gpd
