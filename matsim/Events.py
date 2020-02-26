@@ -1,58 +1,44 @@
 import gzip
-from xml import sax
-from xml.sax import ContentHandler
+import xml.etree.ElementTree as ET
 
 
-class Event:
+def event_reader(filename, filter=None):
+    """
+    Return a generator of events from the specified file.
+    Each event will be generated as a dictionary of attribute key/value pairs.
+    Any content text of the XML element itself is dropped, as MATSim events are attribute-only.
 
-    def __init__(self, time):
-        self.time = time
+    filter: event types to return. Can be a list, set, or comma-separated string. Default None returns all events.
+    """
 
+    # set up event filter - so that we only yield useful events
+    keep = None
+    if isinstance(filter, set) or isinstance(filter, list):
+        keep = filter
+    else:
+        keep = set(filter.split(','))
 
-class LinkEvent(Event):
+    tree = ET.iterparse(gzip.open(filename))
 
-    def __init__(self, time, attrs):
-        super().__init__(time)
-        self.vehicle_id = attrs['vehicle']
-        self.link_id = attrs['link']
+    try:
+        for xml_event, elem in tree:
+            attributes = elem.attrib
 
+            if elem.tag == 'event':
+                # skip events we don't care about
+                if keep:
+                    if not attributes['type'] in keep: continue
 
-class LinkEnterEvent(LinkEvent):
+                # got one! yield the event to the caller
+                attributes['time'] = float(attributes['time'])
+                yield attributes
 
-    def __init__(self, time, attrs):
-        super().__init__(time, attrs)
+            # free memory. Otherwise the data is kept in memory and we loose the advantage of streaming
+            elem.clear()
 
-
-class LinkLeaveEvent(LinkEvent):
-
-    def __init__(self, time, attrs):
-        super().__init__(time, attrs)
-
-
-class EventsHandler(ContentHandler):
-
-    def __init__(self, delegate):
-        super().__init__()
-        self.delegate = delegate
-
-    def startDocument(self):
-        super().startDocument()
-
-    def endDocument(self):
-        super().endDocument()
-
-    def startElement(self, name, attrs):
-        if name == 'event':
-            time = float(attrs['time'])
-            type = attrs['type']
-
-            self.delegate(time, type, attrs)
-
-    def characters(self, content):
-        pass  # don't pass characters to save memory
-
-
-def read(filepath, callback):
-    handler = EventsHandler(callback)
-    with gzip.open(filepath) as file:
-        sax.parse(file, handler)
+    except Exception as e:
+        # Why am I catching this exception instead of allowing it to propagate up?
+        # Because some event files (**coughswitzerland**) are badly formed and do not contain
+        # the closing </events> tag at the end of the file. If we don't trap that error, the
+        # entire analysis fails.
+        print('*** XML ERROR:', e)
