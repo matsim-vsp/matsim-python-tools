@@ -10,7 +10,7 @@ We are just at the very early stages of building this library. The API will chan
 
 - We have only tested this using Anaconda Python. Only Python 3.x is supported.
 - Our primary goal is to make MATSim play nice with **pandas** and **geopandas**, for data analysis workflows.
-- Currently only MATSIm network and event files are supported. Hopefully more will be coming soon.
+- Currently only MATSIm network, event, and plans files are supported. Hopefully more will be coming soon.
 - For Geopandas network support, you also need to install `geopandas` and `shapely`.
 
 ## Quickstart
@@ -71,5 +71,24 @@ link_counts = pd.DataFrame.from_dict(link_counts, orient='index', columns=['coun
 volumes = geo.merge(counts, on='link_id')
 volumes.plot(column='count', figsize=(40,40))
 
-```
+# ------------------------------------
+# 3. Stream through a MATSim plans file.
 
+plans = plan_reader('output_plans.xml.gz', selectedPlansOnly = True)
+
+for person, plan in plans:
+
+    # do stuff with this plan, e.g.
+    work_activities = filter(
+        lambda n: n.tag == 'activity' and n.attrib['type'] = ='w',
+        plan)
+
+    print('person', person.attrib['id'], 'selected plan w/', len(list(work_activities)), 'work-act')
+    activities.append(num_activities)
+
+# person 1 selected plan w/ 2 work-act
+# person 10 selected plan w/ 1 work-act
+# person 100 selected plan w/ 1 work-act
+# ...
+
+```
