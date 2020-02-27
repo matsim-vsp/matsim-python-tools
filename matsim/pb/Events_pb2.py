@@ -20,11 +20,42 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='matsim.pb',
   syntax='proto3',
   serialized_options=b'\n\030org.matsim.core.utils.pbB\013ProtoEvents',
-  serialized_pb=b'\n\x16matsim/pb/Events.proto\x12\tmatsim.pb\x1a\x13matsim/pb/Ids.proto\x1a\x15matsim/pb/Model.proto\"\xaa\x07\n\x05\x45vent\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12%\n\x06\x63oords\x18\x02 \x01(\x0b\x32\x15.matsim.pb.Coordinate\x12*\n\x07generic\x18\x03 \x01(\x0b\x32\x17.matsim.pb.GenericEventH\x00\x12\x32\n\x0b\x61\x63tivityEnd\x18\x04 \x01(\x0b\x32\x1b.matsim.pb.ActivityEndEventH\x00\x12\x36\n\ractivityStart\x18\x05 \x01(\x0b\x32\x1d.matsim.pb.ActivityStartEventH\x00\x12.\n\tlinkEnter\x18\x06 \x01(\x0b\x32\x19.matsim.pb.LinkEnterEventH\x00\x12.\n\tlinkLeave\x18\x07 \x01(\x0b\x32\x19.matsim.pb.LinkLeaveEventH\x00\x12\x38\n\x0fpersonalArrival\x18\x08 \x01(\x0b\x32\x1d.matsim.pb.PersonArrivalEventH\x00\x12:\n\x0fpersonDeparture\x18\t \x01(\x0b\x32\x1f.matsim.pb.PersonDepartureEventH\x00\x12\x42\n\x13personEntersVehicle\x18\n \x01(\x0b\x32#.matsim.pb.PersonEntersVehicleEventH\x00\x12\x42\n\x13personLeavesVehicle\x18\x0b \x01(\x0b\x32#.matsim.pb.PersonLeavesVehicleEventH\x00\x12\x32\n\x0bpersonMoney\x18\x0c \x01(\x0b\x32\x1b.matsim.pb.PersonMoneyEventH\x00\x12\x32\n\x0bpersonStuck\x18\r \x01(\x0b\x32\x1b.matsim.pb.PersonStuckEventH\x00\x12\x42\n\x13transitDriverStarts\x18\x0e \x01(\x0b\x32#.matsim.pb.TransitDriverStartsEventH\x00\x12\x36\n\rvehicleAborts\x18\x0f \x01(\x0b\x32\x1d.matsim.pb.VehicleAbortsEventH\x00\x12\x44\n\x14vehicleEntersTraffic\x18\x10 \x01(\x0b\x32$.matsim.pb.VehicleEntersTrafficEventH\x00\x12\x44\n\x14vehicleLeavesTraffic\x18\x11 \x01(\x0b\x32$.matsim.pb.VehicleLeavesTrafficEventH\x00\x42\x06\n\x04type\"}\n\x0cGenericEvent\x12\x0c\n\x04type\x18\x01 \x01(\t\x12\x31\n\x05\x61ttrs\x18\x02 \x03(\x0b\x32\".matsim.pb.GenericEvent.AttrsEntry\x1a,\n\nAttrsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"\x95\x01\n\x10\x41\x63tivityEndEvent\x12\"\n\x06linkId\x18\x01 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12&\n\nfacilityId\x18\x02 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12$\n\x08personId\x18\x03 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12\x0f\n\x07\x61\x63ttype\x18\x04 \x01(\t\"\x97\x01\n\x12\x41\x63tivityStartEvent\x12\"\n\x06linkId\x18\x01 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12&\n\nfacilityId\x18\x02 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12$\n\x08personId\x18\x03 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12\x0f\n\x07\x61\x63ttype\x18\x04 \x01(\t\"[\n\x0eLinkEnterEvent\x12\"\n\x06linkId\x18\x01 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12%\n\tvehicleId\x18\x02 \x01(\x0b\x32\x12.matsim.pb.ProtoId\"[\n\x0eLinkLeaveEvent\x12\"\n\x06linkId\x18\x01 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12%\n\tvehicleId\x18\x02 \x01(\x0b\x32\x12.matsim.pb.ProtoId\"o\n\x12PersonArrivalEvent\x12\"\n\x06linkId\x18\x01 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12\x0f\n\x07legMode\x18\x02 \x01(\t\x12$\n\x08personId\x18\x03 \x01(\x0b\x32\x12.matsim.pb.ProtoId\"q\n\x14PersonDepartureEvent\x12\"\n\x06linkId\x18\x01 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12\x0f\n\x07legMode\x18\x02 \x01(\t\x12$\n\x08personId\x18\x03 \x01(\x0b\x32\x12.matsim.pb.ProtoId\"g\n\x18PersonEntersVehicleEvent\x12$\n\x08personId\x18\x01 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12%\n\tvehicleId\x18\x02 \x01(\x0b\x32\x12.matsim.pb.ProtoId\"g\n\x18PersonLeavesVehicleEvent\x12$\n\x08personId\x18\x01 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12%\n\tvehicleId\x18\x02 \x01(\x0b\x32\x12.matsim.pb.ProtoId\"u\n\x10PersonMoneyEvent\x12$\n\x08personId\x18\x01 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12\x0e\n\x06\x61mount\x18\x02 \x01(\x01\x12\x0f\n\x07purpose\x18\x03 \x01(\t\x12\x1a\n\x12transactionPartner\x18\x04 \x01(\t\"m\n\x10PersonStuckEvent\x12$\n\x08personId\x18\x01 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12\"\n\x06linkId\x18\x02 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12\x0f\n\x07legMode\x18\x03 \x01(\t\"\xe7\x01\n\x18TransitDriverStartsEvent\x12$\n\x08\x64riverId\x18\x01 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12%\n\tvehicleId\x18\x02 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12*\n\x0etransitRouteId\x18\x03 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12)\n\rtransitLineId\x18\x04 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12\'\n\x0b\x64\x65partureId\x18\x05 \x01(\x0b\x32\x12.matsim.pb.ProtoId\"_\n\x12VehicleAbortsEvent\x12%\n\tvehicleId\x18\x01 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12\"\n\x06linkId\x18\x02 \x01(\x0b\x32\x12.matsim.pb.ProtoId\"\xc1\x01\n\x19VehicleEntersTrafficEvent\x12$\n\x08\x64riverId\x18\x01 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12\"\n\x06linkId\x18\x02 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12%\n\tvehicleId\x18\x03 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12\x13\n\x0bnetworkMode\x18\x04 \x01(\t\x12\x1e\n\x16relativePositionOnLink\x18\x05 \x01(\x01\"\xc1\x01\n\x19VehicleLeavesTrafficEvent\x12$\n\x08\x64riverId\x18\x01 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12\"\n\x06linkId\x18\x02 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12%\n\tvehicleId\x18\x03 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12\x13\n\x0bnetworkMode\x18\x04 \x01(\t\x12\x1e\n\x16relativePositionOnLink\x18\x05 \x01(\x01\x42\'\n\x18org.matsim.core.utils.pbB\x0bProtoEventsb\x06proto3'
+  serialized_pb=b'\n\x16matsim/pb/Events.proto\x12\tmatsim.pb\x1a\x13matsim/pb/Ids.proto\x1a\x15matsim/pb/Model.proto\".\n\nEventBatch\x12 \n\x06\x65vents\x18\x01 \x03(\x0b\x32\x10.matsim.pb.Event\"\xaa\x07\n\x05\x45vent\x12\x0c\n\x04time\x18\x01 \x01(\x01\x12%\n\x06\x63oords\x18\x02 \x01(\x0b\x32\x15.matsim.pb.Coordinate\x12*\n\x07generic\x18\x03 \x01(\x0b\x32\x17.matsim.pb.GenericEventH\x00\x12\x32\n\x0b\x61\x63tivityEnd\x18\x04 \x01(\x0b\x32\x1b.matsim.pb.ActivityEndEventH\x00\x12\x36\n\ractivityStart\x18\x05 \x01(\x0b\x32\x1d.matsim.pb.ActivityStartEventH\x00\x12.\n\tlinkEnter\x18\x06 \x01(\x0b\x32\x19.matsim.pb.LinkEnterEventH\x00\x12.\n\tlinkLeave\x18\x07 \x01(\x0b\x32\x19.matsim.pb.LinkLeaveEventH\x00\x12\x38\n\x0fpersonalArrival\x18\x08 \x01(\x0b\x32\x1d.matsim.pb.PersonArrivalEventH\x00\x12:\n\x0fpersonDeparture\x18\t \x01(\x0b\x32\x1f.matsim.pb.PersonDepartureEventH\x00\x12\x42\n\x13personEntersVehicle\x18\n \x01(\x0b\x32#.matsim.pb.PersonEntersVehicleEventH\x00\x12\x42\n\x13personLeavesVehicle\x18\x0b \x01(\x0b\x32#.matsim.pb.PersonLeavesVehicleEventH\x00\x12\x32\n\x0bpersonMoney\x18\x0c \x01(\x0b\x32\x1b.matsim.pb.PersonMoneyEventH\x00\x12\x32\n\x0bpersonStuck\x18\r \x01(\x0b\x32\x1b.matsim.pb.PersonStuckEventH\x00\x12\x42\n\x13transitDriverStarts\x18\x0e \x01(\x0b\x32#.matsim.pb.TransitDriverStartsEventH\x00\x12\x36\n\rvehicleAborts\x18\x0f \x01(\x0b\x32\x1d.matsim.pb.VehicleAbortsEventH\x00\x12\x44\n\x14vehicleEntersTraffic\x18\x10 \x01(\x0b\x32$.matsim.pb.VehicleEntersTrafficEventH\x00\x12\x44\n\x14vehicleLeavesTraffic\x18\x11 \x01(\x0b\x32$.matsim.pb.VehicleLeavesTrafficEventH\x00\x42\x06\n\x04type\"}\n\x0cGenericEvent\x12\x0c\n\x04type\x18\x01 \x01(\t\x12\x31\n\x05\x61ttrs\x18\x02 \x03(\x0b\x32\".matsim.pb.GenericEvent.AttrsEntry\x1a,\n\nAttrsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"\x95\x01\n\x10\x41\x63tivityEndEvent\x12\"\n\x06linkId\x18\x01 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12&\n\nfacilityId\x18\x02 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12$\n\x08personId\x18\x03 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12\x0f\n\x07\x61\x63ttype\x18\x04 \x01(\t\"\x97\x01\n\x12\x41\x63tivityStartEvent\x12\"\n\x06linkId\x18\x01 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12&\n\nfacilityId\x18\x02 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12$\n\x08personId\x18\x03 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12\x0f\n\x07\x61\x63ttype\x18\x04 \x01(\t\"[\n\x0eLinkEnterEvent\x12\"\n\x06linkId\x18\x01 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12%\n\tvehicleId\x18\x02 \x01(\x0b\x32\x12.matsim.pb.ProtoId\"[\n\x0eLinkLeaveEvent\x12\"\n\x06linkId\x18\x01 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12%\n\tvehicleId\x18\x02 \x01(\x0b\x32\x12.matsim.pb.ProtoId\"o\n\x12PersonArrivalEvent\x12\"\n\x06linkId\x18\x01 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12\x0f\n\x07legMode\x18\x02 \x01(\t\x12$\n\x08personId\x18\x03 \x01(\x0b\x32\x12.matsim.pb.ProtoId\"q\n\x14PersonDepartureEvent\x12\"\n\x06linkId\x18\x01 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12\x0f\n\x07legMode\x18\x02 \x01(\t\x12$\n\x08personId\x18\x03 \x01(\x0b\x32\x12.matsim.pb.ProtoId\"g\n\x18PersonEntersVehicleEvent\x12$\n\x08personId\x18\x01 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12%\n\tvehicleId\x18\x02 \x01(\x0b\x32\x12.matsim.pb.ProtoId\"g\n\x18PersonLeavesVehicleEvent\x12$\n\x08personId\x18\x01 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12%\n\tvehicleId\x18\x02 \x01(\x0b\x32\x12.matsim.pb.ProtoId\"u\n\x10PersonMoneyEvent\x12$\n\x08personId\x18\x01 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12\x0e\n\x06\x61mount\x18\x02 \x01(\x01\x12\x0f\n\x07purpose\x18\x03 \x01(\t\x12\x1a\n\x12transactionPartner\x18\x04 \x01(\t\"m\n\x10PersonStuckEvent\x12$\n\x08personId\x18\x01 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12\"\n\x06linkId\x18\x02 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12\x0f\n\x07legMode\x18\x03 \x01(\t\"\xe7\x01\n\x18TransitDriverStartsEvent\x12$\n\x08\x64riverId\x18\x01 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12%\n\tvehicleId\x18\x02 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12*\n\x0etransitRouteId\x18\x03 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12)\n\rtransitLineId\x18\x04 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12\'\n\x0b\x64\x65partureId\x18\x05 \x01(\x0b\x32\x12.matsim.pb.ProtoId\"_\n\x12VehicleAbortsEvent\x12%\n\tvehicleId\x18\x01 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12\"\n\x06linkId\x18\x02 \x01(\x0b\x32\x12.matsim.pb.ProtoId\"\xc1\x01\n\x19VehicleEntersTrafficEvent\x12$\n\x08\x64riverId\x18\x01 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12\"\n\x06linkId\x18\x02 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12%\n\tvehicleId\x18\x03 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12\x13\n\x0bnetworkMode\x18\x04 \x01(\t\x12\x1e\n\x16relativePositionOnLink\x18\x05 \x01(\x01\"\xc1\x01\n\x19VehicleLeavesTrafficEvent\x12$\n\x08\x64riverId\x18\x01 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12\"\n\x06linkId\x18\x02 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12%\n\tvehicleId\x18\x03 \x01(\x0b\x32\x12.matsim.pb.ProtoId\x12\x13\n\x0bnetworkMode\x18\x04 \x01(\t\x12\x1e\n\x16relativePositionOnLink\x18\x05 \x01(\x01\x42\'\n\x18org.matsim.core.utils.pbB\x0bProtoEventsb\x06proto3'
   ,
   dependencies=[matsim_dot_pb_dot_Ids__pb2.DESCRIPTOR,matsim_dot_pb_dot_Model__pb2.DESCRIPTOR,])
 
 
+
+
+_EVENTBATCH = _descriptor.Descriptor(
+  name='EventBatch',
+  full_name='matsim.pb.EventBatch',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='events', full_name='matsim.pb.EventBatch.events', index=0,
+      number=1, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=81,
+  serialized_end=127,
+)
 
 
 _EVENT = _descriptor.Descriptor(
@@ -168,8 +199,8 @@ _EVENT = _descriptor.Descriptor(
       name='type', full_name='matsim.pb.Event.type',
       index=0, containing_type=None, fields=[]),
   ],
-  serialized_start=82,
-  serialized_end=1020,
+  serialized_start=130,
+  serialized_end=1068,
 )
 
 
@@ -206,8 +237,8 @@ _GENERICEVENT_ATTRSENTRY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1103,
-  serialized_end=1147,
+  serialized_start=1151,
+  serialized_end=1195,
 )
 
 _GENERICEVENT = _descriptor.Descriptor(
@@ -243,8 +274,8 @@ _GENERICEVENT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1022,
-  serialized_end=1147,
+  serialized_start=1070,
+  serialized_end=1195,
 )
 
 
@@ -295,8 +326,8 @@ _ACTIVITYENDEVENT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1150,
-  serialized_end=1299,
+  serialized_start=1198,
+  serialized_end=1347,
 )
 
 
@@ -347,8 +378,8 @@ _ACTIVITYSTARTEVENT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1302,
-  serialized_end=1453,
+  serialized_start=1350,
+  serialized_end=1501,
 )
 
 
@@ -385,8 +416,8 @@ _LINKENTEREVENT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1455,
-  serialized_end=1546,
+  serialized_start=1503,
+  serialized_end=1594,
 )
 
 
@@ -423,8 +454,8 @@ _LINKLEAVEEVENT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1548,
-  serialized_end=1639,
+  serialized_start=1596,
+  serialized_end=1687,
 )
 
 
@@ -468,8 +499,8 @@ _PERSONARRIVALEVENT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1641,
-  serialized_end=1752,
+  serialized_start=1689,
+  serialized_end=1800,
 )
 
 
@@ -513,8 +544,8 @@ _PERSONDEPARTUREEVENT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1754,
-  serialized_end=1867,
+  serialized_start=1802,
+  serialized_end=1915,
 )
 
 
@@ -551,8 +582,8 @@ _PERSONENTERSVEHICLEEVENT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1869,
-  serialized_end=1972,
+  serialized_start=1917,
+  serialized_end=2020,
 )
 
 
@@ -589,8 +620,8 @@ _PERSONLEAVESVEHICLEEVENT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1974,
-  serialized_end=2077,
+  serialized_start=2022,
+  serialized_end=2125,
 )
 
 
@@ -641,8 +672,8 @@ _PERSONMONEYEVENT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=2079,
-  serialized_end=2196,
+  serialized_start=2127,
+  serialized_end=2244,
 )
 
 
@@ -686,8 +717,8 @@ _PERSONSTUCKEVENT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=2198,
-  serialized_end=2307,
+  serialized_start=2246,
+  serialized_end=2355,
 )
 
 
@@ -745,8 +776,8 @@ _TRANSITDRIVERSTARTSEVENT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=2310,
-  serialized_end=2541,
+  serialized_start=2358,
+  serialized_end=2589,
 )
 
 
@@ -783,8 +814,8 @@ _VEHICLEABORTSEVENT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=2543,
-  serialized_end=2638,
+  serialized_start=2591,
+  serialized_end=2686,
 )
 
 
@@ -842,8 +873,8 @@ _VEHICLEENTERSTRAFFICEVENT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=2641,
-  serialized_end=2834,
+  serialized_start=2689,
+  serialized_end=2882,
 )
 
 
@@ -901,10 +932,11 @@ _VEHICLELEAVESTRAFFICEVENT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=2837,
-  serialized_end=3030,
+  serialized_start=2885,
+  serialized_end=3078,
 )
 
+_EVENTBATCH.fields_by_name['events'].message_type = _EVENT
 _EVENT.fields_by_name['coords'].message_type = matsim_dot_pb_dot_Model__pb2._COORDINATE
 _EVENT.fields_by_name['generic'].message_type = _GENERICEVENT
 _EVENT.fields_by_name['activityEnd'].message_type = _ACTIVITYENDEVENT
@@ -1002,6 +1034,7 @@ _VEHICLEENTERSTRAFFICEVENT.fields_by_name['vehicleId'].message_type = matsim_dot
 _VEHICLELEAVESTRAFFICEVENT.fields_by_name['driverId'].message_type = matsim_dot_pb_dot_Ids__pb2._PROTOID
 _VEHICLELEAVESTRAFFICEVENT.fields_by_name['linkId'].message_type = matsim_dot_pb_dot_Ids__pb2._PROTOID
 _VEHICLELEAVESTRAFFICEVENT.fields_by_name['vehicleId'].message_type = matsim_dot_pb_dot_Ids__pb2._PROTOID
+DESCRIPTOR.message_types_by_name['EventBatch'] = _EVENTBATCH
 DESCRIPTOR.message_types_by_name['Event'] = _EVENT
 DESCRIPTOR.message_types_by_name['GenericEvent'] = _GENERICEVENT
 DESCRIPTOR.message_types_by_name['ActivityEndEvent'] = _ACTIVITYENDEVENT
@@ -1019,6 +1052,13 @@ DESCRIPTOR.message_types_by_name['VehicleAbortsEvent'] = _VEHICLEABORTSEVENT
 DESCRIPTOR.message_types_by_name['VehicleEntersTrafficEvent'] = _VEHICLEENTERSTRAFFICEVENT
 DESCRIPTOR.message_types_by_name['VehicleLeavesTrafficEvent'] = _VEHICLELEAVESTRAFFICEVENT
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
+
+EventBatch = _reflection.GeneratedProtocolMessageType('EventBatch', (_message.Message,), {
+  'DESCRIPTOR' : _EVENTBATCH,
+  '__module__' : 'matsim.pb.Events_pb2'
+  # @@protoc_insertion_point(class_scope:matsim.pb.EventBatch)
+  })
+_sym_db.RegisterMessage(EventBatch)
 
 Event = _reflection.GeneratedProtocolMessageType('Event', (_message.Message,), {
   'DESCRIPTOR' : _EVENT,

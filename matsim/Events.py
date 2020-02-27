@@ -1,6 +1,7 @@
-import gzip
+
 import xml.etree.ElementTree as ET
 
+from xopen import xopen
 
 def event_reader(filename, filter=None):
     """
@@ -19,7 +20,7 @@ def event_reader(filename, filter=None):
     else:
         keep = set(filter.split(','))
 
-    tree = ET.iterparse(gzip.open(filename))
+    tree = ET.iterparse(xopen(filename))
 
     try:
         for xml_event, elem in tree:
