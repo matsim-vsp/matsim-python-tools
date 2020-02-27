@@ -27,8 +27,9 @@ def event_reader(filename, filter=None):
 
             if elem.tag == 'event':
                 # skip events we don't care about
-                if keep:
-                    if not attributes['type'] in keep: continue
+                if keep and not elem.attrib['type'] in keep:
+                    elem.clear()
+                    continue
 
                 # got one! yield the event to the caller
                 attributes['time'] = float(attributes['time'])

@@ -59,7 +59,7 @@ geo.plot()    # try this in a notebook to see your network!
 # loop over without loading the entire events file in memory.
 # In this example let's sum up all 'entered link' events to get link volumes.
 
-events = event_reader('output_events.xml.gz', filter='entered link,left link')
+events = matsim.event_reader('output_events.xml.gz', filter='entered link,left link')
 
 link_counts = defaultdict(int) # defaultdict creates a blank dict entry on first reference
 
@@ -72,14 +72,17 @@ for event in events:
 link_counts = pd.DataFrame.from_dict(link_counts, orient='index', columns=['count']).rename_axis('link_id')
 
 # attach counts to our Geopandas network from above
-volumes = geo.merge(counts, on='link_id')
-volumes.plot(column='count', figsize=(40,40))
+volumes = geo.merge(link_counts, on='link_id')
+volumes.plot(column='count', figsize=(10,10), cmap='Wistia') #cmap is colormap
+```
 
+![Link Counts](https://raw.githubusercontent.com/matsim-vsp/matsim-python-tools/master/docs/counts.png)
 
+```python
 # -------------------------------------------------------------------
 # 3. PLANS: Stream through a MATSim plans file.
 
-plans = plan_reader('output_plans.xml.gz', selectedPlansOnly = True)
+plans = matsim.plan_reader('output_plans.xml.gz', selectedPlansOnly = True)
 
 for person, plan in plans:
 
