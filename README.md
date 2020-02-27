@@ -25,8 +25,8 @@ import pandas as pd
 from collections import defaultdict
 %matplotlib inline
 
-# -----------------------------------
-# 1. Read a MATSim network:
+# -------------------------------------------------------------------
+# 1. NETWORK: Read a MATSim network:
 net = matsim.read_network('output_network.xml.gz')
 
 net.nodes
@@ -47,9 +47,13 @@ net.links
 
 geo = net.as_geo()  # combines links+nodes into a Geopandas dataframe with LINESTRINGs
 geo.plot()    # try this in a notebook to see your network!
+```
 
-# ------------------------------------
-# 2. Stream through a MATSim event file.
+![Switzerland](https://raw.githubusercontent.com/matsim-vsp/matsim-python-tools/master/docs/ch.png)
+
+```python
+# -------------------------------------------------------------------
+# 2. EVENTS: Stream through a MATSim event file.
 
 # The event_reader returns a python generator function, which you can then
 # loop over without loading the entire events file in memory.
@@ -71,8 +75,9 @@ link_counts = pd.DataFrame.from_dict(link_counts, orient='index', columns=['coun
 volumes = geo.merge(counts, on='link_id')
 volumes.plot(column='count', figsize=(40,40))
 
-# ------------------------------------
-# 3. Stream through a MATSim plans file.
+
+# -------------------------------------------------------------------
+# 3. PLANS: Stream through a MATSim plans file.
 
 plans = plan_reader('output_plans.xml.gz', selectedPlansOnly = True)
 
