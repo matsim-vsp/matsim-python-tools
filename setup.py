@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import pathlib
 
 from setuptools import setup
@@ -12,9 +10,9 @@ README = (HERE / "README.md").read_text()
 
 # This call to setup() does all the work
 setup(
-    name="matsim_tools",  # TODO: should be matsim-tools ?
-    version="0.0.1",
-    description="Tools for working with the MATSim Agent-Based Transportation Simulation framework",
+    name="matsim-tools",
+    version="0.0.4",
+    description="MATSim Agent-Based Transportation Simulation Framework - official python analysis tools",
     long_description=README,
     long_description_content_type="text/markdown",
     url="https://github.com/matsim-vsp/matsim-python-tools",
@@ -28,10 +26,8 @@ setup(
     packages=["matsim"],
     install_requires=[
         "protobuf >= 3.10.0",
-        "shapely",
         "xopen",
-        "geopandas >= 0.6.0"
-        # TODO: pandas, etc. missing as dependency
+        "pandas", # "shapely", "geopandas >= 0.6.0"
     ],
     tests_require=[
         "assertpy"
