@@ -4,13 +4,13 @@ Official tools for working with MATSim output files
 
 MATSim is an open-source, multi-agent transportation simulation framework. Find out more about MATSim at <https://matsim.org>
 
-## Using this library
+## About this library
 
-We are just at the very early stages of building this library. The API will change, things will break, and there are certainly bugs. You probably shouldn't use this for anything.
+We are at the very early stages of building this library. The API will change, things will break, and there are certainly bugs. You probably shouldn't use this for anything.
 
-- We have only tested this using Anaconda Python. Only Python 3.x is supported.
 - Our primary goal is to make MATSim play nice with **pandas** and **geopandas**, for data analysis workflows.
-- Currently only MATSIm network, event, and plans files are supported. Hopefully more will be coming soon.
+- We have only tested this using Anaconda Python. Only Python 3.x is supported.
+- Currently MATSIm network, event, and plans files are supported. Hopefully more will be coming soon.
 - For Geopandas network support, you also need to install `geopandas` and `shapely`.
 
 ## Quickstart
@@ -84,11 +84,17 @@ volumes.plot(column='count', figsize=(10,10), cmap='Wistia') #cmap is colormap
 
 plans = matsim.plan_reader('output_plans.xml.gz', selectedPlansOnly = True)
 
+# Each plan is returned as a tuple with its owning person (for now, is this ok?)
+# - The name of the element is in its .tag (e.g. 'plan', 'leg', 'route', 'attributes')
+# - An element's attributes are accessed using .attrib['attrib-name']
+# - Use the element's .text field to get data outside of attributes (e.g. a route's list of links)
+# - Every element can be iterated on to get its children (e.g. the plan's activities and legs)
+
 for person, plan in plans:
 
     # do stuff with this plan, e.g.
     work_activities = filter(
-        lambda n: n.tag == 'activity' and n.attrib['type'] = ='w',
+        lambda e: e.tag == 'activity' and e.attrib['type'] == 'w',
         plan)
 
     print('person', person.attrib['id'], 'selected plan w/', len(list(work_activities)), 'work-act')
