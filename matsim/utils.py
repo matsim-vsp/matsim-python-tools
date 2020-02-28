@@ -2,6 +2,32 @@
 
 from google.protobuf.internal.encoder import _EncodeVarint
 
+from xopen import xopen
+
+from .pb.Wireformat_pb2 import ContentType, PBFileHeader
+
+from .pb.Events_pb2 import EventBatch
+
+PB_VERSION = {
+    ContentType.EVENTS: (1, EventBatch)
+}
+
+
+def read_pb(filepath):
+    """ Read MATSim protobuf file and yield each element """
+    with xopen(filepath, "rb") as f:
+        header = PBFileHeader()
+        offset, pos = _read_varint(f)
+        header.ParseFromString(f.read(offset))
+
+        supported, msg = PB_VERSION[header.contentType]
+        if supported < header.version:
+            raise Exception("Unsupported protobuf version: %d" % header.version)
+
+        for batch in read_delimited(msg, f):
+            for ev in batch.events:
+                yield ev
+
 
 def write_delimited(msgs, write):
     """ Helper function to write delimited protobuf messages """

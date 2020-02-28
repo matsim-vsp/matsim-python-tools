@@ -1,0 +1,23 @@
+
+[MASTER]
+
+ignore = tests
+load-plugins=pylint.extensions.docparams,pylint.extensions.docstyle,pylint.extensions.check_elif
+
+
+[DESIGN]
+
+max-complexity = 10
+
+[FORMAT]
+
+max-line-length = 150
+single-line-if-stmt=no
+expected-line-ending-format=LF
+variable-rgx=[a-z0-9_]{1,30}$
+
+[EXCEPTIONS]
+
+# Exceptions that will emit a warning when being caught. Defaults to
+# "Exception"
+overgeneral-exceptions=Exception

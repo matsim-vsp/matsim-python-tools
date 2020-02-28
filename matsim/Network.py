@@ -3,7 +3,6 @@
 import gzip
 import xml.etree.ElementTree as ET
 import pandas as pd
-from collections import namedtuple
 
 
 class Network:

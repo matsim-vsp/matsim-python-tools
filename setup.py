@@ -30,7 +30,8 @@ setup(
         "pandas", # "shapely", "geopandas >= 0.6.0"
     ],
     tests_require=[
-        "assertpy"
+        "assertpy",
+        "pytest"
     ],
     entry_points={},
 )
