@@ -122,8 +122,11 @@ def read_network(filename, skip_attributes=False):
                 atts['value'] = elem.text
 
                 # TODO: pandas will make the value column "object" since we're mixing types
-                if 'class' in elem.attrib and elem.attrib['class'] == 'java.lang.Long':
-                    atts['value'] = float(elem.text)
+                if 'class' in elem.attrib:
+                    if elem.attrib['class'] == 'java.lang.Long':
+                        atts['value'] = float(elem.text)
+                    if elem.attrib['class'] == 'java.lang.Integer':
+                        atts['value'] = int(elem.text)
 
                 attributes.append(atts)
 
