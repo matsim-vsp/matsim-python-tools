@@ -1,10 +1,10 @@
-import gzip
+import xopen
 import xml.etree.ElementTree as ET
 
 def plan_reader(filename, selectedPlansOnly = False):
 
     person = None
-    tree = ET.iterparse(gzip.open(filename), events=['start','end'])
+    tree = ET.iterparse(xopen.xopen(filename), events=['start','end'])
 
     for xml_event, elem in tree:
 
