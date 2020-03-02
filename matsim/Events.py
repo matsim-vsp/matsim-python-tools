@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from pathlib import Path
 from collections import Iterable
 import xml.etree.ElementTree as ET
 import json
@@ -30,6 +31,9 @@ def event_reader(filepath, types=None):
         keep = set(types)
     else:
         raise ValueError("Invalid argument for types: %s" % type(types))
+
+    if isinstance(filepath, Path):
+        filepath = str(filepath)
 
     if '.xml' in filepath:
         reader = _event_reader_xml
