@@ -10,12 +10,13 @@ We are at the very early stages of building this library. The API will change, t
 
 - Our primary goal is to make MATSim play nice with **pandas** and **geopandas**, for data analysis workflows.
 - We have only tested this using Anaconda Python. Only Python 3.x is supported.
-- Currently MATSIm network, event, and plans files are supported. Hopefully more will be coming soon.
+- Currently MATSim network, event, and plans files are supported. Hopefully more will be coming soon.
 - For Geopandas network support, you also need to install `geopandas` and `shapely`.
+- *Now supports JSON and Protobuf event file formats!*
 
 ## Quickstart
 
-1. Install using `pip install matsim-tools`.
+1. Install using `pip install matsim-tools`
 
 2. In lieu of real documentation, here is some sample code to get you started. Good luck!
 
@@ -104,5 +105,5 @@ for person, plan in plans:
 # person 10 selected plan w/ 1 work-act
 # person 100 selected plan w/ 1 work-act
 # ...
-
 ```
+
