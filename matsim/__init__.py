@@ -1,7 +1,4 @@
-from . import Events
-from . import Network
-from . import Plans
-from . import TripEventHandler
+from . import Events, Network, Plans, TripEventHandler
 
 read_network = Network.read_network
 event_reader = Events.event_reader
