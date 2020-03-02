@@ -1,6 +1,7 @@
 __pycache__
 build/
-*.gz
+dist/
 *.egg-info
 .ipynb_checkpoints
+.build-sentinel
 
