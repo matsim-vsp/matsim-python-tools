@@ -26,7 +26,7 @@ test:
 > pytest tests/
 .PHONY: test
 
-push: .build-sentinel
+push: test build
 > twine check dist/*
 > twine upload dist/*
 .PHONY: push

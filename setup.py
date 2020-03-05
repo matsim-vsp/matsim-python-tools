@@ -11,7 +11,7 @@ README = (HERE / "README.md").read_text()
 # This call to setup() does all the work
 setup(
     name="matsim-tools",
-    version="0.0.5",
+    version="0.0.6",
     description="MATSim Agent-Based Transportation Simulation Framework - official python analysis tools",
     long_description=README,
     long_description_content_type="text/markdown",
