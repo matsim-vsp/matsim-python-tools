@@ -19,7 +19,7 @@ build: .build-sentinel
 clean:
 > rm -rf build
 > rm -rf dist
-> rm .build-sentinel
+> rm -f  .build-sentinel
 .PHONY: clean
 
 test:
@@ -34,5 +34,6 @@ push: test build
 .build-sentinel: $(shell find matsim/*.py) $(shell find docs/*) README.md setup.py
 > rm -rf dist
 > python3 setup.py sdist bdist_wheel
+> twine check dist/*
 > touch $@
 

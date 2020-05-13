@@ -90,7 +90,7 @@ plans = matsim.plan_reader('output_plans.xml.gz', selectedPlansOnly = True)
 # - An element's attributes are accessed using .attrib['attrib-name']
 # - Use the element's .text field to get data outside of attributes (e.g. a route's list of links)
 # - Every element can be iterated on to get its children (e.g. the plan's activities and legs)
-# - If a person has no plans, the record will still be returned, but with plan=None
+# - Emits person even if that person has no plans
 
 for person, plan in plans:
 
