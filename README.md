@@ -60,7 +60,7 @@ geo.plot()    # try this in a notebook to see your network!
 # loop over without loading the entire events file in memory.
 # In this example let's sum up all 'entered link' events to get link volumes.
 
-events = matsim.event_reader('output_events.xml.gz', filter='entered link,left link')
+events = matsim.event_reader('output_events.xml.gz', types='entered link,left link')
 
 link_counts = defaultdict(int) # defaultdict creates a blank dict entry on first reference
 
@@ -90,6 +90,7 @@ plans = matsim.plan_reader('output_plans.xml.gz', selectedPlansOnly = True)
 # - An element's attributes are accessed using .attrib['attrib-name']
 # - Use the element's .text field to get data outside of attributes (e.g. a route's list of links)
 # - Every element can be iterated on to get its children (e.g. the plan's activities and legs)
+# - If a person has no plans, the record will still be returned, but with plan=None
 
 for person, plan in plans:
 
