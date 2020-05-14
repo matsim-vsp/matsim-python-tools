@@ -1,5 +1,4 @@
 import pathlib
-import glob
 
 from setuptools import setup
 

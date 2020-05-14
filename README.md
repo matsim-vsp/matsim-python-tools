@@ -63,6 +63,8 @@ geo.plot()    # try this in a notebook to see your network!
 # The event_reader returns a python generator function, which you can then
 # loop over without loading the entire events file in memory.
 # In this example let's sum up all 'entered link' events to get link volumes.
+#
+# NEW! Now supports .xml.gz and protobuf .pb.gz event file formats!
 
 events = matsim.event_reader('output_events.xml.gz', types='entered link,left link')
 
