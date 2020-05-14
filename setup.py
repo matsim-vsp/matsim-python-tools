@@ -1,4 +1,5 @@
 import pathlib
+import glob
 
 from setuptools import setup
 
@@ -10,7 +11,7 @@ README = (HERE / "README.md").read_text()
 
 # This call to setup() does all the work
 setup(
-    version="0.0.7",
+    version="0.0.9",
     name="matsim-tools",
     description="MATSim Agent-Based Transportation Simulation Framework - official python analysis tools",
     long_description_content_type='text/markdown',
@@ -22,7 +23,7 @@ setup(
         "License :: OSI Approved :: GNU General Public License (GPL)",
         "Programming Language :: Python :: 3",
     ],
-    packages=["matsim"],
+    packages=["matsim","matsim.pb"],
     install_requires=[
         "protobuf >= 3.10.0",
         "xopen",

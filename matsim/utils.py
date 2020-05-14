@@ -5,7 +5,6 @@ from google.protobuf.internal.encoder import _EncodeVarint
 from xopen import xopen
 
 from .pb.Wireformat_pb2 import ContentType, PBFileHeader
-
 from .pb.Events_pb2 import EventBatch
 
 PB_VERSION = {
