@@ -18,7 +18,7 @@ class XmlWriter:
         self.writer.write(bytes(content, "utf-8"))
 
     def _require_scope(self, scope):
-        if scope == None and not self.scope is None:
+        if not scope == None and not self.scope is None:
             raise RuntimeError("Execpted initial scope")
 
         if not self.scope == scope:
@@ -259,41 +259,3 @@ class FacilitiesWriter(XmlWriter):
         self._require_scope(self.FACILITY_SCOPE)
         self._write_line('<activity type="%s" />' % purpose)
 
-
-class backlog_iterator:
-    def __init__(self, iterable, backlog = 1):
-        self.iterable = iterable
-        self.forward_log = []
-        self.backward_log = [None] * (backlog + 1)
-
-    def next(self):
-        if len(self.forward_log) > 0:
-            self.backward_log.append(self.forward_log[0])
-            del self.forward_log[0]
-        else:
-            self.backward_log.append(next(self.iterable))
-
-        del self.backward_log[0]
-        return self.backward_log[-1]
-
-    def previous(self):
-        self.forward_log.insert(0, self.backward_log[-1])
-        del self.backward_log[-1]
-        self.backward_log.insert(0, None)
-        return self.backward_log[-1]
-
-    def current(self):
-        return self.backlog[-1]
-
-    def has_previous(self):
-        return len(self.backward_log) > 1
-
-    def has_next(self):
-        if len(self.forward_log) > 0:
-            return True
-
-        try:
-            self.forward_log.append(next(self.iterable))
-            return True
-        except StopIteration:
-            return False
