@@ -24,16 +24,16 @@ class XmlWriter:
         if not self.scope == scope:
             raise RuntimeError("Expected different scope")
 
-    @static
-    def yes_no(self, value):
+    @staticmethod
+    def yes_no(value):
         return "yes" if value else "no"
 
-    @static
+    @staticmethod
     def true_false(self, value):
         return "true" if value else "false"
 
-    @static
-    def time(self, time):
+    @staticmethod
+    def time(time):
         if np.isnan(time):
             return None
 
@@ -43,13 +43,12 @@ class XmlWriter:
         seconds = (time % 60)
         return "%02d:%02d:%02d" % (hours, minutes, seconds)
 
-    @static
-    def location(self, x, y, facility_id=None):
+    @staticmethod
+    def location(x, y, facility_id=None):
         return x, y, None if facility_id is None else facility_id
 
-    @static
-    def _write_preface_attributes(self, attributes):
-        if len(attributes) > 0:
+    def _write_preface_attributes(self, attributes=None):
+        if attributes:
             self._write_line('<attributes>')
             self.indent += 1
 
@@ -70,14 +69,14 @@ class PopulationWriter(XmlWriter):
     def __init__(self, writer):
         XmlWriter.__init__(self, writer)
 
-    def start_population(self, attributes={}):
+    def start_population(self, attributes=None):
         self._require_scope(None)
         self._write_line('<?xml version="1.0" encoding="utf-8"?>')
         self._write_line('<!DOCTYPE population SYSTEM "http://www.matsim.org/files/dtd/population_v6.dtd">')
         self._write_line('<population>')
         self.scope = self.POPULATION_SCOPE
         self.indent += 1
-        _write_preface_attributes(self, attributes)
+        self._write_preface_attributes(attributes)
 
     def end_population(self):
         self._require_scope(self.POPULATION_SCOPE)
@@ -157,7 +156,7 @@ class HouseholdsWriter(XmlWriter):
     def __init__(self, writer):
         XmlWriter.__init__(self, writer)
 
-    def start_households(self, attributes={}):
+    def start_households(self, attributes=None):
         self._require_scope(None)
         self._write_line('<?xml version="1.0" encoding="utf-8"?>')
         self._write_line('<households xmlns="http://www.matsim.org/files/dtd" '
@@ -166,7 +165,7 @@ class HouseholdsWriter(XmlWriter):
                          'http://www.matsim.org/files/dtd/households_v1.0.xsd">')
         self.scope = self.HOUSEHOLDS_SCOPE
         self.indent += 1
-        _write_preface_attributes(self, attributes)
+        self._write_preface_attributes(attributes)
 
     def end_households(self):
         self._require_scope(self.HOUSEHOLDS_SCOPE)
@@ -225,7 +224,7 @@ class FacilitiesWriter(XmlWriter):
     def __init__(self, writer):
         XmlWriter.__init__(self, writer)
 
-    def start_facilities(self, attributes={}):
+    def start_facilities(self, attributes=None):
         self._require_scope(None)
         self._write_line('<?xml version="1.0" encoding="utf-8"?>')
         self._write_line('<!DOCTYPE facilities SYSTEM "http://www.matsim.org/files/dtd/facilities_v1.dtd">')
@@ -233,7 +232,7 @@ class FacilitiesWriter(XmlWriter):
         self.scope = self.FACILITIES_SCOPE
         self.indent += 1
 
-        _write_preface_attributes(self, attributes)
+        self._write_preface_attributes(attributes)
 
     def end_facilities(self):
         self._require_scope(self.FACILITIES_SCOPE)
