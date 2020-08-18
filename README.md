@@ -108,3 +108,30 @@ for person, plan in plans:
 # ...
 ```
 
+
+
+```python
+# -------------------------------------------------------------------
+# 3. WRITERS: Write MATSim input files.
+
+# MATSim input files may be iteratively constructed as in the example below.
+# For a more detailed example, see [test_MatsimPlansWriter.py](tests/test_MatsimPlansWriter.py)
+
+with open("plans.xml", 'wb+') as f_write:
+    writer = matsim.writers.PopulationWriter(f_write)
+
+    writer.start_population()
+    writer.start_person("person_id_123")
+    writer.start_plan(selected=True)
+
+    writer.add_activity(type='home', x=0.0, y=0.0, end_time=8*3600)
+    writer.add_leg(mode='walk')
+    writer.add_activity(type='work', x=10.0, y=0.0, end_time=18*3600)
+    writer.add_leg(mode='pt')
+    writer.add_activity(type='home', x=0.0, y=0.0)
+
+    writer.end_plan()
+    writer.end_person()
+
+    writer.end_population()
+```
