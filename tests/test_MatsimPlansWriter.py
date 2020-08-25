@@ -39,7 +39,7 @@ def test_plan_writer(filepath):
         writer.end_population()
 
     with gzip.open("out_" + filepath) as f_orig:
-        with gzip.open(filepath) as f_new:
+        with gzip.open(HERE / filepath) as f_new:
             assert f_orig.readlines() == f_new.readlines(), "input and output files don't match!"
 
 
