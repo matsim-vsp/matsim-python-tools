@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from pathlib import Path
-from collections import Iterable
+from collections.abc import Iterable
 import xml.etree.ElementTree as ET
 import json
 
