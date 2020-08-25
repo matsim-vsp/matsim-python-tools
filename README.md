@@ -12,7 +12,8 @@ We are at the very early stages of building this library. The API will change, t
 - We have only tested this using Anaconda Python. Only Python 3.x is supported.
 - Currently MATSim network, event, and plans files are supported. Hopefully more will be coming soon.
 - For Geopandas network support, you also need to install `geopandas` and `shapely`.
-- *Now supports JSON and Protobuf event file formats!*
+- Supports JSON and Protobuf event file formats
+- Can write MATSim files too!
 
 ## Quickstart
 
