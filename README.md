@@ -20,6 +20,8 @@ We are at the very early stages of building this library. The API will change, t
 
 2. In lieu of real documentation, here is some sample code to get you started. Good luck!
 
+### Read a network
+
 ```python
 import matsim
 import pandas as pd
@@ -52,6 +54,8 @@ geo.plot()    # try this in a notebook to see your network!
 
 ![Switzerland](https://raw.githubusercontent.com/matsim-vsp/matsim-python-tools/master/docs/ch.png)
 
+### Stream through events
+
 ```python
 # -------------------------------------------------------------------
 # 2. EVENTS: Stream through a MATSim event file.
@@ -78,6 +82,8 @@ volumes.plot(column='count', figsize=(10,10), cmap='Wistia') #cmap is colormap
 ```
 
 ![Link Counts](https://raw.githubusercontent.com/matsim-vsp/matsim-python-tools/master/docs/counts.png)
+
+### Read plans
 
 ```python
 # -------------------------------------------------------------------
@@ -108,3 +114,30 @@ for person, plan in plans:
 # ...
 ```
 
+### Write MATSim input XML files
+
+```python
+# -------------------------------------------------------------------
+# 4. WRITERS: Write MATSim input files.
+
+# MATSim input files may be iteratively constructed as in the example below.
+# For a more detailed example, see tests/test_MatsimPlansWriter.py
+
+with open("plans.xml", 'wb+') as f_write:
+    writer = matsim.writers.PopulationWriter(f_write)
+
+    writer.start_population()
+    writer.start_person("person_id_123")
+    writer.start_plan(selected=True)
+
+    writer.add_activity(type='home', x=0.0, y=0.0, end_time=8*3600)
+    writer.add_leg(mode='walk')
+    writer.add_activity(type='work', x=10.0, y=0.0, end_time=18*3600)
+    writer.add_leg(mode='pt')
+    writer.add_activity(type='home', x=0.0, y=0.0)
+
+    writer.end_plan()
+    writer.end_person()
+
+    writer.end_population()
+```
