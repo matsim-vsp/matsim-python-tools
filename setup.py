@@ -7,13 +7,14 @@ HERE = pathlib.Path(__file__).parent
 
 # The text of the README file
 README = (HERE / "README.md").read_text()
+VERSION = (HERE / "VERSION").read_text()
 
 # This call to setup() does all the work
 setup(
-    version="0.0.9",
+    version=VERSION,
     name="matsim-tools",
     description="MATSim Agent-Based Transportation Simulation Framework - official python analysis tools",
-    long_description_content_type='text/markdown',
+    long_description_content_type="text/markdown",
     url="https://github.com/matsim-vsp/matsim-python-tools",
     author="VSP-Berlin",
     author_email="laudan@tu-berlin.de",
@@ -22,16 +23,13 @@ setup(
         "License :: OSI Approved :: GNU General Public License (GPL)",
         "Programming Language :: Python :: 3",
     ],
-    packages=["matsim","matsim.pb"],
+    packages=["matsim", "matsim.pb"],
     install_requires=[
         "protobuf >= 3.10.0",
         "xopen",
-        "pandas", # "shapely", "geopandas >= 0.6.0"
+        "pandas",  # "shapely", "geopandas >= 0.6.0"
     ],
-    tests_require=[
-        "assertpy",
-        "pytest"
-    ],
+    tests_require=["assertpy", "pytest"],
     entry_points={},
     long_description=README,
 )
