@@ -29,6 +29,9 @@ setup(
         "xopen",
         "pandas",  # "shapely", "geopandas >= 0.6.0"
     ],
+    extras_require = {
+        'calibration':  ["optuna >= 2.7.0"]
+    },
     tests_require=["assertpy", "pytest"],
     entry_points={},
     long_description=README,
