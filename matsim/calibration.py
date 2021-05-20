@@ -7,7 +7,7 @@ import shutil
 from os import path, makedirs
 from time import sleep
 
-from typing import Sequence, Dict, Callable
+from typing import Sequence, Dict, Callable, Tuple
 
 import yaml
 import pandas as pd
@@ -82,13 +82,30 @@ def calc_mode_share(run, person_filter=None, map_trips=None):
 
 
 def create_mode_share_study(name :str, jar : str, config : str,
-                            modes: Sequence[str], fixed_mode: str,
-                            mode_share: Dict[str, float],
+                            modes: Sequence[str], mode_share: Dict[str, float],
+                            fixed_mode: str = "walk",
                             args="", jvm_args="",
                             initial_asc: Dict[str, float] = None,
                             person_filter: Callable = None,
-                            map_trips: Callable = None) -> optuna.Study:
-    """ Creates or loads existing study for mode calibration """
+                            map_trips: Callable = None) -> Tuple[optuna.Study, Callable]:
+    """ Create or loads an existing study for mode share calibration using asc values.
+
+    This function returns the study and optimization objective as tuple. Which can be used like this:
+        study.optimize(obj, 10)
+
+    :param name: name of the study
+    :param jar: path to executable jar file of the scenario
+    :param config: path to config file to run
+    :param modes: list of all relevant modes
+    :param mode_share: dict of target mode shares
+    :param fixed_mode: the fixed mode with asc=0
+    :param args: additional arguments to the executable jar
+    :param jvm_args: additional jvm args
+    :param initial_asc: dict of initial asc values
+    :param person_filter: callable to filter person included in mode share
+    :param map_trips: callable to modify trips included in mode share
+    :return: tuple of study and optimization objective.
+    """
 
     # Init with 0
     if initial_asc is None:
@@ -142,7 +159,6 @@ def create_mode_share_study(name :str, jar : str, config : str,
         if os.name != 'nt':
             cmd = cmd.split(" ")
 
-        # TODO: needs testing on unix
         p = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         try:    
             while p.poll() is None:
