@@ -144,3 +144,29 @@ with open("plans.xml", 'wb+') as f_write:
 
     writer.end_population()
 ```
+
+## Calibration
+
+Scenarios created with the `matsim-application` contrib provide an interface that can be used with the automatic calibration module:
+
+```python
+# -------------------------------------------------------------------
+# 5. CALIBRATION: Automatic calibration for MATSim scenario.
+
+modes = ["walk", "car", "pt", "bike"]
+fixed_mode = "walk"
+target = {
+    "walk": 0.277,
+    "bike": 0.175,
+    "pt": 0.19,
+    "car": 0.359    
+}
+
+study, obj = calibration.create_mode_share_study("calib", "./matsim-scenario-1.0-SNAPSHOT.jar", 
+                                        "./scenarios/input/scenario-v1.0-10pct.config.xml", 
+                                        modes, fixed_mode, target)
+
+
+study.optimize(obj, 10)
+
+```
