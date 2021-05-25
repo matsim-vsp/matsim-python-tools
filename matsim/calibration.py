@@ -75,10 +75,15 @@ def calc_mode_share(run, person_filter=None, map_trips=None):
 
     df = df.join(gdf, on="person", how="inner")
 
+    nans = df.main_mode.isnull()
+
+    # use longest distance mode if there is no main mode
+    df.loc[nans, "main_mode"] = df.loc[nans, "longest_distance_mode"]
+
     if map_trips is not None:
         df = map_trips(df)
 
-    return df.groupby("longest_distance_mode").count()["trip_number"] / len(df)
+    return df.groupby("main_mode").count()["trip_number"] / len(df)
 
 
 def create_mode_share_study(name :str, jar : str, config : str,
