@@ -47,15 +47,19 @@ class ASCSampler(optuna.samplers.BaseSampler):
 
         asc = last.params[param_name]
 
+        asc += self.calc_update(self.mode_share[param_name], last.user_attrs["%s_share" % param_name],
+                                self.mode_share[self.fixed_mode], last.user_attrs["%s_share" % self.fixed_mode])
+
+        return asc
+
+    def calc_update(self, z_i, m_i, z_0, m_0):
+        """ Calculates the asc update for one step """
         # Update asc 
         # (1) Let z_i be the observed share of mode i. (real data, to be reproduced)
         # (2) Run the simulation to convergence. Obtain simulated mode shares m_i.
         # (3) Do nothing for mode 0. For all other modes: add [ln(z_i) - ln(m_i)] – [ln(z_0) - ln(m_0)] to its ASC.
         # (4) Goto 2.
-
-        asc += (math.log(self.mode_share[param_name]) - math.log(last.user_attrs["%s_share" % param_name])) - (math.log(self.mode_share[self.fixed_mode]) - math.log(last.user_attrs["%s_share" % self.fixed_mode]))
-
-        return asc
+        return math.log(z_i) - math.log(m_i) - (math.log(z_0) - math.log(m_0))
 
 def calc_mode_share(run, person_filter=None, map_trips=None):
     
