@@ -123,11 +123,16 @@ class PopulationWriter(XmlWriter):
         self._write_line('</population>')
         self.set_scope(self.FINISHED_SCOPE)
 
-    def start_person(self, person_id: Id):
+    def start_person(self, person_id: Id, attributes: Dict[str, str] = None):
         self._require_scope(self.POPULATION_SCOPE)
         self._write_line(f'<person id="{person_id}">')
         self.set_scope(self.PERSON_SCOPE)
         self.indent += 1
+        if attributes:
+            self.start_attributes(expected_scope=self.PERSON_SCOPE)
+            for k, v in attributes.items():
+                self.add_attribute(k, v)
+            self.end_attributes()
 
     def end_person(self):
         self._require_scope(self.PERSON_SCOPE)
