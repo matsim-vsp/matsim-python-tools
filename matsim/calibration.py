@@ -163,6 +163,9 @@ def create_mode_share_study(name :str, jar : str, config : str,
         cmd = "java %s -jar %s run --config %s --yaml %s --output %s --runId %03d %s" \
               % (jvm_args, jar, config, params_path, run_dir, trial.number, args)
 
+        # Extra whitespaces will brake argument parsing
+        cmd = cmd.strip()
+
         print("Running cmd %s" % cmd)
 
         if os.name != 'nt':
