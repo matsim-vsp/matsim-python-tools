@@ -7,9 +7,10 @@ import shutil
 from os import path, makedirs
 from time import sleep
 
-from typing import Sequence, Dict, Callable, Tuple
+from typing import Any, Sequence, Dict, Callable, Tuple
 
 import yaml
+import numpy as np
 import pandas as pd
 import geopandas
 import optuna
@@ -61,6 +62,56 @@ class ASCSampler(optuna.samplers.BaseSampler):
         # (4) Goto 2.
         return math.log(z_i) - math.log(m_i) - (math.log(z_0) - math.log(m_0))
 
+def calc_adjusted_mode_share(sim: pd.DataFrame, survey: pd.DataFrame, 
+                             count_var: str = "trips", dist_var: str = "dist_group") -> Tuple[Any, pd.DataFrame]:
+    """ This function can be used if the given input trip data has a different distance distribution than the survey data.
+        It will rescale the survey data to match simulated data, which allows to calculate an adjusted overall mode share.
+
+        :param sim: data frame containing shares for distance group and modes
+        :param survey: data frame containing shares from survey data
+        :param count_var: name of column containing the number of trips or share in 'sim'
+        :param dist_var: name of the column holding the distance group information
+        :return: tuple of optimization result and adjusted mode share
+    """
+    from scipy.optimize import minimize
+
+    sagg = sim.groupby(dist_var).sum()
+    sagg['share'] = sagg[count_var] / np.sum(sagg[count_var])
+
+    def f(x, result=False):
+        adj = survey.copy()
+
+        for i, t in enumerate(x):
+            adj.loc[adj[dist_var] == sagg.index[i], "share"] *= t
+
+        adj.share = adj.share / np.sum(adj.share)
+
+        agg = adj.groupby(dist_var).sum()
+
+        # Minimized difference between adjusted and simulated distribution
+        err = sum((sagg.share - agg.share)**2)
+
+        if result:
+            return adj
+
+        return err
+
+    # One variable for each distance group
+    x0 = np.ones(len(sagg.index)) / len(sagg.index)
+
+    # Sum should be less than one
+    cons = [{'type': 'ineq', 'fun': lambda x:  1 - sum(x)}]
+    bnds = tuple((0, 1) for x in x0)
+
+    res = minimize(f, x0, method='SLSQP', bounds=bnds, constraints=cons)
+
+    df = f(res.x, True)
+
+    return res, df
+
+
+
+
 def calc_mode_share(run, person_filter=None, map_trips=None):
     
     trips = glob.glob(run.rstrip("/") + "/*.output_trips.csv.gz")[0]
@@ -90,7 +141,7 @@ def calc_mode_share(run, person_filter=None, map_trips=None):
     return df.groupby("main_mode").count()["trip_number"] / len(df)
 
 
-def create_mode_share_study(name :str, jar : str, config : str,
+def create_mode_share_study(name: str, jar: str, config: str,
                             modes: Sequence[str], mode_share: Dict[str, float],
                             fixed_mode: str = "walk",
                             args="", jvm_args="",
