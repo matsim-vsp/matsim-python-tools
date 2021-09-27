@@ -65,7 +65,7 @@ def read_network(filename, skip_attributes=False):
     """Read a MATSim network.xml.gz file. Returns a Network object with dataframes
     for nodes, links, node_attributes, and link_attributes. If the network has a CRS
     projection set, it will be available in network_attrs."""
-    tree = ET.iterparse(xopen.xopen(filename, 'r'))
+    tree = ET.iterparse(xopen.xopen(filename, 'r'), events=('start',))
     nodes = []
     links = []
     node_attrs = []
@@ -79,7 +79,7 @@ def read_network(filename, skip_attributes=False):
 
     for xml_event, elem in tree:
         # the nodes element CLOSES at the end of the nodes, followed by links:
-        if elem.tag == 'nodes':
+        if elem.tag == 'links':
             attributes = link_attrs
             attr_label = 'link_id'
 
