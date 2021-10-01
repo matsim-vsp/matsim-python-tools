@@ -17,7 +17,7 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/matsim-vsp/matsim-python-tools",
     author="VSP-Berlin",
-    author_email="laudan@tu-berlin.de",
+    author_email="charlton@tu-berlin.de",
     license="GPLv3",
     classifiers=[
         "License :: OSI Approved :: GNU General Public License (GPL)",
