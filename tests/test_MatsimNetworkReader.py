@@ -1,3 +1,5 @@
+import pandas as pd
+from pandas.testing import assert_frame_equal
 from unittest import TestCase
 
 import matsim.Network
@@ -34,3 +36,22 @@ class TestNetworkHandler(TestCase):
         self.assertEqual(27.78, link.freespeed[0])
         self.assertEqual(1, link.permlanes[0])
         self.assertEqual('car,bike', link.modes[0])
+
+    def test_attrs(self):
+        network = matsim.Network.read_network('tests/test_network_attrs.xml.gz')
+        expected_node_attrs = [
+            ['1', 'meta:name', 'node-1'],
+            ['2', 'meta:name', 'node-2'],
+            ['3', 'meta:name', 'node-3'],
+            ['4', 'meta:name', 'node-4'],
+        ]
+        expected_link_attrs = [
+            ['1', 'meta:name', 'link-1'],
+            ['2', 'meta:name', 'link-2'],
+            ['3', 'meta:name', 'link-3'],
+        ]
+        node_attrs = network.node_attrs
+        link_attrs = network.link_attrs
+
+        assert_frame_equal(node_attrs, pd.DataFrame(data=expected_node_attrs, columns=['node_id', 'name', 'value']))
+        assert_frame_equal(link_attrs, pd.DataFrame(data=expected_link_attrs, columns=['link_id', 'name', 'value']))
