@@ -112,5 +112,5 @@ def _convert_pb_event(event):
 
 def _event_reader_json(filepath):
     with xopen(filepath) as f:
-        for line in f.readlines():
+        for line in f:
             yield json.loads(line)
