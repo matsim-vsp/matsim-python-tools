@@ -65,7 +65,7 @@ def read_network(filename, skip_attributes=False):
     """Read a MATSim network.xml.gz file. Returns a Network object with dataframes
     for nodes, links, node_attributes, and link_attributes. If the network has a CRS
     projection set, it will be available in network_attrs."""
-    tree = ET.iterparse(xopen.xopen(filename, 'r'))
+    tree = ET.iterparse(xopen.xopen(filename, 'r'), events=['start', 'end'])
     nodes = []
     links = []
     node_attrs = []
@@ -79,11 +79,11 @@ def read_network(filename, skip_attributes=False):
 
     for xml_event, elem in tree:
         # the nodes element CLOSES at the end of the nodes, followed by links:
-        if elem.tag == 'nodes':
+        if elem.tag == 'links' and xml_event == 'start':
             attributes = link_attrs
             attr_label = 'link_id'
 
-        elif elem.tag == 'node':
+        elif elem.tag == 'node' and xml_event == 'start':
             atts = elem.attrib
             current_id = atts['id']
 
@@ -94,7 +94,7 @@ def read_network(filename, skip_attributes=False):
 
             nodes.append(atts)
 
-        elif elem.tag == 'link':
+        elif elem.tag == 'link' and xml_event == 'start':
             atts = elem.attrib
             current_id = atts['id']
 
@@ -111,7 +111,8 @@ def read_network(filename, skip_attributes=False):
 
             links.append(atts)
 
-        elif elem.tag == 'attribute':
+
+        elif elem.tag == 'attribute' and xml_event == 'end':
             if elem.attrib['name'] == Network._crsTag:
                 network_attrs[Network._crsTag] = elem.text
 
@@ -131,7 +132,8 @@ def read_network(filename, skip_attributes=False):
                 attributes.append(atts)
 
         # clear the element when we're done, to keep memory usage low
-        elem.clear()
+        if elem.tag in ['node', 'link'] and xml_event == 'end':
+            elem.clear()
 
     nodes = pd.DataFrame.from_records(nodes)
     links = pd.DataFrame.from_records(links)
