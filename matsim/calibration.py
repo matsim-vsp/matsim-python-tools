@@ -17,6 +17,10 @@ import optuna
 
 from optuna.trial import TrialState
 
+def _completed_trials(study):
+    completed = filter(lambda s: s.state == TrialState.COMPLETE, study.trials)
+    return sorted(completed, key=lambda s: s.number)
+
 class ASCSampler(optuna.samplers.BaseSampler):
     """ Sample asc according to obtained mode shares """
 
@@ -38,10 +42,11 @@ class ASCSampler(optuna.samplers.BaseSampler):
         if param_name == self.fixed_mode:
             return 0
 
-        completed = filter(lambda s: s.state == TrialState.COMPLETE, study.trials)
-        completed = sorted(completed, key=lambda s: s.number)
+        completed = _completed_trials(study)
 
-        if len(completed) == 0:
+        # The first run is not evaluated
+        # This is more stable when chaining runs
+        if len(completed) <= 1:
             return self.initial_asc[param_name]
 
         last = completed[-1]
@@ -53,9 +58,10 @@ class ASCSampler(optuna.samplers.BaseSampler):
 
         return asc
 
-    def calc_update(self, z_i, m_i, z_0, m_0):
+    @staticmethod
+    def calc_update(z_i, m_i, z_0, m_0):
         """ Calculates the asc update for one step """
-        # Update asc 
+        # Update asc
         # (1) Let z_i be the observed share of mode i. (real data, to be reproduced)
         # (2) Run the simulation to convergence. Obtain simulated mode shares m_i.
         # (3) Do nothing for mode 0. For all other modes: add [ln(z_i) - ln(m_i)] – [ln(z_0) - ln(m_0)] to its ASC.
@@ -109,10 +115,29 @@ def calc_adjusted_mode_share(sim: pd.DataFrame, survey: pd.DataFrame,
 
     return res, df
 
+def read_leg_stats(run : str, person_filter=None, map_legs=None):
+    """ Reads leg statistic from run directory """
 
+    legs = glob.glob(run.rstrip("/") + "/*.output_trips.csv.gz")[0]
+    persons = glob.glob(run.rstrip("/") + "/*.output_persons.csv.gz")[0]
 
+    df = pd.read_csv(legs, sep=";")
+    dfp = pd.read_csv(persons, sep=";", index_col=0)
+
+    gdf = geopandas.GeoDataFrame(dfp, 
+            geometry=geopandas.points_from_xy(dfp.first_act_x, dfp.first_act_y)
+    )
+
+    if person_filter is not None:
+        gdf = person_filter(gdf)
+
+    if map_legs is not None:
+        df = map_legs(df)
+
+    return df
 
 def calc_mode_share(run, person_filter=None, map_trips=None):
+    """ Calculates the mode share from output directory """
     
     trips = glob.glob(run.rstrip("/") + "/*.output_trips.csv.gz")[0]
 
@@ -147,7 +172,9 @@ def create_mode_share_study(name: str, jar: str, config: str,
                             args="", jvm_args="",
                             initial_asc: Dict[str, float] = None,
                             person_filter: Callable = None,
-                            map_trips: Callable = None) -> Tuple[optuna.Study, Callable]:
+                            map_trips: Callable = None,
+                            chain_runs: bool = False,
+                            ) -> Tuple[optuna.Study, Callable]:
     """ Create or loads an existing study for mode share calibration using asc values.
 
     This function returns the study and optimization objective as tuple. Which can be used like this:
@@ -164,6 +191,7 @@ def create_mode_share_study(name: str, jar: str, config: str,
     :param initial_asc: dict of initial asc values
     :param person_filter: callable to filter person included in mode share
     :param map_trips: callable to modify trips included in mode share
+    :param chain_runs: automatically use the output plans of each run as input for the next
     :return: tuple of study and optimization objective.
     """
 
@@ -190,6 +218,8 @@ def create_mode_share_study(name: str, jar: str, config: str,
     if not path.exists("runs"):
         makedirs("runs")
 
+    print("Running study with target shares:", mode_share)
+
     def f(trial):
 
         params_path = path.join("params", "run%d.yaml" % trial.number)
@@ -214,7 +244,22 @@ def create_mode_share_study(name: str, jar: str, config: str,
         cmd = "java %s -jar %s run --config %s --yaml %s --output %s --runId %03d %s" \
               % (jvm_args, jar, config, params_path, run_dir, trial.number, args)
 
-        # Extra whitespaces will brake argument parsing
+        if chain_runs:
+            completed = _completed_trials(study)
+
+            out = None
+            for t in reversed(completed):
+                out = glob.glob("runs/%03d/*.output_plans.csv.gz" % t.number)
+                if out:
+                    out = out[0]
+                    break
+
+            if out:
+                cmd += "--config:plans.input=" + out
+            else:
+                print("No output plans for chaining runs found.")
+
+        # Extra whitespaces will break argument parsing
         cmd = cmd.strip()
 
         print("Running cmd %s" % cmd)
@@ -233,6 +278,9 @@ def create_mode_share_study(name: str, jar: str, config: str,
             p.terminate()
 
         shares = calc_mode_share(run_dir, person_filter=person_filter, map_trips=map_trips)
+
+        print("Obtained mode shares:", shares)
+
         for k, v in shares.items():
             trial.set_user_attr("%s_share" % k, v)
 
