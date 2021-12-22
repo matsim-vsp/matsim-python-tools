@@ -249,13 +249,13 @@ def create_mode_share_study(name: str, jar: str, config: str,
 
             out = None
             for t in reversed(completed):
-                out = glob.glob("runs/%03d/*.output_plans.csv.gz" % t.number)
+                out = glob.glob("runs/%03d/*.output_plans.xml.gz" % t.number)
                 if out:
                     out = out[0]
                     break
 
             if out:
-                cmd += "--config:plans.input=" + out
+                cmd += " --config:plans.inputPlansFile=" + out
             else:
                 print("No output plans for chaining runs found.")
 
