@@ -251,7 +251,7 @@ def create_mode_share_study(name: str, jar: str, config: str,
             for t in reversed(completed):
                 out = glob.glob("runs/%03d/*.output_plans.xml.gz" % t.number)
                 if out:
-                    out = out[0]
+                    out = path.abspath(out[0])
                     break
 
             if out:
