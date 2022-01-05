@@ -24,11 +24,12 @@ def _completed_trials(study):
 class ASCSampler(optuna.samplers.BaseSampler):
     """ Sample asc according to obtained mode shares """
 
-    def __init__(self, mode_share, fixed_mode, initial_asc):
+    def __init__(self, mode_share, fixed_mode, initial_asc, lr):
 
         self.mode_share = mode_share
         self.fixed_mode = fixed_mode
         self.initial_asc = initial_asc
+        self.lr = lr
 
     def infer_relative_search_space(self, study, trial):
         return {}
@@ -53,7 +54,11 @@ class ASCSampler(optuna.samplers.BaseSampler):
 
         asc = last.params[param_name]
 
-        asc += self.calc_update(self.mode_share[param_name], last.user_attrs["%s_share" % param_name],
+        rate = 1.0
+        if self.lr is not None:
+            rate = self.lr(len(completed))
+
+        asc += rate * self.calc_update(self.mode_share[param_name], last.user_attrs["%s_share" % param_name],
                                 self.mode_share[self.fixed_mode], last.user_attrs["%s_share" % self.fixed_mode])
 
         return asc
@@ -174,6 +179,7 @@ def create_mode_share_study(name: str, jar: str, config: str,
                             person_filter: Callable = None,
                             map_trips: Callable = None,
                             chain_runs: bool = False,
+                            lr: Callable = None
                             ) -> Tuple[optuna.Study, Callable]:
     """ Create or loads an existing study for mode share calibration using asc values.
 
@@ -192,6 +198,7 @@ def create_mode_share_study(name: str, jar: str, config: str,
     :param person_filter: callable to filter person included in mode share
     :param map_trips: callable to modify trips included in mode share
     :param chain_runs: automatically use the output plans of each run as input for the next
+    :param lr: learning rate schedule
     :return: tuple of study and optimization objective.
     """
 
@@ -206,7 +213,7 @@ def create_mode_share_study(name: str, jar: str, config: str,
             storage="sqlite:///%s.db" % name, 
             load_if_exists=True,
             directions=["minimize"] * len(modes),
-            sampler=ASCSampler(mode_share, fixed_mode, initial_asc)
+            sampler=ASCSampler(mode_share, fixed_mode, initial_asc, lr)
         )
 
     study.set_user_attr("modes", modes)
