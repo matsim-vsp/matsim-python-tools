@@ -56,7 +56,7 @@ class ASCSampler(optuna.samplers.BaseSampler):
 
         rate = 1.0
         if self.lr is not None:
-            rate = self.lr(len(completed))
+            rate = self.lr(float(len(completed)))
 
         asc += rate * self.calc_update(self.mode_share[param_name], last.user_attrs["%s_share" % param_name],
                                 self.mode_share[self.fixed_mode], last.user_attrs["%s_share" % self.fixed_mode])
