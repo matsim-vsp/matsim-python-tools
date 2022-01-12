@@ -49,7 +49,12 @@ class ASCSampler(optuna.samplers.BaseSampler):
         # The first run is not evaluated
         # This is more stable when chaining runs
         if len(completed) <= 1:
-            return self.initial_asc[param_name]
+            asc = self.initial_asc[param_name]
+
+            if self.constraints is not None and param_name in self.constraints:
+                asc = self.constraints[param_name](asc)
+
+            return asc
 
         last = completed[-1]
 
