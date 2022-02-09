@@ -151,9 +151,8 @@ def read_leg_stats(run : str, person_filter=None, map_legs=None):
 
     return df
 
-def calc_mode_share(run, person_filter=None, map_trips=None):
-    """ Calculates the mode share from output directory """
-    
+def read_trips_and_persons(run, person_filter=None, map_trips=None):    
+    """ Read trips and persons from run directory """
     trips = glob.glob(run.rstrip("/") + "/*.output_trips.csv.gz")[0]
 
     persons = glob.glob(run.rstrip("/") + "/*.output_persons.csv.gz")[0]
@@ -177,6 +176,12 @@ def calc_mode_share(run, person_filter=None, map_trips=None):
 
     if map_trips is not None:
         df = map_trips(df)
+
+    return df, gdf
+
+def calc_mode_share(run, person_filter=None, map_trips=None):
+    """ Calculates the mode share from output directory """    
+    df, _ = read_trips_and_persons(run, person_filter, map_trips)
 
     return df.groupby("main_mode").count()["trip_number"] / len(df)
 
