@@ -55,18 +55,19 @@ def event_reader(filepath, types=None):
 def _event_reader_xml(filepath):
     """ Any content text of the XML element itself is dropped, as MATSim events are attribute-only. """
     with xopen(filepath) as f:
-        tree = ET.iterparse(f)
+        tree = ET.iterparse(f, events=['start', 'end'])
+        _, root = next(tree)
         try:
             for xml_event, elem in tree:
                 attributes = elem.attrib
 
-                if elem.tag == 'event':
+                if xml_event == 'start' and elem.tag == 'event':
                     # got one! yield the event to the caller
                     attributes['time'] = float(attributes['time'])
                     yield attributes
 
                 # free memory. Otherwise the data is kept in memory and we loose the advantage of streaming
-                elem.clear()
+                root.clear()
 
         except Exception as e:
             # Why am I catching this exception instead of allowing it to propagate up?
