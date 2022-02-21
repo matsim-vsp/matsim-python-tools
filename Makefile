@@ -31,6 +31,10 @@ push: test build
 > twine upload dist/*
 .PHONY: push
 
+version:
+> npx standard-version
+.PHONY: version
+
 .build-sentinel: $(shell find matsim/*.py) $(shell find docs/*) README.md setup.py
 > rm -rf dist
 > python3 setup.py sdist bdist_wheel
