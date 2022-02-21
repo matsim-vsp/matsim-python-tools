@@ -10,7 +10,7 @@ from matsim.calibration import ASCSampler
 def test_asc_sampler():
 
     # variables are not needed for this test
-    sampler = ASCSampler(None, None, None)
+    sampler = ASCSampler(None, None, None, None, None)
 
     utils = np.random.rand(1000, 4)
     ascs = np.zeros(4)
