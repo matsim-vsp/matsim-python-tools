@@ -157,8 +157,8 @@ def read_trips_and_persons(run, person_filter=None, map_trips=None):
 
     persons = glob.glob(run.rstrip("/") + "/*.output_persons.csv.gz")[0]
 
-    df = pd.read_csv(trips, sep=";")
-    dfp = pd.read_csv(persons, sep=";", index_col=0)
+    df = pd.read_csv(trips, sep=";",  dtype={"person": "str"})
+    dfp = pd.read_csv(persons, sep=";", index_col=0,  dtype={"person": "str"})
 
     gdf = geopandas.GeoDataFrame(dfp, 
             geometry=geopandas.points_from_xy(dfp.first_act_x, dfp.first_act_y)
@@ -167,7 +167,7 @@ def read_trips_and_persons(run, person_filter=None, map_trips=None):
     if person_filter is not None:
         gdf = person_filter(gdf)
 
-    df = df.join(gdf, on="person", how="inner")
+    df = pd.merge(df, gdf, how="inner", left_on="person", right_on="person")
 
     nans = df.main_mode.isnull()
 
