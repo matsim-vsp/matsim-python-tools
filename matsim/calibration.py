@@ -268,6 +268,9 @@ def create_mode_share_study(name: str, jar: str, config: str,
         cmd = "java %s -jar %s run --config %s --yaml %s --output %s --runId %03d %s" \
               % (jvm_args, jar, config, params_path, run_dir, trial.number, args)
 
+        # Max fix extra whitespaces in args
+        cmd = cmd.strip()
+
         if chain_runs:
             completed = _completed_trials(study)
 
