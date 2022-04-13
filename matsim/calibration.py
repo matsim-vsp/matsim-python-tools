@@ -158,7 +158,7 @@ def read_trips_and_persons(run, person_filter=None, map_trips=None):
     persons = glob.glob(run.rstrip("/") + "/*.output_persons.csv.gz")[0]
 
     df = pd.read_csv(trips, sep=";",  dtype={"person": "str"})
-    dfp = pd.read_csv(persons, sep=";", index_col=0,  dtype={"person": "str"})
+    dfp = pd.read_csv(persons, sep=";", dtype={"person": "str"})
 
     gdf = geopandas.GeoDataFrame(dfp, 
             geometry=geopandas.points_from_xy(dfp.first_act_x, dfp.first_act_y)
