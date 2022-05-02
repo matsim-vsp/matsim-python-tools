@@ -4,6 +4,7 @@ import subprocess
 import glob
 import math
 import shutil
+import sys
 from os import path, makedirs
 from time import sleep
 
@@ -20,6 +21,10 @@ from optuna.trial import TrialState
 def _completed_trials(study):
     completed = filter(lambda s: s.state == TrialState.COMPLETE, study.trials)
     return sorted(completed, key=lambda s: s.number)
+
+def _same_sign(x):
+    x = x.to_numpy()
+    return np.all(x >= 0) if x[0] >= 0 else np.all(x < 0)
 
 class ASCSampler(optuna.samplers.BaseSampler):
     """ Sample asc according to obtained mode shares """
@@ -60,12 +65,22 @@ class ASCSampler(optuna.samplers.BaseSampler):
 
         asc = last.params[param_name]
 
+        step = self.calc_update(self.mode_share[param_name], last.user_attrs["%s_share" % param_name],
+                                self.mode_share[self.fixed_mode], last.user_attrs["%s_share" % self.fixed_mode])
+
         rate = 1.0
         if self.lr is not None:
-            rate = self.lr(float(len(completed) + 1))
 
-        asc += rate * self.calc_update(self.mode_share[param_name], last.user_attrs["%s_share" % param_name],
-                                self.mode_share[self.fixed_mode], last.user_attrs["%s_share" % self.fixed_mode])
+            rate = self.lr(float(len(completed) + 1), param_name, step, self.mode_share, trial, study)
+
+            # rate of None or 0 would be invalid
+            if not rate:
+                rate = 1            
+
+        trial.user_attrs["%s_rate" % param_name] = rate
+        trial.user_attrs["%s_step" % param_name] = step
+
+        asc += rate * step
 
         # Call constraint if present
         if self.constraints is not None and param_name in self.constraints:
@@ -185,6 +200,80 @@ def calc_mode_share(run, person_filter=None, map_trips=None):
 
     return df.groupby("main_mode").count()["trip_number"] / len(df)
 
+def study_as_df(study):
+    """ Convert study to dataframe """
+    completed = _completed_trials(study)
+
+    modes = study.user_attrs["modes"]
+    #fixed_mode = study.user_attrs["fixed_mode"]
+
+    data = []
+
+    for i, trial in enumerate(completed):
+
+        for j, m in enumerate(modes):
+
+            data.append({
+                "trial": i,
+                "mode": m,
+                "asc": trial.params[m],
+                "share": trial.user_attrs["%s_share" % m],
+                "error": trial.values[j]
+            })
+
+    return pd.DataFrame(data)
+
+def auto_lr_scheduler(start=9, interval=3, lookback=3, throttle=0.7):
+    """ Creates a function to be passed into the lr argument of the mode share study. This scheduler will
+        try to increase the step size automatically to speed up convergence. 
+        
+        :param start: earliest run to start adjusting
+        :param interval: apply every x runs
+        :param lookback: look at x recent runs for the interpolation
+        :param throttle: reduce estimate as step size will most likely be over-estimated
+        """
+            
+    def _fn(n, mode, update, mode_share, trial, study):
+    
+        if n < start:
+            return 1
+        
+        # Only run every x iterations
+        if (n - start) % interval != 0:
+            return 1
+        
+        df = study_as_df(study)        
+        df = df[df["mode"] == mode]
+    
+        updates = df.asc.diff(1)
+        changes = df.share.diff(1)
+
+        # ensure that all previous updates and all previous reactions have been in the same direction
+        # otherwise there will be instability
+        if not _same_sign(updates.iloc[-lookback:]) or not _same_sign(changes.iloc[-lookback:]):
+            return 1
+                
+        asc = df.asc.iloc[-1]
+    
+        x = df.share.iloc[-lookback:]
+        y = df.asc.iloc[-lookback:]
+        
+        A = np.vstack([x, np.ones(len(x))]).T
+        m, c = np.linalg.lstsq(A, y, rcond=None)[0]
+    
+        target = m*mode_share[mode] + c        
+        new_update = (target - asc) * throttle
+        
+        # updates must be in same direction
+        if np.sign(update) != np.sign(new_update):
+            return 1.0
+        
+        trial.user_attrs["%s_auto_lr" % mode] = True
+
+        return new_update / update
+
+
+    return _fn
 
 def create_mode_share_study(name: str, jar: str, config: str,
                             modes: Sequence[str], mode_share: Dict[str, float],
@@ -194,10 +283,10 @@ def create_mode_share_study(name: str, jar: str, config: str,
                             person_filter: Callable = None,
                             map_trips: Callable = None,
                             chain_runs: bool = False,
-                            lr: Callable = None,
-                            constraints: Dict[str, Callable] = None
+                            lr: Callable[[int, str, float, Dict[str, float], optuna.Trial, optuna.Study], float] = None,
+                            constraints: Dict[str, Callable] = None,                            
                             ) -> Tuple[optuna.Study, Callable]:
-    """ Create or loads an existing study for mode share calibration using asc values.
+    """ Create or load an existing study for mode share calibration using asc values.
 
     This function returns the study and optimization objective as tuple. Which can be used like this:
         study.optimize(obj, 10)
@@ -211,10 +300,10 @@ def create_mode_share_study(name: str, jar: str, config: str,
     :param args: additional arguments to the executable jar
     :param jvm_args: additional jvm args
     :param initial_asc: dict of initial asc values
-    :param person_filter: callable to filter person included in mode share
+    :param person_filter: callable to filter persons included in mode share
     :param map_trips: callable to modify trips included in mode share
     :param chain_runs: automatically use the output plans of each run as input for the next
-    :param lr: learning rate schedule, will be called with current run number
+    :param lr: learning rate schedule, will be called with (trial number, mode, asc update, mode_share, trial, study)
     :param constraints: constraints for each mode, must return asc and will be called with original asc
     :return: tuple of study and optimization objective.
     """
@@ -253,7 +342,7 @@ def create_mode_share_study(name: str, jar: str, config: str,
             # preserve order
             m = {"mode": mode}
 
-            asc = trial.suggest_float(mode, -2, 2)
+            asc = trial.suggest_float(mode, sys.float_info.min, sys.float_info.max)
             m["constant"] = asc
             params.append(m)
 
