@@ -7,6 +7,7 @@ import shutil
 import sys
 from os import path, makedirs
 from time import sleep
+from turtle import st
 
 from typing import Any, Sequence, Dict, Callable, Tuple
 
@@ -77,8 +78,8 @@ class ASCSampler(optuna.samplers.BaseSampler):
             if not rate:
                 rate = 1            
 
-        trial.user_attrs["%s_rate" % param_name] = rate
-        trial.user_attrs["%s_step" % param_name] = step
+        trial.set_user_attr("%s_rate" % param_name, rate)
+        trial.set_user_attr("%s_step" % param_name, step)
 
         asc += rate * step
 
@@ -114,6 +115,8 @@ def calc_adjusted_mode_share(sim: pd.DataFrame, survey: pd.DataFrame,
     sagg = sim.groupby(dist_var).sum()
     sagg['share'] = sagg[count_var] / np.sum(sagg[count_var])
 
+    # Rescale the distance groups of the survey data so that it matches the distance group distribution of the simulation
+    # The overall mode share after this adjustment will the resulting adjusted mode share
     def f(x, result=False):
         adj = survey.copy()
 
@@ -232,6 +235,11 @@ def auto_lr_scheduler(start=9, interval=3, lookback=3, throttle=0.7):
         :param lookback: look at x recent runs for the interpolation
         :param throttle: reduce estimate as step size will most likely be over-estimated
         """
+    if start < 1:
+        raise ValueError("Start must be at least 1")
+
+    if interval > start:
+        raise ValueError("Start must be less equal than interval")
             
     def _fn(n, mode, update, mode_share, trial, study):
     
@@ -266,9 +274,9 @@ def auto_lr_scheduler(start=9, interval=3, lookback=3, throttle=0.7):
         
         # updates must be in same direction
         if np.sign(update) != np.sign(new_update):
-            return 1.0
+            return 1
         
-        trial.user_attrs["%s_auto_lr" % mode] = True
+        trial.set_user_attr("%s_auto_lr" % mode, True)
 
         return new_update / update
 
