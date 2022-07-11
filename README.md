@@ -21,7 +21,10 @@ We are at the very early stages of building this library. The API will change, t
 
 2. In lieu of real documentation, here is some sample code to get you started. Good luck!
 
-### Read a network
+## Read a network
+
+This reads a MATSim network file in `.xml.gz` format, and creates an object with two
+dataframes: one for nodes, and one for links.
 
 ```python
 import matsim
@@ -49,13 +52,22 @@ net.links
 # 2   10000.0    3600.0      27.78  ...        3         2       4
 # ...
 
-geo = net.as_geo()  # combines links+nodes into a Geopandas dataframe with LINESTRINGs
+# Extra: create a Geopandas dataframe with LINESTRINGS for our network
+geo = net.as_geo()
 geo.plot()    # try this in a notebook to see your network!
 ```
 
 ![Switzerland](https://raw.githubusercontent.com/matsim-vsp/matsim-python-tools/master/docs/ch.png)
 
-### Stream through events
+## Event processing
+
+MATSim event files do not convert easily to Pandas dataframes, because every event type has a different set of properties, while dataframes expect a well-defined set of columns.
+
+Depending on your use case, your options are to either (1) filter specific event types into separate dataframes (one for each type), or (2) collect the data you need into python dictionaries and/or lists which can be converted to dataframes at the end (or just analyzed using regular Python).
+
+Be warned that the event ORDER in MATSim event files is important, so separating event types into separate dataframes is often a bad idea. Option (2) above is a bit more work but very likely what you need to do.
+
+The following code snippets show some examples of each.
 
 ```python
 # -------------------------------------------------------------------
@@ -63,13 +75,16 @@ geo.plot()    # try this in a notebook to see your network!
 
 # The event_reader returns a python generator function, which you can then
 # loop over without loading the entire events file in memory.
-# In this example let's sum up all 'entered link' events to get link volumes.
 #
-# NEW! Now supports .xml.gz and protobuf .pb.gz event file formats!
-
+# ---------
+# Example 1: Sum up all 'entered link' events to get link volumes.
+# Supports both .xml.gz and protobuf .pb.gz event file formats!
+# Only returns events of type 'entered link' and 'left link':
+from collections import defaultdict
 events = matsim.event_reader('output_events.xml.gz', types='entered link,left link')
 
-link_counts = defaultdict(int) # defaultdict creates a blank dict entry on first reference
+# defaultdict creates a blank dict entry on first reference; similar to {} but more friendly
+link_counts = defaultdict(int)
 
 for event in events:
     if event['type'] == 'entered link':
@@ -86,7 +101,76 @@ volumes.plot(column='count', figsize=(10,10), cmap='Wistia') #cmap is colormap
 
 ![Link Counts](https://raw.githubusercontent.com/matsim-vsp/matsim-python-tools/master/docs/counts.png)
 
-### Read plans
+---
+
+### Events example: Convert an event type to a dataframe
+
+```python
+# ---------
+# Example 2: Convert one event type to a dataframe
+
+# Only return actstart and actend events
+events = matsim.event_reader('output_events.xml.gz', types='actstart,actend')
+
+event_lists = { 'actstart': [], 'actend': [] }
+
+for event in events:
+    # Use event type as lookup string
+    eventType = event['type']
+    # Append the entire event to the list of events of this type
+    event_lists[eventType].append(event)
+
+# Convert lists to Pandas DataFrames - one for each type
+df_actstart = pd.DataFrame(event_lists['actstart'])
+df_actend = pd.DataFrame(event_lists['actend'])
+```
+
+---
+
+### Events example: Build lookups for event types I'm interested in
+
+```python
+# ---------
+# Example 3: Build lookups for event types I'm interested in
+
+import matsim
+import pandas as pd
+from collections import defaultdict
+
+events_file = "output_events.xml.gz"
+
+print("reading events:", events_file)
+
+# Read events - filter and return the listed event types only
+events = matsim.event_reader(
+    events_file,
+    types="DrtRequest submitted,PassengerRequest scheduled",
+)
+
+# Save drt_requests by person_id
+drt_requests = defaultdict(list)
+
+# Loop on all filtered events
+for event in events:
+    if event["type"] == "PassengerRequest scheduled":
+        drt_requests[event["person"]].append(event["vehicle"])
+
+
+# Convert to dataframe
+df_requests = pd.DataFrame.from_dict(drt_requests, orient="index").rename_axis('id')
+
+```
+
+## Plan files
+
+Each plan is returned as a tuple with its owning person (for now)
+
+- Use `selectedPlansOnly = True` to only return selected plans
+- The name of the element is in its `.tag` (e.g. 'plan', 'leg', 'route', 'attributes')
+- An element's attributes are accessed using `.attrib['attrib-name']`
+- Use the element's `.text` field to get data outside of attributes (e.g. a route's list of links)
+- Every element can be **iterated on** to get its children (e.g. the plan's activities and legs)
+- Always emits person, even if that person has no plans
 
 ```python
 # -------------------------------------------------------------------
@@ -117,7 +201,7 @@ for person, plan in plans:
 # ...
 ```
 
-### Write MATSim input XML files
+## Write MATSim input XML files
 
 ```python
 # -------------------------------------------------------------------
@@ -159,11 +243,11 @@ target = {
     "walk": 0.277,
     "bike": 0.175,
     "pt": 0.19,
-    "car": 0.359    
+    "car": 0.359
 }
 
-study, obj = calibration.create_mode_share_study("calib", "./matsim-scenario-1.0-SNAPSHOT.jar", 
-                                        "./scenarios/input/scenario-v1.0-10pct.config.xml", 
+study, obj = calibration.create_mode_share_study("calib", "./matsim-scenario-1.0-SNAPSHOT.jar",
+                                        "./scenarios/input/scenario-v1.0-10pct.config.xml",
                                         modes, fixed_mode, target)
 
 
