@@ -37,7 +37,7 @@ class ASCSampler(optuna.samplers.BaseSampler):
         self.initial_asc = initial_asc
         self.lr = lr
         self.constraints = constraints
-
+    
     def infer_relative_search_space(self, study, trial):
         return {}
 
@@ -52,9 +52,7 @@ class ASCSampler(optuna.samplers.BaseSampler):
 
         completed = _completed_trials(study)
 
-        # The first run is not evaluated
-        # This is more stable when chaining runs
-        if len(completed) <= 1:
+        if len(completed) == 0:
             asc = self.initial_asc[param_name]
 
             if self.constraints is not None and param_name in self.constraints:
@@ -215,14 +213,18 @@ def study_as_df(study):
     for i, trial in enumerate(completed):
 
         for j, m in enumerate(modes):
-
-            data.append({
+            entry = {
                 "trial": i,
                 "mode": m,
                 "asc": trial.params[m],
-                "share": trial.user_attrs["%s_share" % m],
                 "error": trial.values[j]
-            })
+            }
+
+            for k, v in trial.user_attrs.items():
+                if k.startswith(m + "_"):
+                    entry[k[len(m) + 1:]] = v
+
+            data.append(entry)
 
     return pd.DataFrame(data)
 
@@ -415,3 +417,23 @@ def create_mode_share_study(name: str, jar: str, config: str,
         return res
 
     return study, f
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Calibration CLI")
+    parser.add_argument('file', nargs=1, type=str, help="Path to input db")
+    parser.add_argument("--name", type=str, default="calib", help="Calibration name")
+    parser.add_argument("--output", default=None, help="Output path")
+    args = parser.parse_args()
+
+    study = optuna.load_study(
+            study_name=args.name, 
+            storage="sqlite:///%s" % args.file[0],
+    )
+
+    if not args.output:
+        args.output = args.file[0] + ".csv"
+
+    df = study_as_df(study)
+    df.to_csv(args.output, index=False)
