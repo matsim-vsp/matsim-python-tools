@@ -4,4 +4,4 @@ dist/
 *.egg-info
 .ipynb_checkpoints
 .build-sentinel
-
+.vscode
