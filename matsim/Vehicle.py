@@ -18,6 +18,8 @@ def vehicle_reader(filename):
     currentVehicleType = {}
     currentVehicle = {}
     
+    isParsingVehicleType = False
+    
     for xml_event, elem in tree:
         _, _, elemTag = elem.tag.partition('}')     # Removing xmlns tag from tag name
         
@@ -33,17 +35,22 @@ def vehicle_reader(filename):
         # VEHICLETYPES
         elif elemTag == 'vehicleType' and xml_event == 'start':
             utils.parseAttributes(elem, currentVehicleType)
-        
-        elif elemTag in ['capacity', 'length', 'passengerCarEquivalents', 'networkMode', 'flowEfficiencyFactor']:
-            utils.parseAttributes(elem, currentVehicleType)
+            isParsingVehicleType = True
         
         elif elemTag == 'attribute' and xml_event == 'start':
             currentVehicleType[elem.attrib['name']] = elem.text
+        
+        elif elemTag in ['length', 'width'] and xml_event == 'start':
+            currentVehicleType[elemTag] = elem.attrib['meter']
         
         elif elemTag == 'vehicleType' and xml_event == 'end':
             vehicleTypes.append(currentVehicleType)
             currentVehicleType = {}
             elem.clear()
+            isParsingVehicleType = False
+        
+        elif isParsingVehicleType and elemTag not in ['attribute', 'length', 'width']:
+            utils.parseAttributes(elem, currentVehicleType)
         
         
     vehicleTypes = pd.DataFrame.from_records(vehicleTypes)
