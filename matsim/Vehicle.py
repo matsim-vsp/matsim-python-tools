@@ -8,7 +8,8 @@ class Vehicle:
         self.vehicleTypes = vehicleTypes
         self.vehicles = vehicles
 
-# TODO definition
+# Returns vehicleTypes and vehicles dataframes
+# <vehicleType> attributes and children attributes are récursively added to the dataframe
 def vehicle_reader(filename):
     tree = ET.iterparse(xopen.xopen(filename, 'r'), events=['start','end'])
     
