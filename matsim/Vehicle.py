@@ -48,7 +48,7 @@ def vehicle_reader(filename):
             currentVehicleType = {}
             elem.clear()
             isParsingVehicleType = False
-        
+         
         elif isParsingVehicleType and elemTag not in ['attribute', 'length', 'width']:
             utils.parseAttributes(elem, currentVehicleType)
         
