@@ -2,6 +2,15 @@ import xopen
 import xml.etree.ElementTree as ET
 import pandas as pd
 
+
+class Plans:
+    def __init__(self, persons, plans, activities, legs, routes):
+        self.persons = persons
+        self.plans = plans
+        self.activities = activities
+        self.legs = legs
+        self.routes = routes
+
 def plan_reader(filename, selectedPlansOnly = False):
     person = None
     tree = ET.iterparse(xopen.xopen(filename), events=['start','end'])
@@ -70,7 +79,7 @@ def plan_reader_dataframe(filename, selectedPlansOnly = False):
     currentRouteId = 0
     
     for xml_event, elem in tree:
-        if elem.tag in ['person', 'leg', 'activity'] and xml_event == 'end':
+        if elem.tag in ['person', 'leg', 'activity', 'plan', 'route'] and xml_event == 'end':
             if isParsingPerson:
                 persons.append(currentPerson)
                 currentPerson = {}
@@ -86,6 +95,15 @@ def plan_reader_dataframe(filename, selectedPlansOnly = False):
                 currentLeg = {}
                 isParsingLeg = False
             
+            if elem.tag == 'plan':
+                if elem.attrib['selected'] == 'no' and selectedPlansOnly: continue
+                plans.append(currentPlan)
+                currentPlan = {}
+                
+            if elem.tag == 'route':
+                routes.append(currentRoute)
+                currentRoute = {}
+            
             elem.clear()
         
         # PERSON
@@ -96,15 +114,12 @@ def plan_reader_dataframe(filename, selectedPlansOnly = False):
         
         # PLAN
         elif elem.tag == 'plan':
+            if elem.attrib['selected'] == 'no' and selectedPlansOnly: continue
             currentPlanId += 1
             
             currentPlan['id'] = currentPlanId
             currentPlan['person_id'] = currentPersonId
             currentPlan = _parseAttributes(elem, currentPlan)
-            
-            plans.append(currentPlan)
-            currentPlan = {}
-            elem.clear()
         
         # ACTIVITY
         elif elem.tag == 'activity':
@@ -134,10 +149,6 @@ def plan_reader_dataframe(filename, selectedPlansOnly = False):
             currentRoute['leg_id'] = currentLegId
             currentRoute['value'] = elem.text
             currentRoute = _parseAttributes(elem, currentRoute)
-            
-            routes.append(currentRoute)
-            currentRoute = {}
-            elem.clear()
         
         
         # ATTRIBUTES
@@ -159,10 +170,5 @@ def plan_reader_dataframe(filename, selectedPlansOnly = False):
     legs = pd.DataFrame.from_records(legs)
     routes = pd.DataFrame.from_records(routes)
     
-    print(persons.head())
-    print(plans.head())
-    print(activities.head(30))
-    print(legs.head())
-    print(routes.head())
-    # return persons
+    return Plans(persons, plans, activities, legs, routes)
     
