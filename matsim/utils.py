@@ -11,6 +11,12 @@ PB_VERSION = {
     ContentType.EVENTS: (1, EventBatch)
 }
 
+# Parses attributes of an element and adds them to the given dictionary
+def parseAttributes(elem, dict):
+    for attrib in elem.attrib:
+        dict[attrib] = elem.attrib[attrib]
+    return dict
+
 
 def read_pb(filepath):
     """ Read MATSim protobuf file and yield each element """
