@@ -45,13 +45,13 @@ def _parseAttributes(elem, dict):
         dict[attrib] = elem.attrib[attrib]
     return dict
 
-# Returns dataframes with the following columns:
-# Person : ['id', 'age', 'bikeAvailability', 'carAvailability', 'censusHouseholdId', 'censusPersonId', 'employed', 'hasLicense', 'hasPtSubscription', 'householdId', 'householdIncome', 'htsHouseholdId', 'htsPersonId', 'isOutside', 'isPassenger', 'motorbikesAvailability', 'sex']
-# Plan : ['id', 'person_id', 'score', 'selected']
-# Activity : ['id', 'plan_id', 'type', 'link', 'facility', 'x', 'y', 'z', 'end_time', 'start_time', 'max_dur', 'typeBeforeCutting']
-# Leg : ['id', 'plan_id', 'mode', 'dep_time', 'trav_time', 'routingMode']
-# Route :
-# TODO  - Add an option to disable parsing <attribute> xml elements
+# Returns dataframes with the following relations between them:
+# Person : None
+# Plan : person_id
+# Activity : plan_id
+# Leg : plan_id
+# Route :leg_id
+# The column names of the dataframes are the same as the attribute names (<name:'value'> and <attribute> are parsed)
 def plan_reader_dataframe(filename, selectedPlansOnly = False):
     tree = ET.iterparse(xopen.xopen(filename), events=['start','end'])
     
