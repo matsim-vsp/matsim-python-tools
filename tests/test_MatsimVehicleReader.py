@@ -18,8 +18,8 @@ def test_vehicle_reader(filepath):
     vehicles = vehicle_dataframes.vehicles
     vehicles_counts_dataframes = vehicles['type'].value_counts()
     
-    expected_vehicle_types_columns = ['id', 'accessTimeInSecondsPerPerson', 'doorOperationMode', 'egressTimeInSecondsPerPerson', 'seats', 'standingRoomInPersons', 'length', 'width', 'pce', 'networkMode', 'factor']
-    expected_vehicles_columns = ['id','type']
+    EXPECTED_VEHICLE_TYPES_COLUMNS = ['id', 'accessTimeInSecondsPerPerson', 'doorOperationMode', 'egressTimeInSecondsPerPerson', 'seats', 'standingRoomInPersons', 'length', 'width', 'pce', 'networkMode', 'factor']
+    EXPECTED_VEHICLES_COLUMNS = ['id','type']
     EXPECTED_VEHICLETYPES_ROW_0_RESULT = {
         'id': 'Bus',
         'accessTimeInSecondsPerPerson': 0.5,
@@ -45,5 +45,5 @@ def test_vehicle_reader(filepath):
     assert vehicles_counts_dataframes.Rail == 1
     
     assert vehicle_types.iloc[0].to_dict() == EXPECTED_VEHICLETYPES_ROW_0_RESULT
-    np.testing.assert_array_equal(expected_vehicle_types_columns, vehicle_types.keys())
-    np.testing.assert_array_equal(expected_vehicles_columns, vehicles.keys())
+    np.testing.assert_array_equal(EXPECTED_VEHICLE_TYPES_COLUMNS, vehicle_types.keys())
+    np.testing.assert_array_equal(EXPECTED_VEHICLES_COLUMNS, vehicles.keys())
