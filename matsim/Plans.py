@@ -11,7 +11,7 @@ class Plans:
         self.legs = legs
         self.routes = routes
 
-def plan_reader(filename, selectedPlansOnly = False):
+def plan_reader(filename, selected_plans_only = False):
     person = None
     tree = ET.iterparse(xopen.xopen(filename), events=['start','end'])
     
@@ -27,7 +27,7 @@ def plan_reader(filename, selectedPlansOnly = False):
             this_person_has_plans = True
 
             # filter out unselected plans if asked to do so
-            if selectedPlansOnly and elem.attrib['selected'] == 'no': continue
+            if selected_plans_only and elem.attrib['selected'] == 'no': continue
 
             yield (person, elem)
 
@@ -52,7 +52,7 @@ def _parseAttributes(elem, dict):
 # Leg : plan_id
 # Route :leg_id
 # The column names of the dataframes are the same as the attribute names (<name:'value'> and <attribute> are parsed)
-def plan_reader_dataframe(filename, selectedPlansOnly = False):
+def plan_reader_dataframe(filename, selected_plans_only = False):
     tree = ET.iterparse(xopen.xopen(filename), events=['start','end'])
     
     persons = []
@@ -61,108 +61,108 @@ def plan_reader_dataframe(filename, selectedPlansOnly = False):
     legs = []
     routes = []
     
-    currentPerson = {}
-    currentPlan = {}
-    currentActivity = {}
-    currentLeg = {}
-    currentRoute = {}
+    current_person = {}
+    current_plan = {}
+    current_activity = {}
+    current_leg = {}
+    current_route = {}
     
     # Indicates current parent element while parsing <attribute> element
-    isParsingPerson = False
-    isParsingActivity = False
-    isParsingLeg = False
+    is_parsing_person = False
+    is_parsing_activity = False
+    is_parsing_leg = False
     
-    currentPersonId = None
-    currentPlanId = 0
-    currentActivityId = 0
-    currentLegId = 0
-    currentRouteId = 0
+    current_person_id = None
+    current_plan_id = 0
+    current_activity_id = 0
+    current_leg_id = 0
+    current_route_id = 0
     
     for xml_event, elem in tree:
         if elem.tag in ['person', 'leg', 'activity', 'plan', 'route'] and xml_event == 'end':
-            if isParsingPerson:
-                persons.append(currentPerson)
-                currentPerson = {}
-                isParsingPerson = False
+            if is_parsing_person:
+                persons.append(current_person)
+                current_person = {}
+                is_parsing_person = False
             
-            if isParsingActivity:
-                activities.append(currentActivity)
-                currentActivity = {}
-                isParsingActivity = False
+            if is_parsing_activity:
+                activities.append(current_activity)
+                current_activity = {}
+                is_parsing_activity = False
             
-            if isParsingLeg:
-                legs.append(currentLeg)
-                currentLeg = {}
-                isParsingLeg = False
+            if is_parsing_leg:
+                legs.append(current_leg)
+                current_leg = {}
+                is_parsing_leg = False
             
             if elem.tag == 'plan':
-                if elem.attrib['selected'] == 'no' and selectedPlansOnly: continue
-                plans.append(currentPlan)
-                currentPlan = {}
+                if elem.attrib['selected'] == 'no' and selected_plans_only: continue
+                plans.append(current_plan)
+                current_plan = {}
                 
             if elem.tag == 'route':
-                routes.append(currentRoute)
-                currentRoute = {}
+                routes.append(current_route)
+                current_route = {}
             
             elem.clear()
         
         # PERSON
         elif elem.tag == 'person':
-            currentPerson['id'] = elem.attrib['id']
-            currentPersonId = elem.attrib['id']
-            isParsingPerson = True
+            current_person['id'] = elem.attrib['id']
+            current_person_id = elem.attrib['id']
+            is_parsing_person = True
         
         # PLAN
         elif elem.tag == 'plan':
-            if elem.attrib['selected'] == 'no' and selectedPlansOnly: continue
-            currentPlanId += 1
+            if elem.attrib['selected'] == 'no' and selected_plans_only: continue
+            current_plan_id += 1
             
-            currentPlan['id'] = currentPlanId
-            currentPlan['person_id'] = currentPersonId
-            currentPlan = _parseAttributes(elem, currentPlan)
+            current_plan['id'] = current_plan_id
+            current_plan['person_id'] = current_person_id
+            current_plan = _parseAttributes(elem, current_plan)
         
         # ACTIVITY
         elif elem.tag == 'activity':
-            isParsingActivity = True
-            currentActivityId += 1
+            is_parsing_activity = True
+            current_activity_id += 1
             
-            currentActivity['id'] = currentActivityId
-            currentActivity['plan_id'] = currentPlanId
-            currentActivity = _parseAttributes(elem, currentActivity)
+            current_activity['id'] = current_activity_id
+            current_activity['plan_id'] = current_plan_id
+            current_activity = _parseAttributes(elem, current_activity)
             
         
         # LEG
         elif elem.tag == 'leg':
-            isParsingLeg = True
-            currentLegId += 1
+            is_parsing_leg = True
+            current_leg_id += 1
             
-            currentLeg['id'] = currentLegId
-            currentLeg['plan_id'] = currentPlanId
-            currentLeg = _parseAttributes(elem, currentLeg)
+            current_leg['id'] = current_leg_id
+            current_leg['plan_id'] = current_plan_id
+            current_leg = _parseAttributes(elem, current_leg)
         
         
         # ROUTE
         elif elem.tag == 'route':
-            currentRouteId += 1
+            current_route_id += 1
             
-            currentRoute['id'] = currentRouteId
-            currentRoute['leg_id'] = currentLegId
-            currentRoute['value'] = elem.text
-            currentRoute = _parseAttributes(elem, currentRoute)
+            current_route['id'] = current_route_id
+            current_route['leg_id'] = current_leg_id
+            current_route['value'] = elem.text
+            current_route = _parseAttributes(elem, current_route)
         
         
         # ATTRIBUTES
         elif elem.tag == 'attribute' and xml_event == 'end':
             attribs = elem.attrib
             
-            if isParsingActivity:
-                currentActivity[attribs['name']] = elem.text
+            if is_parsing_activity:
+                current_activity[attribs['name']] = elem.text
                 
-            elif isParsingLeg:
-                currentLeg[attribs['name']] = elem.text
+            elif is_parsing_leg:
+                current_leg[attribs['name']] = elem.text
             
-            elif isParsingPerson: # Parsing person
-                currentPerson[attribs['name']] = elem.text
+            elif is_parsing_person: # Parsing person
+                current_person[attribs['name']] = elem.text
     
     persons = pd.DataFrame.from_records(persons)
     plans = pd.DataFrame.from_records(plans)
