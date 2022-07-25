@@ -10,7 +10,7 @@ class Household:
 def houshold_reader(filename):
     tree = ET.iterparse(xopen.xopen(filename, 'r'), events=['start','end'])
     
-    housholds = []
+    households = []
     current_persons = []
     current_household = {}
     
@@ -22,7 +22,7 @@ def houshold_reader(filename):
                 utils.parse_attributes(elem, current_household)
             else:
                 current_household['members'] = current_persons
-                housholds.append(current_household)
+                households.append(current_household)
                 current_household = {}
                 current_persons = []
                 elem.clear()
@@ -31,7 +31,14 @@ def houshold_reader(filename):
             current_household[elem.attrib['name']] = elem.text
         
         elif elem_tag == 'personId' and xml_event == 'start':
-            current_persons.append(elem.attrib['refId'])
+            current_persons.append(int(elem.attrib['refId']))
     
-    housholds = pd.DataFrame.from_records(housholds)
-    return Household(housholds)
+    households = pd.DataFrame.from_records(households)
+    try:
+        households['id'] = households['id'].astype(int)
+        households['censusId'] = households['censusId'].astype(int)
+        households['household_income'] = households['household_income'].astype(float)
+    except KeyError:
+        print('dataframe types convertion failed')
+    
+    return Household(households)
