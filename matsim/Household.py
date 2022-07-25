@@ -21,7 +21,7 @@ def houshold_reader(filename):
             if xml_event == 'start':
                 utils.parse_attributes(elem, current_household)
             else:
-                current_household['persons'] = current_persons
+                current_household['members'] = current_persons
                 housholds.append(current_household)
                 current_household = {}
                 current_persons = []
