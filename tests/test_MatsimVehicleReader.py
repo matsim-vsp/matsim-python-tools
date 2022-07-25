@@ -1,4 +1,3 @@
-from isort import file
 import pytest
 import pathlib
 
