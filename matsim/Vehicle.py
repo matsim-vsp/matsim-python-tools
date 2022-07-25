@@ -4,58 +4,58 @@ import pandas as pd
 from matsim import utils
 
 class Vehicle:
-    def __init__(self, vehicleTypes, vehicles):
-        self.vehicleTypes = vehicleTypes
+    def __init__(self, vehicle_types, vehicles):
+        self.vehicle_types = vehicle_types
         self.vehicles = vehicles
 
-# Returns vehicleTypes and vehicles dataframes
+# Returns vehicle_types and vehicles dataframes
 # <vehicleType> attributes and children attributes are récursively added to the dataframe
 def vehicle_reader(filename):
     tree = ET.iterparse(xopen.xopen(filename, 'r'), events=['start','end'])
     
-    vehicleTypes = []
+    vehicle_types = []
     vehicles = []
     
-    currentVehicleType = {}
-    currentVehicle = {}
+    current_vehicle_type = {}
+    current_vehicle = {}
     
-    isParsingVehicleType = False
+    is_parsing_vehicle_type = False
     
     for xml_event, elem in tree:
-        _, _, elemTag = elem.tag.partition('}')     # Removing xmlns tag from tag name
+        _, _, elem_tag = elem.tag.partition('}')     # Removing xmlns tag from tag name
         
         # VEHICLES
-        if elemTag == 'vehicle' and xml_event == 'start':
-            utils.parseAttributes(elem, currentVehicle)
+        if elem_tag == 'vehicle' and xml_event == 'start':
+            utils.parse_attributes(elem, current_vehicle)
         
-        elif elemTag == 'vehicle' and xml_event == 'end':
-            vehicles.append(currentVehicle)
-            currentVehicle = {}
+        elif elem_tag == 'vehicle' and xml_event == 'end':
+            vehicles.append(current_vehicle)
+            current_vehicle = {}
             elem.clear()
             
         # VEHICLETYPES
-        elif elemTag == 'vehicleType' and xml_event == 'start':
-            utils.parseAttributes(elem, currentVehicleType)
-            isParsingVehicleType = True
+        elif elem_tag == 'vehicleType' and xml_event == 'start':
+            utils.parse_attributes(elem, current_vehicle_type)
+            is_parsing_vehicle_type = True
         
-        elif elemTag == 'attribute' and xml_event == 'start':
-            currentVehicleType[elem.attrib['name']] = elem.text
+        elif elem_tag == 'attribute' and xml_event == 'start':
+            current_vehicle_type[elem.attrib['name']] = elem.text
         
-        elif elemTag in ['length', 'width'] and xml_event == 'start':
-            currentVehicleType[elemTag] = elem.attrib['meter']
+        elif elem_tag in ['length', 'width'] and xml_event == 'start':
+            current_vehicle_type[elem_tag] = elem.attrib['meter']
         
-        elif elemTag == 'vehicleType' and xml_event == 'end':
-            vehicleTypes.append(currentVehicleType)
-            currentVehicleType = {}
+        elif elem_tag == 'vehicleType' and xml_event == 'end':
+            vehicle_types.append(current_vehicle_type)
+            current_vehicle_type = {}
             elem.clear()
-            isParsingVehicleType = False
+            is_parsing_vehicle_type = False
          
-        elif isParsingVehicleType and elemTag not in ['attribute', 'length', 'width']:
-            utils.parseAttributes(elem, currentVehicleType)
+        elif is_parsing_vehicle_type and elem_tag not in ['attribute', 'length', 'width']:
+            utils.parse_attributes(elem, current_vehicle_type)
         
         
-    vehicleTypes = pd.DataFrame.from_records(vehicleTypes)
+    vehicle_types = pd.DataFrame.from_records(vehicle_types)
     vehicles = pd.DataFrame.from_records(vehicles)
     
-    return Vehicle(vehicleTypes, vehicles)
+    return Vehicle(vehicle_types, vehicles)
         

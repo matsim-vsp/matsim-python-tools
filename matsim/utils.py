@@ -12,7 +12,7 @@ PB_VERSION = {
 }
 
 # Parses attributes of an element and adds them to the given dictionary
-def parseAttributes(elem, dict):
+def parse_attributes(elem, dict):
     for attrib in elem.attrib:
         dict[attrib] = elem.attrib[attrib]
     return dict
