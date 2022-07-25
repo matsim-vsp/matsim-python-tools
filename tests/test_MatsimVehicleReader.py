@@ -20,6 +20,19 @@ def test_vehicle_reader(filepath):
     
     expected_vehicle_types_columns = ['id', 'accessTimeInSecondsPerPerson', 'doorOperationMode', 'egressTimeInSecondsPerPerson', 'seats', 'standingRoomInPersons', 'length', 'width', 'pce', 'networkMode', 'factor']
     expected_vehicles_columns = ['id','type']
+    EXPECTED_VEHICLETYPES_ROW_0_RESULT = {
+        'id': 'Bus',
+        'accessTimeInSecondsPerPerson': 0.5,
+        'doorOperationMode': 'serial',
+        'egressTimeInSecondsPerPerson': 0.5,
+        'seats': 70,
+        'standingRoomInPersons': 0,
+        'length': 18.0,
+        'width': 2.5,
+        'pce': 2.8,
+        'networkMode': 'car',
+        'factor': 1.0
+    }
         
     # Checking total lengths
     assert len(vehicle_types) == 4
@@ -30,6 +43,7 @@ def test_vehicle_reader(filepath):
     assert vehicles_counts_dataframes.Bus == 43
     assert vehicles_counts_dataframes.Tram == 25
     assert vehicles_counts_dataframes.Rail == 1
-        
+    
+    assert vehicle_types.iloc[0].to_dict() == EXPECTED_VEHICLETYPES_ROW_0_RESULT
     np.testing.assert_array_equal(expected_vehicle_types_columns, vehicle_types.keys())
     np.testing.assert_array_equal(expected_vehicles_columns, vehicles.keys())

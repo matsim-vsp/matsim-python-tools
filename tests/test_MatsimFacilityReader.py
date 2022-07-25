@@ -27,6 +27,13 @@ def test_vehicle_reader(filepath):
     EXPECTED_WORK_FACILITIES_COUNT = 28
     
     EXPECTED_DATAFRAME_KEYS = ['id', 'linkId', 'x', 'y', 'type']
+    EXPECTED_ROW_84_RESULT = {
+        'id': 'edu_820',
+        'linkId': '58693',
+        'x': 353742.7,
+        'y': 6691356.6,
+        'type': 'education'
+    }
 
     assert len(facilities_dataframe) == EXPECTED_TOTAL_FACILITIES
     assert facilities_count_types_dataframe.education == EXPECTED_EDUCATION_FACILITIES_COUNT
@@ -37,4 +44,5 @@ def test_vehicle_reader(filepath):
     assert facilities_count_types_dataframe.shop == EXPECTED_SHOP_FACILITIES_COUNT
     assert facilities_count_types_dataframe.work == EXPECTED_WORK_FACILITIES_COUNT
     
+    assert facilities_dataframe.iloc[84].to_dict() == EXPECTED_ROW_84_RESULT
     np.testing.assert_array_equal(EXPECTED_DATAFRAME_KEYS, facilities_dataframe.keys())

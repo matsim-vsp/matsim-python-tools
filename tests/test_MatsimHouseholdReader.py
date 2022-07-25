@@ -15,7 +15,7 @@ def test_vehicle_reader(filepath):
     
     EXPECTED_TOTAL_HOUSEHOLDS = 112
     EXPECTED_HOUSEHOLD_COLUMNS = ['id', 'bikeAvailability', 'carAvailability', 'censusId', 'household_income', 'members']
-    ROW_84_EXPECTED_RESULT = {
+    EXPECTED_ROW_84_RESULT = {
         'id': 2293,
         'bikeAvailability': 'none',
         'carAvailability': 'some',
@@ -26,5 +26,5 @@ def test_vehicle_reader(filepath):
     
     
     assert len(household_dataframe) == EXPECTED_TOTAL_HOUSEHOLDS
-    assert household_dataframe.iloc[84].to_dict() == ROW_84_EXPECTED_RESULT
+    assert household_dataframe.iloc[84].to_dict() == EXPECTED_ROW_84_RESULT
     np.testing.assert_array_equal(EXPECTED_HOUSEHOLD_COLUMNS, household_dataframe.keys())
