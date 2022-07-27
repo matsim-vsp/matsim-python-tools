@@ -35,6 +35,6 @@ def facility_reader(filename, convert_dataframes_types=True):
             facilities['x'] = facilities['x'].astype(float)
             facilities['y'] = facilities['y'].astype(float)
         except KeyError:
-            print('dataframe types convertion failed')
+            print('dataframe types conversion failed')
     
     return Facility(facilities)

@@ -46,6 +46,6 @@ def houshold_reader(filename, convert_dataframes_types=True):
             households['censusId'] = households['censusId'].astype(int)
             households['household_income'] = households['household_income'].astype(float)
         except KeyError:
-            print('dataframe types convertion failed')
+            print('dataframe types conversion failed')
     
     return Household(households)

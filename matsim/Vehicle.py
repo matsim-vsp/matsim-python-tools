@@ -72,7 +72,7 @@ def vehicle_reader(filename, convert_dataframes_types=True):
             vehicle_types['pce'] = vehicle_types['pce'].astype(float)
             vehicle_types['factor'] = vehicle_types['factor'].astype(float)
         except KeyError:
-            print('dataframe types convertion failed')
+            print('dataframe types conversion failed')
     
     return Vehicle(vehicle_types, vehicles)
         
