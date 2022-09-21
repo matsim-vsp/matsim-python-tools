@@ -7,7 +7,6 @@ import shutil
 import sys
 from os import path, makedirs
 from time import sleep
-from turtle import st
 
 from typing import Any, Sequence, Dict, Callable, Tuple
 
@@ -294,7 +293,8 @@ def create_mode_share_study(name: str, jar: str, config: str,
                             map_trips: Callable = None,
                             chain_runs: bool = False,
                             lr: Callable[[int, str, float, Dict[str, float], optuna.Trial, optuna.Study], float] = None,
-                            constraints: Dict[str, Callable] = None,                            
+                            constraints: Dict[str, Callable] = None,
+                            storage: optuna.storages.RDBStorage = None
                             ) -> Tuple[optuna.Study, Callable]:
     """ Create or load an existing study for mode share calibration using asc values.
 
@@ -315,6 +315,7 @@ def create_mode_share_study(name: str, jar: str, config: str,
     :param chain_runs: automatically use the output plans of each run as input for the next
     :param lr: learning rate schedule, will be called with (trial number, mode, asc update, mode_share, trial, study)
     :param constraints: constraints for each mode, must return asc and will be called with original asc
+    :param storage: custom storage object to overwrite default sqlite backend
     :return: tuple of study and optimization objective.
     """
 
@@ -324,9 +325,14 @@ def create_mode_share_study(name: str, jar: str, config: str,
         for m in modes:
             initial_asc[m] = 0
 
+    # Set some custom arguments to prevent known errors on NFS
+    if storage is None:
+        storage = optuna.storages.RDBStorage(url="sqlite:///%s.db" % name, 
+            engine_kwargs={"connect_args": {"timeout": 100}, "isolation_level": "AUTOCOMMIT"})
+
     study = optuna.create_study(
             study_name=name, 
-            storage="sqlite:///%s.db" % name, 
+            storage=storage, 
             load_if_exists=True,
             directions=["minimize"] * len(modes),
             sampler=ASCSampler(mode_share, fixed_mode, initial_asc, lr, constraints)
