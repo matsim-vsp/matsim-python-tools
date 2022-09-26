@@ -34,7 +34,7 @@ def main(args):
 
             if len(iters) > 1:
 
-                print("Found %d iterations in %s" % (len(iters) - 1, dirpath))
+                print("Found %d iterations in %s" % (len(iters), dirpath))
 
                 delete = False
                 if args.dry_run:
