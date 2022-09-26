@@ -33,6 +33,8 @@ setup(
         'calibration':  ["optuna >= 2.7.0"]
     },
     tests_require=["assertpy", "pytest"],
-    entry_points={},
+    entry_points = {
+        'matsim-tools': ['matsim-tools=matsim.cli.main:main']
+    },
     long_description=README,
 )
