@@ -286,6 +286,25 @@ def auto_lr_scheduler(start=9, interval=3, lookback=3, throttle=0.7):
 
     return _fn
 
+def linear_lr_scheduler(start=0.6, end=1, interval=3):
+    """ Creates an lr scheduler that will interpolate linearly from start to end over the first n iterations.
+
+        :param start: Initial learning rate.
+        :param end: Finial learning rate to reach.
+        :param interval: Number of runs until end rate should be reached.
+    """
+    if interval < 2:
+        raise ValueError("N must be greater or equal 2.")
+
+    def _fn(n, *args, **kwargs):
+        
+        if n > interval:
+            return end
+
+        return start + (n - 1) * (end - start) / interval
+
+    return _fn
+
 def create_mode_share_study(name: str, jar: str, config: str,
                             modes: Sequence[str], mode_share: Dict[str, float],
                             fixed_mode: str = "walk",
