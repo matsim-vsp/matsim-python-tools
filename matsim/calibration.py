@@ -75,7 +75,10 @@ class ASCSampler(optuna.samplers.BaseSampler):
 
             # rate of None or 0 would be invalid
             if not rate:
-                rate = 1            
+                rate = 1
+
+            # numpy types need casting
+            rate = float(rate)
 
         trial.set_user_attr("%s_rate" % param_name, rate)
         trial.set_user_attr("%s_step" % param_name, step)
