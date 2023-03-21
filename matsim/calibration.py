@@ -10,7 +10,7 @@ import sys
 from os import path, makedirs
 from time import sleep
 
-from typing import Any, Sequence, Dict, Callable, Tuple
+from typing import Any, Union, Sequence, Dict, Callable, Tuple
 
 import yaml
 import numpy as np
@@ -315,7 +315,7 @@ def create_mode_share_study(name: str, jar: str, config: str,
                             initial_asc: Dict[str, float] = None,
                             person_filter: Callable = None,
                             map_trips: Callable = None,
-                            chain_runs: bool = False,
+                            chain_runs: Union[bool, int] = False,
                             lr: Callable[[int, str, float, Dict[str, float], optuna.Trial, optuna.Study], float] = None,
                             constraints: Dict[str, Callable] = None,
                             storage: optuna.storages.RDBStorage = None
@@ -336,7 +336,7 @@ def create_mode_share_study(name: str, jar: str, config: str,
     :param initial_asc: dict of initial asc values
     :param person_filter: callable to filter persons included in mode share
     :param map_trips: callable to modify trips included in mode share
-    :param chain_runs: automatically use the output plans of each run as input for the next
+    :param chain_runs: automatically use the output plans of each run as input for the next, either True or number of iterations
     :param lr: learning rate schedule, will be called with (trial number, mode, asc update, mode_share, trial, study)
     :param constraints: constraints for each mode, must return asc and will be called with original asc
     :param storage: custom storage object to overwrite default sqlite backend
@@ -410,9 +410,9 @@ def create_mode_share_study(name: str, jar: str, config: str,
                     out = path.abspath(out[0])
                     break
 
-            if out:
+            if out and (chain_runs is True or len(completed) % chain_runs == 0):
                 cmd += " --config:plans.inputPlansFile=" + out
-            else:
+            elif not out:
                 print("No output plans for chaining runs found.")
 
         # Extra whitespaces will break argument parsing
