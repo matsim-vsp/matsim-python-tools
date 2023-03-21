@@ -289,6 +289,22 @@ def auto_lr_scheduler(start=9, interval=3, lookback=3, throttle=0.7):
 
     return _fn
 
+def default_chain_scheduler(completed):
+    """ Default function to determin when to chain runs. """
+
+    n = len(completed)
+
+    if n <= 6:
+        return n % 2 == 0
+    
+    if n <= 15:
+        return n % 5 == 0
+
+    if n <= 50:
+        return n % 10 == 0
+
+    return False
+
 def linear_lr_scheduler(start=0.6, end=1, interval=3):
     """ Creates an lr scheduler that will interpolate linearly from start to end over the first n iterations.
 
@@ -315,7 +331,7 @@ def create_mode_share_study(name: str, jar: str, config: str,
                             initial_asc: Dict[str, float] = None,
                             person_filter: Callable = None,
                             map_trips: Callable = None,
-                            chain_runs: Union[bool, int] = False,
+                            chain_runs: Union[bool, int, Callable] = False,
                             lr: Callable[[int, str, float, Dict[str, float], optuna.Trial, optuna.Study], float] = None,
                             constraints: Dict[str, Callable] = None,
                             storage: optuna.storages.RDBStorage = None
@@ -336,7 +352,7 @@ def create_mode_share_study(name: str, jar: str, config: str,
     :param initial_asc: dict of initial asc values
     :param person_filter: callable to filter persons included in mode share
     :param map_trips: callable to modify trips included in mode share
-    :param chain_runs: automatically use the output plans of each run as input for the next, either True or number of iterations
+    :param chain_runs: automatically use the output plans of each run as input for the next, either True or number of iterations or callable
     :param lr: learning rate schedule, will be called with (trial number, mode, asc update, mode_share, trial, study)
     :param constraints: constraints for each mode, must return asc and will be called with original asc
     :param storage: custom storage object to overwrite default sqlite backend
@@ -410,7 +426,7 @@ def create_mode_share_study(name: str, jar: str, config: str,
                     out = path.abspath(out[0])
                     break
 
-            if out and (chain_runs is True or len(completed) % chain_runs == 0):
+            if out and (chain_runs is True or (callable(chain_runs) and chain_runs(completed)) or len(completed) % chain_runs == 0):
                 cmd += " --config:plans.inputPlansFile=" + out
             elif not out:
                 print("No output plans for chaining runs found.")
