@@ -327,7 +327,7 @@ def linear_lr_scheduler(start=0.6, end=1, interval=3):
 def create_mode_share_study(name: str, jar: str, config: str,
                             modes: Sequence[str], mode_share: Dict[str, float],
                             fixed_mode: str = "walk",
-                            args="", jvm_args="",
+                            args: Union[str, Callable]="", jvm_args="",
                             initial_asc: Dict[str, float] = None,
                             person_filter: Callable = None,
                             map_trips: Callable = None,
@@ -347,7 +347,7 @@ def create_mode_share_study(name: str, jar: str, config: str,
     :param modes: list of all relevant modes
     :param mode_share: dict of target mode shares
     :param fixed_mode: the fixed mode with asc=0
-    :param args: additional arguments to the executable jar
+    :param args: additional arguments to the executable jar, can also be a callback function
     :param jvm_args: additional jvm args
     :param initial_asc: dict of initial asc values
     :param person_filter: callable to filter persons included in mode share
@@ -410,14 +410,18 @@ def create_mode_share_study(name: str, jar: str, config: str,
         if os.path.exists(run_dir):
             shutil.rmtree(run_dir)
 
+        completed = _completed_trials(study)
+
+        # Call args if necesarry
+        run_args = args(completed) if callable(args) else args
+
         cmd = "java %s -jar %s run --config %s --yaml %s --output %s --runId %03d %s" \
-              % (jvm_args, jar, config, params_path, run_dir, trial.number, args)
+              % (jvm_args, jar, config, params_path, run_dir, trial.number, run_args)
 
         # Max fix extra whitespaces in args
         cmd = cmd.strip()
 
         if chain_runs:
-            completed = _completed_trials(study)
 
             out = None
             for t in reversed(completed):
