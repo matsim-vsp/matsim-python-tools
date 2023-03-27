@@ -1,0 +1,7 @@
+pandas>=1.4.4
+geopandas>=0.6.0
+shapely>=1.8.0
+xopen>=1.7.0
+protobuf>=3.10.0
+protobuf<=3.19.0
+optuna>=2.7.0
