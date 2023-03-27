@@ -19,7 +19,7 @@ def test_asc_sampler():
     z = [0.1, 0.5, 0.3, 0.1]
 
     # 100 iterations
-    for it in range(100):
+    for it in range(200):
 
         modes = np.argmax(utils + ascs + np.random.normal(size=(1000, 4)), axis=1)
         _, counts = np.unique(modes, return_counts=True)
