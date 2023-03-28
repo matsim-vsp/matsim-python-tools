@@ -430,7 +430,9 @@ def create_mode_share_study(name: str, jar: str, config: str,
                     out = path.abspath(out[0])
                     break
 
-            if out and (chain_runs is True or (callable(chain_runs) and chain_runs(completed)) or len(completed) % chain_runs == 0):
+            if out and (chain_runs is True or
+                         (callable(chain_runs) and chain_runs(completed)) or
+                         (type(chain_runs) == int and len(completed) % chain_runs == 0)):
                 cmd += " --config:plans.inputPlansFile=" + out
             elif not out:
                 print("No output plans for chaining runs found.")
