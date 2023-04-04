@@ -20,7 +20,11 @@ import optuna
 
 from optuna.trial import TrialState
 
-from analysis import calc_mode_share
+# This is there so that this file can be used standalone, as well as installed from the package
+try:
+    import analysis
+except ImportError:
+    from . import analysis
 
 def _completed_trials(study):
     completed = filter(lambda s: s.state == TrialState.COMPLETE, study.trials)
@@ -152,27 +156,6 @@ def calc_adjusted_mode_share(sim: pd.DataFrame, survey: pd.DataFrame,
 
     return res, df
 
-def read_leg_stats(run : str, person_filter=None, map_legs=None):
-    """ Reads leg statistic from run directory """
-
-    legs = glob.glob(run.rstrip("/") + "/*.output_trips.csv.gz")[0]
-    persons = glob.glob(run.rstrip("/") + "/*.output_persons.csv.gz")[0]
-
-    df = pd.read_csv(legs, sep=";")
-    dfp = pd.read_csv(persons, sep=";", index_col=0)
-
-    gdf = geopandas.GeoDataFrame(dfp, 
-            geometry=geopandas.points_from_xy(dfp.first_act_x, dfp.first_act_y)
-    )
-
-    if person_filter is not None:
-        gdf = person_filter(gdf)
-
-    if map_legs is not None:
-        df = map_legs(df)
-
-    return df
-
 
 def study_as_df(study):
     """ Convert study to dataframe """
@@ -298,8 +281,8 @@ def create_mode_share_study(name: str, jar: str, config: str,
                             fixed_mode: str = "walk",
                             args: Union[str, Callable]="", jvm_args="",
                             initial_asc: Dict[str, float] = None,
-                            person_filter: Callable = None,
-                            map_trips: Callable = None,
+                            transform_persons: Callable = None,
+                            transform_trips: Callable = None,
                             chain_runs: Union[bool, int, Callable] = False,
                             lr: Callable[[int, str, float, Dict[str, float], optuna.Trial, optuna.Study], float] = None,
                             constraints: Dict[str, Callable] = None,
@@ -319,8 +302,8 @@ def create_mode_share_study(name: str, jar: str, config: str,
     :param args: additional arguments to the executable jar, can also be a callback function
     :param jvm_args: additional jvm args
     :param initial_asc: dict of initial asc values
-    :param person_filter: callable to filter persons included in mode share
-    :param map_trips: callable to modify trips included in mode share
+    :param transform_persons: callable to filter persons included in mode share
+    :param transform_trips: callable to modify trips included in mode share
     :param chain_runs: automatically use the output plans of each run as input for the next, either True or number of iterations or callable
     :param lr: learning rate schedule, will be called with (trial number, mode, asc update, mode_share, trial, study)
     :param constraints: constraints for each mode, must return asc and will be called with original asc
@@ -431,7 +414,7 @@ def create_mode_share_study(name: str, jar: str, config: str,
         finally:
             p.terminate()
 
-        shares = calc_mode_share(run_dir, person_filter=person_filter, map_trips=map_trips)
+        shares = analysis.calc_mode_share(run_dir, transform_persons=transform_persons, transform_trips=transform_trips)
 
         print("Obtained mode shares:", shares)
 

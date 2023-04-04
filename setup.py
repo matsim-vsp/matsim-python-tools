@@ -34,7 +34,9 @@ setup(
     },
     tests_require=["assertpy", "pytest"],
     entry_points = {
-        'matsim-tools': ['matsim-tools=matsim.cli.main:main']
+        'console_scripts': [
+             'matsim-tools=matsim.cli.main:main'
+        ]
     },
     long_description=README,
 )

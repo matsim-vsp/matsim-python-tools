@@ -36,9 +36,30 @@ def read_trips_and_persons(run, transform_persons=None, transform_trips=None):
 
     return df, gdf
 
-def calc_mode_share(run, person_filter=None, map_trips=None):
+def read_leg_stats(run : str, transform_persons=None, transform_legs=None):
+    """ Reads leg statistic from run directory """
+
+    legs = glob.glob(run.rstrip("/") + "/*.output_trips.csv.gz")[0]
+    persons = glob.glob(run.rstrip("/") + "/*.output_persons.csv.gz")[0]
+
+    df = pd.read_csv(legs, sep=";")
+    dfp = pd.read_csv(persons, sep=";", index_col=0)
+
+    gdf = geopandas.GeoDataFrame(dfp, 
+            geometry=geopandas.points_from_xy(dfp.first_act_x, dfp.first_act_y)
+    )
+
+    if transform_persons is not None:
+        gdf = transform_persons(gdf)
+
+    if transform_legs is not None:
+        df = transform_legs(df)
+
+    return df
+
+def calc_mode_share(run, transform_persons=None, transform_trips=None):
     """ Calculates the mode share from output directory """    
-    df, _ = read_trips_and_persons(run, person_filter, map_trips)
+    df, _ = read_trips_and_persons(run, transform_persons, transform_trips)
 
     return df.groupby("main_mode").count()["trip_number"] / len(df)
 
