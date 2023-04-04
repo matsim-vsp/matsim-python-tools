@@ -20,6 +20,8 @@ import optuna
 
 from optuna.trial import TrialState
 
+from analysis import calc_mode_share
+
 def _completed_trials(study):
     completed = filter(lambda s: s.state == TrialState.COMPLETE, study.trials)
     return sorted(completed, key=lambda s: s.number)
@@ -171,39 +173,6 @@ def read_leg_stats(run : str, person_filter=None, map_legs=None):
 
     return df
 
-def read_trips_and_persons(run, person_filter=None, map_trips=None):    
-    """ Read trips and persons from run directory """
-    trips = glob.glob(run.rstrip("/") + "/*.output_trips.csv.gz")[0]
-
-    persons = glob.glob(run.rstrip("/") + "/*.output_persons.csv.gz")[0]
-
-    df = pd.read_csv(trips, sep=";",  dtype={"person": "str"})
-    dfp = pd.read_csv(persons, sep=";", dtype={"person": "str"})
-
-    gdf = geopandas.GeoDataFrame(dfp, 
-            geometry=geopandas.points_from_xy(dfp.first_act_x, dfp.first_act_y)
-    )
-
-    if person_filter is not None:
-        gdf = person_filter(gdf)
-
-    df = pd.merge(df, gdf, how="inner", left_on="person", right_on="person")
-
-    nans = df.main_mode.isnull()
-
-    # use longest distance mode if there is no main mode
-    df.loc[nans, "main_mode"] = df.loc[nans, "longest_distance_mode"]
-
-    if map_trips is not None:
-        df = map_trips(df)
-
-    return df, gdf
-
-def calc_mode_share(run, person_filter=None, map_trips=None):
-    """ Calculates the mode share from output directory """    
-    df, _ = read_trips_and_persons(run, person_filter, map_trips)
-
-    return df.groupby("main_mode").count()["trip_number"] / len(df)
 
 def study_as_df(study):
     """ Convert study to dataframe """
@@ -430,11 +399,18 @@ def create_mode_share_study(name: str, jar: str, config: str,
                     out = path.abspath(out[0])
                     break
 
-            if out and (chain_runs is True or
-                         (callable(chain_runs) and chain_runs(completed)) or
-                         (type(chain_runs) == int and len(completed) % chain_runs == 0)):
-                cmd += " --config:plans.inputPlansFile=" + out
-            elif not out:
+            if out:
+                last_chained = study.user_attrs.get("last_chained_run", None)
+                if (chain_runs is True or
+                            (callable(chain_runs) and chain_runs(completed)) or
+                            (type(chain_runs) == int and len(completed) % chain_runs == 0)):
+                    cmd += " --config:plans.inputPlansFile=" + out
+                    study.set_user_attr("last_chained_run", out)
+
+                elif last_chained:
+                    cmd += " --config:plans.inputPlansFile=" + last_chained
+
+            else:
                 print("No output plans for chaining runs found.")
 
         # Extra whitespaces will break argument parsing
