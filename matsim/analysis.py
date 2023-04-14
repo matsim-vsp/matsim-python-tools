@@ -10,8 +10,13 @@ import geopandas
 
 def read_trips_and_persons(run, transform_persons=None, transform_trips=None):    
     """ Read trips and persons from run directory """
-    trips = glob.glob(run.rstrip("/") + "/*.output_trips.csv.gz")[0]
 
+    # Return input as output
+    # This allows to re-use input for the calc functions
+    if type(run) is tuple and len(run) == 2:
+        return run
+
+    trips = glob.glob(run.rstrip("/") + "/*.output_trips.csv.gz")[0]
     persons = glob.glob(run.rstrip("/") + "/*.output_persons.csv.gz")[0]
 
     df = pd.read_csv(trips, sep=";",  dtype={"person": "str"})
@@ -66,7 +71,7 @@ def calc_mode_share(run, transform_persons=None, transform_trips=None):
 def calc_mode_stats(run, attrs=[], 
                     dist_bins = [0, 1000, 2000, 5000, 10000, 20000, np.inf],
                     dist_labels = ["0 - 1000", "1000 - 2000", "2000 - 5000", "5000 - 10000", "10000 - 20000", "20000+"],
-                    transform_persons=None, transform_trips=None):    
+                    transform_persons=None, transform_trips=None) -> pd.DataFrame:    
     """ Calculate detailed mode statistics """
 
     trips, _ = read_trips_and_persons(run, transform_persons, transform_trips)
@@ -83,12 +88,10 @@ def calc_mode_stats(run, attrs=[],
     aggr["share"] = aggr.n / aggr.n.sum()
     aggr["share"].fillna(0, inplace=True)
 
-
-
     return aggr
 
 
-def calc_population_stats(run, attrs=[], transform_persons=None, transform_trips=None):
+def calc_population_stats(run, attrs=[], transform_persons=None, transform_trips=None) -> pd.DataFrame:
     """ Calculate population statistics """
 
     trips, persons = read_trips_and_persons(run, transform_persons, transform_trips)
@@ -126,8 +129,11 @@ def calc_population_stats(run, attrs=[], transform_persons=None, transform_trips
         
         return pd.Series(data=data)
 
-
-    aggr = persons.groupby(attrs).apply(summarize)
+    if attrs:
+        aggr = persons.groupby(attrs).apply(summarize)
+    else:
+        aggr = summarize(persons)
+        aggr = aggr.to_frame(0).T
 
     aggr["population_share"] = aggr.n / aggr.n.sum()
     

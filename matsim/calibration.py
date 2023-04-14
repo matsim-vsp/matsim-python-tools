@@ -34,14 +34,15 @@ def _same_sign(x):
     x = x.to_numpy()
     return np.all(x >= 0) if x[0] >= 0 else np.all(x < 0)
 
-class ASCSampler(optuna.samplers.BaseSampler):
+class CalibrationSampler(optuna.samplers.BaseSampler):
     """ Sample asc according to obtained mode shares """
 
-    def __init__(self, mode_share, fixed_mode, initial_asc, lr, constraints):
+    def __init__(self, target, mode_share, fixed_mode, initial, lr, constraints):
 
+        self.target = target
         self.mode_share = mode_share
         self.fixed_mode = fixed_mode
-        self.initial_asc = initial_asc
+        self.initial = initial
         self.lr = lr
         self.constraints = constraints
     
@@ -54,25 +55,24 @@ class ASCSampler(optuna.samplers.BaseSampler):
 
     def sample_independent(self, study, trial, param_name, param_distribution):
 
-        if param_name == self.fixed_mode:
-            return 0
+        param, _, mode = param_name.partition("_")
 
         completed = _completed_trials(study)
-
         if len(completed) == 0:
-            asc = self.initial_asc[param_name]
+            initial = self.initial.get(param, {}).get(mode, 0)
 
-            if self.constraints is not None and param_name in self.constraints:
-                asc = self.constraints[param_name](asc)
+            if self.constraints is not None and param in self.constraints and mode in self.constraints[param]:
+                initial = self.constraints[param](initial)
 
-            return asc
+            return initial
 
         last = completed[-1]
+        last_param = last.params[param_name]
 
-        asc = last.params[param_name]
-
-        step = self.calc_update(self.mode_share[param_name], last.user_attrs["%s_share" % param_name],
-                                self.mode_share[self.fixed_mode], last.user_attrs["%s_share" % self.fixed_mode])
+        if param == "asc":
+            step = self.sample_asc(mode, last)
+        elif param == "dist":
+            step = self.sample_dist_util(mode, last)
 
         rate = 1.0
         if self.lr is not None:
@@ -89,16 +89,56 @@ class ASCSampler(optuna.samplers.BaseSampler):
         trial.set_user_attr("%s_rate" % param_name, rate)
         trial.set_user_attr("%s_step" % param_name, step)
 
-        asc += rate * step
+        last_param += rate * step
 
         # Call constraint if present
-        if self.constraints is not None and param_name in self.constraints:
-            asc = self.constraints[param_name](asc)
+        if self.constraints is not None and param in self.constraints and mode in self.constraints[param]:
+            last_param = self.constraints[param](last_param)
 
-        return asc
+        return last_param
+
+    def sample_asc(self, mode, last):
+        
+        if mode == self.fixed_mode:
+            return 0
+
+        step = self.calc_asc_update(self.mode_share.loc[mode], last.user_attrs["%s_share" % mode],
+                        self.mode_share.loc[self.fixed_mode], last.user_attrs["%s_share" % self.fixed_mode])
+        
+        return step
+
+    def sample_dist_util(self, mode, last):
+        
+        df = pd.DataFrame.from_dict(last.user_attrs["mode_stats"], orient="tight")
+        target = self.target[self.target["mode"] == mode].reset_index(drop=True).copy()
+
+        df = df.loc[target.dist_group].reset_index()
+
+        # Trips distances shares over all modes
+        # Correction factor is calculated here
+        ref_dist = self.target.groupby("dist_group").agg(share=("share", "sum"))
+        sim_dist = df.groupby("dist_group").agg(share=("share", "sum"))
+
+        correction = ref_dist.loc[target.dist_group] / sim_dist.loc[target.dist_group]
+
+        df = df[df.main_mode == mode].reset_index(drop=True).copy()
+
+        if "mean_dist" not in target.columns:
+            target["mean_dist"] = df.mean_dist
+
+        df["correction"] = correction.values
+
+        target.share = target.share / sum(target.share)
+        df.share = df.share / sum(df.share)
+
+        real = (df.mean_dist * df.share * df.correction).sum()
+        target = (target.mean_dist * target.share).sum()
+
+        # TODO: configurable parameter
+        return float(0.2 * (target - real) / (1000 * 1000))
 
     @staticmethod
-    def calc_update(z_i, m_i, z_0, m_0):
+    def calc_asc_update(z_i, m_i, z_0, m_0):
         """ Calculates the asc update for one step """
         # Update asc
         # (1) Let z_i be the observed share of mode i. (real data, to be reproduced)
@@ -276,17 +316,19 @@ def linear_lr_scheduler(start=0.6, end=1, interval=3):
 
     return _fn
 
-def create_mode_share_study(name: str, jar: str, config: str,
-                            modes: Sequence[str], mode_share: Dict[str, float],
+def create_mode_calibration_study(name: str,  params: set,
+                            jar: Union[str, os.PathLike], config: Union[str, os.PathLike],
+                            modes: Sequence[str], target: Union[str, os.PathLike],
                             fixed_mode: str = "walk",
                             args: Union[str, Callable]="", jvm_args="",
-                            initial_asc: Dict[str, float] = None,
+                            initial_params: Dict[str, Dict[str, float]] = None,
                             transform_persons: Callable = None,
                             transform_trips: Callable = None,
                             chain_runs: Union[bool, int, Callable] = False,
                             lr: Callable[[int, str, float, Dict[str, float], optuna.Trial, optuna.Study], float] = None,
-                            constraints: Dict[str, Callable] = None,
-                            storage: optuna.storages.RDBStorage = None
+                            constraints: Dict[str, Dict[str, Callable]] = None,
+                            storage: optuna.storages.RDBStorage = None,
+                            debug: bool = False
                             ) -> Tuple[optuna.Study, Callable]:
     """ Create or load an existing study for mode share calibration using asc values.
 
@@ -294,10 +336,11 @@ def create_mode_share_study(name: str, jar: str, config: str,
         study.optimize(obj, 10)
 
     :param name: name of the study
+    :param params: parameters to calibrate
     :param jar: path to executable jar file of the scenario
     :param config: path to config file to run
     :param modes: list of all relevant modes
-    :param mode_share: dict of target mode shares
+    :param target: csv file with target shares
     :param fixed_mode: the fixed mode with asc=0
     :param args: additional arguments to the executable jar, can also be a callback function
     :param jvm_args: additional jvm args
@@ -308,29 +351,35 @@ def create_mode_share_study(name: str, jar: str, config: str,
     :param lr: learning rate schedule, will be called with (trial number, mode, asc update, mode_share, trial, study)
     :param constraints: constraints for each mode, must return asc and will be called with original asc
     :param storage: custom storage object to overwrite default sqlite backend
+    :param debug: enable debug output
     :return: tuple of study and optimization objective.
     """
 
     # Init with 0
-    if initial_asc is None:
-        initial_asc = {}
-        for m in modes:
-            initial_asc[m] = 0
+    if initial_params is None:
+        for p in params:
+            for m in modes:
+                initial_params[m] = 0
 
     # Set some custom arguments to prevent known errors on NFS
     if storage is None:
         storage = optuna.storages.RDBStorage(url="sqlite:///%s.db" % name, 
             engine_kwargs={"connect_args": {"timeout": 100}, "isolation_level": "AUTOCOMMIT"})
+        
+    target = pd.read_csv(target)
+
+    mode_share = target.groupby("mode").agg(share=("share", "sum"))
 
     study = optuna.create_study(
             study_name=name, 
             storage=storage, 
             load_if_exists=True,
             directions=["minimize"] * len(modes),
-            sampler=ASCSampler(mode_share, fixed_mode, initial_asc, lr, constraints)
+            sampler=CalibrationSampler(target, mode_share, fixed_mode, initial_params, lr, constraints)
         )
 
     study.set_user_attr("modes", modes)
+    study.set_user_attr("params", params)
     study.set_user_attr("fixed_mode", fixed_mode)
 
     if not path.exists("params"):
@@ -339,23 +388,27 @@ def create_mode_share_study(name: str, jar: str, config: str,
     if not path.exists("runs"):
         makedirs("runs")
 
-    print("Running study with target shares:", mode_share)
+    print("Running study with target:", mode_share)
 
     def f(trial):
 
         params_path = path.join("params", "run%d.yaml" % trial.number)
-        params = []
+        mode_params = []
 
         for mode in modes:
             # preserve order
             m = {"mode": mode}
 
-            asc = trial.suggest_float(mode, sys.float_info.min, sys.float_info.max)
-            m["constant"] = asc
-            params.append(m)
+            if "asc" in params:
+                m["constant"] = trial.suggest_float("asc_" + mode, sys.float_info.min, sys.float_info.max)
+
+            if "util_dist" in params or "dist" in params:
+                m["marginalUtilityOfDistance_util_m"] = trial.suggest_float("dist_" + mode, sys.float_info.min, sys.float_info.max)
+
+            mode_params.append(m)
 
         with open(params_path, "w") as f:
-            yaml.dump({"planCalcScore": {"scoringParameters": [{"modeParams": params}]}}, f, sort_keys=False)
+            yaml.dump({"planCalcScore": {"scoringParameters": [{"modeParams": mode_params}]}}, f, sort_keys=False)
 
         run_dir = "runs/%03d" % trial.number
 
@@ -404,7 +457,9 @@ def create_mode_share_study(name: str, jar: str, config: str,
         if os.name != 'nt':
             cmd = cmd.split(" ")
 
-        p = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        p = subprocess.Popen(cmd, 
+                             stdout=sys.stdout if debug else subprocess.DEVNULL, 
+                             stderr=sys.stderr if debug else subprocess.DEVNULL)
         try:    
             while p.poll() is None:
                 sleep(1)
@@ -415,6 +470,9 @@ def create_mode_share_study(name: str, jar: str, config: str,
             p.terminate()
 
         shares = analysis.calc_mode_share(run_dir, transform_persons=transform_persons, transform_trips=transform_trips)
+        mode_stats = analysis.calc_mode_stats(run_dir, transform_persons=transform_persons, transform_trips=transform_trips)
+
+        trial.set_user_attr("mode_stats", mode_stats.to_dict(orient="tight"))
 
         print("Obtained mode shares:", shares)
 
@@ -423,7 +481,7 @@ def create_mode_share_study(name: str, jar: str, config: str,
 
         res = []
         for mode in modes:
-            res.append(abs(mode_share[mode] - trial.user_attrs["%s_share" % mode]))
+            res.append(abs(mode_share.loc[mode] - trial.user_attrs["%s_share" % mode]))
 
         return res
 
