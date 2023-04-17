@@ -34,6 +34,14 @@ def _same_sign(x):
     x = x.to_numpy()
     return np.all(x >= 0) if x[0] >= 0 else np.all(x < 0)
 
+def positive_constraint(mode, val):
+    """ Ensures parameter are positive """
+    return max(0, val)
+
+def negative_constraint(mode, val):
+    """ Ensure parameter are negative """
+    return min(0, val)
+
 class CalibrationSampler(optuna.samplers.BaseSampler):
     """ Sample asc according to obtained mode shares """
 
@@ -61,8 +69,8 @@ class CalibrationSampler(optuna.samplers.BaseSampler):
         if len(completed) == 0:
             initial = self.initial.get(param, {}).get(mode, 0)
 
-            if self.constraints is not None and param in self.constraints and mode in self.constraints[param]:
-                initial = self.constraints[param](initial)
+            if self.constraints is not None and param in self.constraints:
+                initial = self.constraints[param](mode, initial)
 
             return initial
 
@@ -92,8 +100,8 @@ class CalibrationSampler(optuna.samplers.BaseSampler):
         last_param += rate * step
 
         # Call constraint if present
-        if self.constraints is not None and param in self.constraints and mode in self.constraints[param]:
-            last_param = self.constraints[param](last_param)
+        if self.constraints is not None and param in self.constraints:
+            last_param = self.constraints[param](mode, last_param)
 
         return last_param
 
@@ -102,8 +110,8 @@ class CalibrationSampler(optuna.samplers.BaseSampler):
         if mode == self.fixed_mode:
             return 0
 
-        step = self.calc_asc_update(self.mode_share.loc[mode], last.user_attrs["%s_share" % mode],
-                        self.mode_share.loc[self.fixed_mode], last.user_attrs["%s_share" % self.fixed_mode])
+        step = self.calc_asc_update(self.mode_share.loc[mode].share, last.user_attrs["%s_share" % mode],
+                        self.mode_share.loc[self.fixed_mode].share, last.user_attrs["%s_share" % self.fixed_mode])
         
         return step
 
@@ -134,8 +142,10 @@ class CalibrationSampler(optuna.samplers.BaseSampler):
         real = (df.mean_dist * df.share * df.correction).sum()
         target = (target.mean_dist * target.share).sum()
 
+        # TODO: magnitude should depend on the asc
+
         # TODO: configurable parameter
-        return float(0.2 * (target - real) / (1000 * 1000))
+        return float(0.05 * (target - real) / (1000 * 1000))
 
     @staticmethod
     def calc_asc_update(z_i, m_i, z_0, m_0):
@@ -326,7 +336,7 @@ def create_mode_calibration_study(name: str,  params: set,
                             transform_trips: Callable = None,
                             chain_runs: Union[bool, int, Callable] = False,
                             lr: Callable[[int, str, float, Dict[str, float], optuna.Trial, optuna.Study], float] = None,
-                            constraints: Dict[str, Dict[str, Callable]] = None,
+                            constraints: Dict[str, Callable[[str, float], float]] = None,
                             storage: optuna.storages.RDBStorage = None,
                             debug: bool = False
                             ) -> Tuple[optuna.Study, Callable]:

@@ -27,7 +27,7 @@ setup(
     install_requires=[
         "protobuf >= 3.10.0",
         "xopen",
-        "pandas",  # "shapely", "geopandas >= 0.6.0"
+        "pandas >= 1.4.0",  # "shapely", "geopandas >= 0.6.0"
     ],
     extras_require = {
         'calibration':  ["optuna >= 2.7.0"]
