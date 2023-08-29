@@ -322,6 +322,8 @@ def create_mode_share_study(name: str, jar: str, config: str,
         storage = optuna.storages.RDBStorage(url="sqlite:///%s.db" % name, 
             engine_kwargs={"connect_args": {"timeout": 100}, "isolation_level": "AUTOCOMMIT"})
 
+    # TODO: normalize target share for given modes
+
     study = optuna.create_study(
             study_name=name, 
             storage=storage, 

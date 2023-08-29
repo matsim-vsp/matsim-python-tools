@@ -13,7 +13,7 @@ VERSION = (HERE / "VERSION").read_text()
 setup(
     version=VERSION,
     name="matsim-tools",
-    description="MATSim Agent-Based Transportation Simulation Framework - official python analysis tools",
+    description="MATSim Agent-Based Transportation Simulation Framework - official python tools",
     long_description_content_type="text/markdown",
     url="https://github.com/matsim-vsp/matsim-python-tools",
     author="VSP-Berlin",
@@ -29,13 +29,16 @@ setup(
         "xopen",
         "pandas",  # "shapely", "geopandas >= 0.6.0"
     ],
-    extras_require = {
-        'calibration':  ["optuna >= 2.7.0"]
+    extras_require={
+        'calibration': ["optuna >= 2.7.0"],
+        'scenariogen': ["sumolib", "traci", "lxml", "optax", "requests", "tqdm", "sklearn", "xgboost", "lightgbm",
+                        "sklearn-contrib-lightning", "numpy", "sympy"]
     },
     tests_require=["assertpy", "pytest"],
-    entry_points = {
+    entry_points={
         'console_scripts': [
-             'matsim-tools=matsim.cli.main:main'
+            'matsim-tools=matsim.cli.main:main'
+            'matsim-scenariogen=matsim.scenariogen:main'
         ]
     },
     long_description=README,

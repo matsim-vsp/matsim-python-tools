@@ -5,10 +5,11 @@ from argparse import ArgumentParser
 
 import clean_iters as ci
 
+
 def main():
     """ Main entry point. """
 
-    parser = ArgumentParser(prog='matsim-tools', description="MATSim ommand line util")
+    parser = ArgumentParser(prog='matsim-tools', description="MATSim command line util")
     subparsers = parser.add_subparsers(title="Subcommands")
 
     s1 = subparsers.add_parser(ci.METADATA[0], help=ci.METADATA[1])
