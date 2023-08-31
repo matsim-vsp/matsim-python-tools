@@ -1,14 +1,90 @@
 """ This module contains dataclasses and methods for reading and processing survey data.
 """
 
-__all__ = ["ParkingPosition", "HouseholdType", "EconomicStatus", "Gender", "Employment", "Availability", "Purpose",
+__all__ = ["read_all", "ParkingPosition", "HouseholdType", "EconomicStatus", "Gender", "Employment", "Availability", "Purpose",
            "TripMode", "DistanceGroup", "DurationGroup", "SourceDestinationGroup",
            "Household", "Person", "Trip", "Activity"]
+
+import os
+from typing import List, Union, Tuple
 
 from dataclasses import dataclass
 from enum import Enum, auto
 
 import numpy as np
+import pandas as pd
+
+
+def _batch(iterable: list, max_batch_size: int):
+    """ Batches an iterable into lists of given maximum size, yielding them one by one. """
+    batch = []
+    for element in iterable:
+        batch.append(element)
+        if len(batch) >= max_batch_size:
+            yield batch
+            batch = []
+    if len(batch) > 0:
+        yield batch
+
+
+def read_all(dirs: Union[str, List[str]], regio=None) -> Tuple[pd.DataFrame]:
+    """ Scan directories and read everything into one dataframe """
+
+    from .formats import srv, mid
+
+    hh = []
+    pp = []
+    tt = []
+
+    # Allow to use without list
+    if type(dirs) == str:
+        dirs = [dirs]
+
+    for d in dirs:
+
+        files = []
+
+        for format in (srv, mid):
+
+            # Collect all files for each format
+            for f in os.scandir(d):
+                fp = f.name
+                if not f.is_file():
+                    continue
+                if format.is_format(f):
+                    files.append(f.path)
+
+            files = sorted(files)
+
+            if len(files) % format.INPUT_FILES != 0:
+                print(files)
+                raise ValueError("File structure is wrong. Need exactly %d files per region." % format.INPUT_FILES)
+
+            for input_files in _batch(files, format.INPUT_FILES):
+                print("Reading", *input_files)
+
+                data = format.read_raw(*input_files)
+                df = format.convert(data, regio)
+
+                hh.append(df[0])
+                pp.append(df[1])
+                tt.append(df[2])
+
+    hh = pd.concat(hh, axis=0)
+    hh = hh[~hh.index.duplicated(keep='first')]
+    print("Households: ", len(hh))
+
+    pp = pd.concat(pp, axis=0)
+    pp = pp[~pp.index.duplicated(keep='first')]
+    pp.sort_index(inplace=True)
+    print("Persons: ", len(pp))
+
+    tt = pd.concat(tt, axis=0)
+    tt = tt[~tt.index.duplicated(keep='first')]
+    tt.sort_values(["p_id", "n"], inplace=True)
+    print("Trips: ", len(tt))
+
+    return hh, pp, tt
 
 
 class StrEnum(str, Enum):
@@ -87,6 +163,11 @@ class Purpose(AutoNameLowerStrEnum):
     """ Berufs-, Fach-, Hochschule """
     EDU_OTHER = auto()
     """ Andere Bildungseinrichtung """
+    EDU = auto()
+    """ All Edu """
+
+    SHOPPING = auto()
+    """ General non differentiated shopping """
 
     SHOP_DAILY = auto()
     SHOP_OTHER = auto()
@@ -97,6 +178,7 @@ class Purpose(AutoNameLowerStrEnum):
     OUTSIDE_RECREATION = auto()
     VISIT = auto()
     HOME = auto()
+    WAYBACK = auto()
     OTHER = auto()
 
 
@@ -206,6 +288,7 @@ class Household:
     type: HouseholdType
     region_type: int
     location: str
+    geom: object = None
 
 
 @dataclass

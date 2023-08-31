@@ -1,6 +1,125 @@
 # -*- coding: utf-8 -*-
 
-from . import *
+import os
+
+from .. import *
+
+# Has households, persons and trips
+INPUT_FILES = 3
+
+def is_format(f: os.DirEntry):
+    fp = f.name
+    if not f.path.endswith(".csv"):
+        return False
+    if "MiD" in f.name:
+        return False
+
+    return "_HH" in fp or "_P" in fp or "_W" in fp or "H2018" in fp or "P2018" in fp or "W2018" in fp
+
+
+def read_raw(household_file, person_file, trip_file):
+    """ Read the input files into format used by conversion """
+
+    hh = pd.read_csv(household_file, encoding="windows-1252", delimiter=";", decimal=",",
+                     quotechar="\"", low_memory=False, quoting=2)
+
+    p = pd.read_csv(person_file, encoding="windows-1252", delimiter=";", decimal=",",
+                    quotechar="\"", low_memory=False, quoting=2)
+
+    t = pd.read_csv(trip_file, encoding="windows-1252", delimiter=";", decimal=",",
+                    quotechar="\"", low_memory=False, quoting=2)
+
+    return hh, p, t
+
+
+def convert(data: tuple, regio=None):
+    """ Convert srv data to standardized survey format """
+
+    (hh, pp, tt) = data
+
+    if regio is not None:
+        regio = pd.read_csv(regio)
+
+    ps = []
+    for p in pp.itertuples():
+        ps.append(
+            Person(
+                str(int(p.HHNR)) + "_" + str(int(p.PNR)),
+                p.GEWICHT_P,
+                str(int(p.HHNR)),
+                int(p.V_ALTER),
+                SrV2018.gender(p.V_GESCHLECHT),
+                SrV2018.employment(p.V_ERW),
+                False if p.V_EINSCHR_NEIN else True,
+                SrV2018.yes_no(p.V_FUEHR_PKW),
+                SrV2018.veh_avail(p.V_PKW_VERFUEG),
+                Availability.YES if SrV2018.veh_avail(p.V_RAD_VERFUEG) == Availability.YES or SrV2018.veh_avail(
+                    p.V_ERAD_VERFUEG) == Availability.YES else SrV2018.veh_avail(p.V_RAD_VERFUEG),
+                SrV2018.veh_avail(p.V_FK_VERFUEG),
+                p.V_WOHNUNG == 1,
+                p.V_WOHNORT == 1,
+                int(p.STICHTAG_WTAG),
+                int(p.E_ANZ_WEGE)
+            )
+        )
+
+    ps = pd.DataFrame(ps).set_index("p_id")
+
+    random_state = np.random.RandomState(0)
+
+    hhs = []
+    for h in hh.itertuples():
+
+        # Invalid entries in certain files
+        if np.isnan(h.HHNR):
+            continue
+
+        hh_id = str(int(h.HHNR))
+        hhs.append(
+            Household(
+                hh_id,
+                h.GEWICHT_HH,
+                pint(h.V_ANZ_PERS),
+                pint(h.V_ANZ_PKW_PRIV + h.V_ANZ_PKW_DIENST),
+                pint(h.V_ANZ_RAD + h.V_ANZ_ERAD),
+                pint(h.V_ANZ_MOT125 + h.V_ANZ_MOPMOT + h.V_ANZ_SONST),
+                SrV2018.parking_position(h.V_STELLPL1),
+                SrV2018.economic_status(h.E_OEK_STATUS if "E_OEK_STATUS" in hh.keys() else -1, h.V_EINK,
+                                        ps[ps.hh_id == hh_id]),
+                SrV2018.household_type(h.E_HHTYP),
+                SrV2018.region_type(h, regio, random_state),
+                h.ST_CODE_NAME,
+            )
+        )
+
+    ts = []
+    for t in tt.itertuples():
+        # TODO: E_DAUER, E_GESCHW
+        # E_ANKUNFT
+        # TODO: double check
+        ts.append(
+            Trip(
+                str(int(t.HHNR)) + "_" + str(int(t.PNR)) + "_" + str(int(t.WNR)),
+                t.GEWICHT_W,
+                str(int(t.HHNR)) + "_" + str(int(t.PNR)),
+                str(int(t.HHNR)),
+                int(t.WNR),
+                int(t.STICHTAG_WTAG),
+                int(t.E_BEGINN),
+                int(t.E_DAUER),
+                float(t.GIS_LAENGE),
+                SrV2018.trip_mode(t.E_HVM),
+                SrV2018.trip_purpose(t.V_ZWECK),
+                SrV2018.sd_group(int(t.E_QZG_17)),
+                t.E_WEG_GUELTIG != 0 and t.GIS_LAENGE_GUELTIG != 0
+            )
+        )
+
+    return pd.DataFrame(hhs).set_index("hh_id"), ps, pd.DataFrame(ts).set_index("t_id")
+
+def pint(x):
+    """ Convert to positive integer"""
+    return max(0, int(x))
 
 
 class SrV2018:

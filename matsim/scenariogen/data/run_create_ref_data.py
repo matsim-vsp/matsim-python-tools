@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from . import *
-from .io import read_all_srv
+from .io import read_all
 from .preparation import _fill
 
 METADATA = "data-create-ref", "Extract and create reference data from surveys."
@@ -66,9 +66,13 @@ def summarize_mode_usage(x, trips):
 def setup(parser: argparse.ArgumentParser):
     parser.add_argument("dirs", nargs="+", help="Directories with survey data")
 
+def create(hh, persons, trips):
+    pass
+    # TODO
+
 
 def main(args):
-    all_hh, all_persons, all_trips = read_all_srv(args.dirs)
+    all_hh, all_persons, all_trips = read_all(args.dirs)
 
     # Filter person ad trips for area
     df = all_persons.join(all_hh, on="hh_id")

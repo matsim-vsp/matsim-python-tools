@@ -4,24 +4,21 @@
 import argparse
 import os
 
-from .io import read_all_srv
+from .io import read_all
 from .preparation import prepare_persons, create_activities
 
 METADATA = "data-extract-activities", "Extract activities and persons from survey data."
 
 
 def setup(parser: argparse.ArgumentParser):
-    parser.add_argument("-d", "--directory", default=os.path.expanduser(
-        "~/Development/matsim-scenarios/shared-svn/projects/matsim-berlin/data/SrV/"))
-    parser.add_argument("--regiostar", default=os.path.expanduser(
-        "~/Development/matsim-scenarios/shared-svn/projects/matsim-germany/zuordnung_plz_regiostar.csv"))
+    parser.add_argument("dirs", nargs="+", help="Directories with survey data")
+    parser.add_argument("--regiostar", default=None)
 
     parser.add_argument("--output", default="table", help="Output prefix")
 
 
 def main(args):
-    hh, persons, trips = read_all_srv([args.directory + "Berlin+Umland", args.directory + "Brandenburg"],
-                                      regio=args.regiostar)
+    hh, persons, trips = read_all(args.dirs, regio=args.regiostar)
 
     hh.to_csv(args.output + "-households.csv")
     trips.to_csv(args.output + "-trips.csv")
