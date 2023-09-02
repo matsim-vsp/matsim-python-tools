@@ -35,4 +35,4 @@ echo "command is $command"
 echo ""
 
 $command
-python python -u -m matsim.scenariogen sumo-collect-results $mode --input $f
+python -u -m matsim.scenariogen sumo-collect-results $mode --input $f
