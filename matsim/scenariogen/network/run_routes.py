@@ -8,12 +8,12 @@ from os.path import join, basename
 from traceback import print_exc
 
 from .utils import init_workload, setup_parser, create_args, write_scenario, filter_network_polygon, vehicle_parameter
+from .randomTrips import get_options, main as gen_trips
 
 import sumolib.net
 import traci  # noqa
 
 from sumolib import checkBinary  # noqa
-from randomTrips import get_options, main as gen_trips
 
 import lxml.etree as ET
 
