@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 
 from . import *
-from .io import read_all
 from .preparation import _fill
 
 METADATA = "data-create-ref", "Extract and create reference data from surveys."
