@@ -18,7 +18,7 @@ module add java/17
 jar="matsim-berlin-6.x-SNAPSHOT.jar"
 input="input/*"
 network="network.xml.gz"
-ft="sumo.net-edges.csv.gz"
+ft="network-ft.csv.gz"
 
 command="java -cp ${jar} org.matsim.prepare.network.FreeSpeedOptimizer ${input} --network ${network} --input-features ${ft}"
 
@@ -34,4 +34,4 @@ while ! nc -z localhost 9090; do
   sleep 0.5
 done
 
-python3.9 -u opt_freespeed.py
+python3.9 -u -m matsim.scenariogen network-opt-freespeed

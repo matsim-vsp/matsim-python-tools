@@ -96,7 +96,7 @@ def main(args):
         for i in outer:
             params, result = req(models["priority"].params, models["rbl"].params, models["traffic_light"].params)
 
-            name = "it%03d_mse_%.2f_rmse_%.2f.json" % (i, result["mse"], result["rmse"])
+            name = "it%03d_mse_%.3f_rmse_%.3f.json" % (i, result["mse"], result["rmse"])
 
             with open(os.path.join(out, name), "w") as f:
                 json.dump(params, f)

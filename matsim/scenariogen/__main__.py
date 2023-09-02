@@ -7,7 +7,9 @@ from .network import run_edges as sumo_edges
 from .network import run_intersections as sumo_intersections
 from .network import run_opt_freespeed
 from .network import run_routes as sumo_routes
+from .network import run_collect_results
 from .network import run_train_model
+
 from .data import run_extract_activities
 from .data import run_create_ref_data
 from .data import run_lookup_regiostar
@@ -32,6 +34,7 @@ def main():
     _add(subparsers, sumo_routes)
     _add(subparsers, sumo_intersections)
     _add(subparsers, run_train_model)
+    _add(subparsers, run_collect_results)
     _add(subparsers, run_opt_freespeed)
     _add(subparsers, run_extract_activities)
     _add(subparsers, run_create_ref_data)

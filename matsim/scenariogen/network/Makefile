@@ -6,7 +6,7 @@ export SUMO_HOME="env"
 PREFIX=$(abspath env)
 
 .ONESHELL: # Applies to every targets in the file!
-
+.DEFAULT_GOAL := all
 
 download:
 	mkdir -p build
@@ -38,7 +38,6 @@ sqlite:
 	SQLITE_ENABLE_COLUMN_METADATA=1 ./configure --prefix=$(PREFIX)
 	SQLITE_ENABLE_COLUMN_METADATA=1 make install
 
-
 xerces:
 	cd build/xerces-c-3.2.4
 
@@ -51,7 +50,15 @@ fox:
 	./configure --prefix=$(PREFIX)
 	make install
 
-gdal:
+proj:
+	cd build/proj-9.2.1
+
+	mkdir -p cmake-build && cd cmake-build
+	cmake -DCMAKE_INSTALL_PREFIX=$(PREFIX) -DCMAKE_PREFIX_PATH=$(PREFIX)\
+	 ../
+	make install
+
+gdal: sqlite proj
 	cd build/gdal-3.7.0
 
 	mkdir -p cmake-build && cd cmake-build
@@ -61,17 +68,7 @@ gdal:
 	 ../
 	make install
 
-proj:
-	cd build/proj-9.2.1
-
-	mkdir -p cmake-build && cd cmake-build
-	cmake -DCMAKE_INSTALL_PREFIX=$(PREFIX) -DCMAKE_PREFIX_PATH=$(PREFIX)\
-	 ../
-	make install
-
-
-
-sumo:
+sumo: gdal fox xerces
 	cd build/sumo-1.17.0
 
 	mkdir -p cmake-build && cd cmake-build
@@ -81,3 +78,5 @@ sumo:
 	 -DPROJ_INCLUDE_DIR=$(PREFIX)/include -DPROJ_LIBRARY=$(PREFIX)/lib64/libproj.so.25\
 	 ../
 	make install
+
+all: download sumo

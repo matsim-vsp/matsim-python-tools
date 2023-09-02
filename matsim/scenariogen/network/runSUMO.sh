@@ -6,14 +6,14 @@
 #$ -cwd
 #$ -pe mp 3
 #$ -l mem_free=3G
-#$ -N sumo-berlin
+#$ -N sumo
 
 date
 hostname
 
 source env/bin/activate
 
-ENV="/net/ils/matsim-berlin/capacity/env"
+ENV=$(realpath "env")
 
 export LD_LIBRARY_PATH="$ENV/lib64:$ENV/lib:$LD_LIBRARY_PATH"
 export SUMO_HOME="$ENV/share/sumo/"
@@ -24,14 +24,15 @@ total=$SGE_TASK_LAST
 
 mode="routes"
 scenario="base"
+network="sumo.net.xml"
 
 f="output-${mode}/scenario-$scenario"
 
-command="python -u run_${mode}.py ${mode}.txt --scenario $scenario --network sumo.net.xml --output $f --runner runner/${JOB_ID}${SGE_TASK_ID} --runner-index $idx --runner-total $total"
+command="python -u -m matsim.scenariogen sumo-${mode} ${mode}.txt --scenario $scenario --network $network --output $f --runner runner/${JOB_ID}${SGE_TASK_ID} --runner-index $idx --runner-total $total"
 
 echo ""
 echo "command is $command"
 echo ""
 
 $command
-python features.py $mode --input $f
+python python -u -m matsim.scenariogen sumo-collect-results $mode --input $f
