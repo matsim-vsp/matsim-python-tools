@@ -12,7 +12,7 @@
 date
 hostname
 
-source env/bin/activate
+source venv/bin/activate
 module add java/17
 
 jar="matsim-berlin-6.x-SNAPSHOT.jar"

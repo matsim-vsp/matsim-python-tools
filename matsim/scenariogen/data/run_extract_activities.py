@@ -2,9 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import argparse
-import os
 
-from .io import read_all
+from . import read_all
 from .preparation import prepare_persons, create_activities
 
 METADATA = "data-extract-activities", "Extract activities and persons from survey data."

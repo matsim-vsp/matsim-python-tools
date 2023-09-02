@@ -11,7 +11,7 @@
 date
 hostname
 
-source env/bin/activate
+source venv/bin/activate
 
 ENV=$(realpath "env")
 
