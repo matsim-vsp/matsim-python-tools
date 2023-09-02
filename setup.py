@@ -1,6 +1,6 @@
 import pathlib
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 # The directory containing this file
 HERE = pathlib.Path(__file__).parent
@@ -23,7 +23,7 @@ setup(
         "License :: OSI Approved :: GNU General Public License (GPL)",
         "Programming Language :: Python :: 3",
     ],
-    packages=["matsim", "matsim.pb"],
+    packages=["matsim"] + ["matsim." + x for x in find_packages(where="matsim")],
     install_requires=[
         "protobuf >= 3.10.0",
         "xopen",

@@ -34,4 +34,6 @@ while ! nc -z localhost 9090; do
   sleep 0.5
 done
 
+export PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
+
 python3.9 -u -m matsim.scenariogen network-opt-freespeed
