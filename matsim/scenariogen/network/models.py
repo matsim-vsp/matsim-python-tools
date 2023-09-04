@@ -396,17 +396,16 @@ def sympy_to_c(model):
     return c_code
 
 
-def model_to_java(name, model, scaler, df):
+def model_to_java(name, package, model, scaler, df):
     """ Convert to java source file """
     import m2cgen as m2c
 
-    name = name.capitalize()
-
-    code = m2c.export_to_java(model, "org.matsim.prepare.network", name)
+    code = m2c.export_to_java(model, package, name)
 
     code, params = replace_params(code)
 
-    imp = """import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
+    imp = """import org.matsim.application.prepare.network.opt.FeatureRegressor;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
     
 /**
 * Generated model, do not modify.

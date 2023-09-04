@@ -13,10 +13,10 @@ hostname
 
 source venv/bin/activate
 
-ENV=$(realpath "env")
+#ENV=$(realpath "env")
+#export LD_LIBRARY_PATH="$ENV/lib64:$ENV/lib:$LD_LIBRARY_PATH"
+#export SUMO_HOME="$ENV/share/sumo/"
 
-export LD_LIBRARY_PATH="$ENV/lib64:$ENV/lib:$LD_LIBRARY_PATH"
-export SUMO_HOME="$ENV/share/sumo/"
 export PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
 
 # use with -t 1-10

@@ -1,5 +1,6 @@
 
 # Setup the sumo environment
+# Deprecated: You can install sumo via pip
 
 export SUMO_HOME="env"
 
