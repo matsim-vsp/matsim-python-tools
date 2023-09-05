@@ -14,7 +14,7 @@ from requests import post
 from tqdm import trange
 
 
-URL = "http://localhost:9090"
+URL = "http://localhost:%d"
 
 METADATA = "network-opt-freespeed", "Optimize parameters for free-speed model. Server must be running before starting."
 
@@ -23,14 +23,14 @@ def as_list(array):
     return [float(x) for x in array]
 
 
-def req(priority, rbl, traffic_light):
+def req(port, priority, rbl, traffic_light):
     req = {
         "priority": as_list(priority),
-        "rbl": as_list(rbl),
+        "right_before_left": as_list(rbl),
         "traffic_light": as_list(traffic_light),
     }
 
-    res = post(URL, json=req)
+    res = post(URL % port, json=req)
     return req, res.json()
 
 
@@ -47,6 +47,7 @@ class Model:
 def setup(parser: argparse.ArgumentParser):
     parser.add_argument("--steps", type=int, help="Number of training steps", default="1000")
     parser.add_argument("--resume", help="File with parameters to to resume", default=None)
+    parser.add_argument("--port", type=int, help="Port to connect on", default=9090)
 
 
 def main(args):
@@ -67,7 +68,7 @@ def main(args):
         with open(args.resume) as f:
             resume = json.load(f)
 
-    for (module, name) in ((p, "priority"), (tl, "traffic_light"), (rbl, "rbl")):
+    for (module, name) in ((p, "priority"), (tl, "traffic_light"), (rbl, "right_before_left")):
         schedule = optax.exponential_decay(
             init_value=learning_rate, decay_rate=0.9,
             # Every 5% steps, decay 0.9
@@ -94,21 +95,23 @@ def main(args):
 
         # A simple update loop.
         for i in outer:
-            params, result = req(models["priority"].params, models["rbl"].params, models["traffic_light"].params)
+            params, result = req(args.port, models["priority"].params,
+                                 models["right_before_left"].params, models["traffic_light"].params)
 
-            name = "it%03d_mse_%.3f_rmse_%.3f.json" % (i, result["mse"], result["rmse"])
+            name = "it%03d_mae_%.3f_rmse_%.3f.json" % (i, result["mae"], result["rmse"])
 
             with open(os.path.join(out, name), "w") as f:
                 json.dump(params, f)
 
-            outer.set_postfix(mse=result["mse"], rmse=result["rmse"])
+            outer.set_postfix(mae=result["mae"], rmse=result["rmse"])
+            data = result["data"]
 
             for k, m in models.items():
 
-                xs = [d["x"] for d in result[k]]
+                xs = [d["x"] for d in data[k]]
                 xs = jnp.array(xs)
 
-                ys = [d["yTrue"] for d in result[k]]
+                ys = [d["yTrue"] for d in data[k]]
                 ys = jnp.array(ys)
 
                 for j in range(batches):

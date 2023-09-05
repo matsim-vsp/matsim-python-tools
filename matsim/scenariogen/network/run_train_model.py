@@ -184,7 +184,7 @@ def main(args):
 import org.matsim.application.prepare.network.opt.FeatureRegressor;
 import org.matsim.application.prepare.network.opt.NetworkModel;
 
-class %(name)s implements NetworkModel {
+public class %(name)s implements NetworkModel {
 	@Override
 	public FeatureRegressor capacity(String junctionType) {
 		return switch (junctionType) {

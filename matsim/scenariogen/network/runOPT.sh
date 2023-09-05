@@ -15,12 +15,21 @@ hostname
 source venv/bin/activate
 module add java/17
 
-jar="matsim-berlin-6.x-SNAPSHOT.jar"
+jar="matsim-[name]-SNAPSHOT.jar"
 input="input/*"
 network="network.xml.gz"
 ft="network-ft.csv.gz"
 
-command="java -cp ${jar} org.matsim.prepare.network.FreeSpeedOptimizer ${input} --network ${network} --input-features ${ft}"
+# Find a free port
+while
+  port=$(shuf -n 1 -i 49152-65535)
+  netstat -atun | grep -q "$port"
+do
+  continue
+done
+
+command="java -cp ${jar} org.matsim.application.prepare.network.opt.FreespeedOptServer ${input}
+ --network ${network} --input-features ${ft} --port ${port}"
 
 echo ""
 echo "command is $command"
@@ -28,12 +37,12 @@ echo ""
 
 $command &
 
-echo "Waiting to launch on 9090..."
+echo "Waiting to launch on ${port}..."
 
-while ! nc -z localhost 9090; do
+while ! nc -z localhost "${port}"; do
   sleep 0.5
 done
 
 export PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
 
-python3.9 -u -m matsim.scenariogen network-opt-freespeed
+python3.9 -u -m matsim.scenariogen network-opt-freespeed --port "${port}"
