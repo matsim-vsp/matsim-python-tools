@@ -32,7 +32,7 @@ setup(
     extras_require={
         'calibration': ["optuna >= 2.7.0"],
         'scenariogen': ["sumolib", "traci", "lxml", "optax", "requests", "tqdm", "sklearn", "xgboost", "lightgbm",
-                        "sklearn-contrib-lightning", "numpy", "sympy"]
+                        "sklearn-contrib-lightning", "numpy", "sympy", "m2cgen"]
     },
     tests_require=["assertpy", "pytest"],
     entry_points={

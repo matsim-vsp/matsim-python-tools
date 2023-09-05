@@ -21,11 +21,13 @@ name="Scenario"
 package="org.matsim.prepare.network"
 
 command="python -u -m matsim.scenariogen network-train-model
---name ${name} --package ${package}
---network-features ${ft} --input-intersections ${intersections} --input-routes ${routes}"
+ --name ${name} --package ${package}
+ --network-features ${ft} --input-intersections ${intersections} --input-routes ${routes}"
 
 echo ""
 echo "command is $command"
 echo ""
+
+export PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
 
 $command
