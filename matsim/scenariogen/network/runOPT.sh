@@ -17,6 +17,7 @@ module add java/17
 
 jar="matsim-[name]-SNAPSHOT.jar"
 input="input/*"
+model="org.matsim.prepare.network.Model"
 network="network.xml.gz"
 ft="network-ft.csv.gz"
 
@@ -29,7 +30,7 @@ do
 done
 
 command="java -cp ${jar} org.matsim.application.prepare.network.opt.FreespeedOptServer ${input}
- --network ${network} --input-features ${ft} --port ${port}"
+ --network ${network} --input-features ${ft} --model ${model} --port ${port}"
 
 echo ""
 echo "command is $command"
@@ -45,4 +46,4 @@ done
 
 export PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
 
-python3.9 -u -m matsim.scenariogen network-opt-freespeed --port "${port}"
+python -u -m matsim.scenariogen network-opt-freespeed --port "${port}"
