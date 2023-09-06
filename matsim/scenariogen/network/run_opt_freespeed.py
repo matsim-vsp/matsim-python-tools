@@ -13,7 +13,6 @@ from jax import grad, random
 from requests import post
 from tqdm import trange
 
-
 URL = "http://localhost:%d"
 
 METADATA = "network-opt-freespeed", "Optimize parameters for free-speed model. Server must be running before starting."
@@ -48,20 +47,29 @@ def setup(parser: argparse.ArgumentParser):
     parser.add_argument("--steps", type=int, help="Number of training steps", default=1500)
     parser.add_argument("--resume", help="File with parameters to to resume", default=None)
     parser.add_argument("--port", type=int, help="Port to connect on", default=9090)
+    parser.add_argument("--ref-model", required=False, default=None,
+                        help="Use an integrated model instead of importing", choices=["tree_regression"])
+    parser.add_argument("--learning-rate", type=float, help="Start learning rate", default=1e-4)
+    parser.add_argument("--output", help="Output folder for params", default="output-params")
 
 
 def main(args):
     batch_size = 128
     batches = 5
-    learning_rate = 1e-4
 
     models = {}
     resume = {}
 
-    # Import model, must be present on path
-    from gen_code import speedRelative_priority as p
-    from gen_code import speedRelative_right_before_left as rbl
-    from gen_code import speedRelative_traffic_light as tl
+    # TODO: test optimizing the custom model
+
+    if args.ref_model == "tree_regression":
+        from .ref_model import tree_regression as p
+        rbl = tl = p
+    else:
+        # Import model, must be present on path
+        from gen_code import speedRelative_priority as p
+        from gen_code import speedRelative_right_before_left as rbl
+        from gen_code import speedRelative_traffic_light as tl
 
     if args.resume:
         print("Resuming from", args.resume)
@@ -70,7 +78,7 @@ def main(args):
 
     for (module, name) in ((p, "priority"), (tl, "traffic_light"), (rbl, "right_before_left")):
         schedule = optax.exponential_decay(
-            init_value=learning_rate, decay_rate=0.9,
+            init_value=args.learning_rate, decay_rate=0.9,
             # Every 5% steps, decay 0.9
             transition_steps=int(batches * args.steps / 20), transition_begin=int(0.35 * args.steps * batches),
             staircase=False
@@ -86,7 +94,7 @@ def main(args):
 
     r = Random(42)
 
-    out = os.path.join("output-params", time.strftime("%Y%m%d-%H%M"))
+    out = os.path.join(args.output, time.strftime("%Y%m%d-%H%M"))
     os.makedirs(out, exist_ok=True)
 
     print("Writing to", out)
