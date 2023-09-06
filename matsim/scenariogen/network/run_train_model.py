@@ -19,15 +19,18 @@ METADATA = "network-train-model", "Train models for network capacity and freeflo
 def setup(parser: ArgumentParser):
     parser.add_argument("--n-trials", type=int, help="Number of trials", default=250)
     parser.add_argument("--name", help="Name of the model", default="Model")
-    parser.add_argument("--package", help="Packagename", default="org.matsim.prepare.network")
+    parser.add_argument("--package", help="Package name", default="org.matsim.prepare.network")
+    parser.add_argument("--output", help="Output folder", default="gen_code")
     parser.add_argument("--network-features", type=str, help="Path to file with edge features", required=True)
     parser.add_argument("--input-intersections", type=str, nargs="+", help="Path to file with intersection results",
                         required=True)
     parser.add_argument("--input-routes", type=str, nargs="+", help="Path to file with route results.", required=True)
+    parser.add_argument("--model-type", help="Type of model (features to use)", choices=["default", "extended"],
+                        default="full")
 
 
 def main(args):
-    dfs = build_datasets(args.network_features, args.input_intersections, args.input_routes)
+    dfs = build_datasets(args.network_features, args.input_intersections, args.input_routes, args.model_type)
     targets = dfs.keys()
 
     def get(idx, t):
@@ -45,7 +48,9 @@ def main(args):
 
         df = get(None, t)[0]
 
-        norm = ["length", "speed", "num_foes", "num_lanes", "junction_inc_lanes"]
+        norm = ["length", "speed", "num_lanes"]
+        if args.model_type == "full":
+            norm += ["num_foes", "junction_inc_lanes"]
 
         scaler[t] = sklearn.compose.ColumnTransformer([
             ("scale", _scaler, [df.columns.get_loc(x) for x in norm])  # column indices
@@ -171,14 +176,14 @@ def main(args):
 
         print("Best model", m)
 
-        makedirs("gen_code", exist_ok=True)
+        makedirs(args.output, exist_ok=True)
 
-        with open(join("gen_code", "__init__.py"), "w") as f:
+        with open(join(args.output, "__init__.py"), "w") as f:
             f.write("")
 
         name = args.name + "_" + t
 
-        with open(join("gen_code", args.name + ".java"), "w") as f:
+        with open(join(args.output, args.name + ".java"), "w") as f:
             f.write("""package %(package)s;
 
 import org.matsim.application.prepare.network.opt.FeatureRegressor;
@@ -207,13 +212,14 @@ public class %(name)s implements NetworkModel {
 }
 """ % dict(package=args.package, name=args.name))
 
-        with open(join("gen_code", name + ".java"), "w") as f:
+        with open(join(args.output, name + ".java"), "w") as f:
             code = model_to_java(name, args.package, m[0], scaler[t], get(None, t)[0])
             f.write(code)
 
-        with open(join("gen_code", t + ".py"), "w") as f:
+        with open(join(args.output, t + ".py"), "w") as f:
             code = model_to_py(t, m[0], scaler[t], get(None, t)[0])
             f.write("# -*- coding: utf-8 -*-\n")
+            f.write("\"\"\"%s\nError: %f\"\"\"\n" % m)
             f.write(code)
 
 

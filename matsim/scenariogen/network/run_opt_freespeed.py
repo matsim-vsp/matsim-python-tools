@@ -45,7 +45,7 @@ class Model:
 
 
 def setup(parser: argparse.ArgumentParser):
-    parser.add_argument("--steps", type=int, help="Number of training steps", default="1000")
+    parser.add_argument("--steps", type=int, help="Number of training steps", default=1500)
     parser.add_argument("--resume", help="File with parameters to to resume", default=None)
     parser.add_argument("--port", type=int, help="Port to connect on", default=9090)
 
@@ -86,7 +86,7 @@ def main(args):
 
     r = Random(42)
 
-    out = os.path.join("output_params", time.strftime("%Y%m%d-%H%M"))
+    out = os.path.join("output-params", time.strftime("%Y%m%d-%H%M"))
     os.makedirs(out, exist_ok=True)
 
     print("Writing to", out)

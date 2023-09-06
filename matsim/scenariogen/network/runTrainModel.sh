@@ -19,9 +19,11 @@ intersections="result_intersections_scenario-base.csv"
 routes="result_routes_scenario-base.csv"
 name="Scenario"
 package="org.matsim.prepare.network"
+output="gen_code"
+type="default"
 
 command="python -u -m matsim.scenariogen network-train-model
- --name ${name} --package ${package}
+ --name ${name} --package ${package} --model-type ${type} --output ${output}
  --network-features ${ft} --input-intersections ${intersections} --input-routes ${routes}"
 
 echo ""

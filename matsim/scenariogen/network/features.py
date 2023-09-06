@@ -6,12 +6,13 @@ import os.path
 import pandas as pd
 
 
-def build_datasets(network, inter, routes):
+def build_datasets(network, inter, routes, model_type):
     """ Build all datasets needed for training models"""
     ft = pd.read_csv(network)
 
     df_i = pd.concat([pd.merge(pd.read_csv(i), ft, left_on="fromEdgeId", right_on="linkId") for i in inter])
-    df_r = pd.concat([pd.merge(pd.read_csv(r).drop(columns=["speed"]), ft, left_on="edgeId", right_on="linkId") for r in routes])
+    df_r = pd.concat(
+        [pd.merge(pd.read_csv(r).drop(columns=["speed"]), ft, left_on="edgeId", right_on="linkId") for r in routes])
 
     result = {}
 
@@ -20,17 +21,17 @@ def build_datasets(network, inter, routes):
         if str(g) == "dead_end":
             continue
 
-        result["speedRelative_" + str(g)] = prepare_dataframe(aggr.get_group(g), target="speedRelative")
+        result["speedRelative_" + str(g)] = prepare_dataframe(aggr.get_group(g), model_type, target="speedRelative")
 
     aggr = df_i.groupby(["junction_type"])
     df_i["norm_cap"] = df_i.capacity / df_i.num_lanes
     for g in aggr.groups:
-        result["capacity_" + str(g)] = prepare_dataframe(aggr.get_group(g), target="norm_cap")
+        result["capacity_" + str(g)] = prepare_dataframe(aggr.get_group(g), model_type, target="norm_cap")
 
     return result
 
 
-def prepare_dataframe(df, target):
+def prepare_dataframe(df, model_type, target):
     """ Simple preprocessing """
 
     df = df.rename(columns={target: "target"})
@@ -53,14 +54,22 @@ def prepare_dataframe(df, target):
 
     df = df.drop(outliers.index)
 
-    # remove unneeded features
-    df = df[["target", "length", "speed", "change_speed",
-             "dir_l", "dir_r", "dir_s", "dir_multiple_s", "dir_exclusive",
-             "priority_lower", "priority_equal", "priority_higher", "num_to_links",
-             "num_foes", "num_lanes", "change_num_lanes", "junction_inc_lanes",
-             "is_secondary_or_higher", "is_primary_or_higher", "is_motorway", "is_link"]]
+    # select features based on model
+    if model_type == "extended":
+        df = df[["target", "length", "speed", "change_speed", "num_lanes", "change_num_lanes", "num_to_links",
+                 "dir_l", "dir_r", "dir_s", "dir_multiple_s", "dir_exclusive", "num_foes",
+                 "junction_inc_lanes", "priority_lower", "priority_equal", "priority_higher",
+                 "is_secondary_or_higher", "is_primary_or_higher", "is_motorway", "is_link"]]
+    elif model_type == "default":
+        df = df[["target", "length", "speed", "change_speed", "num_lanes", "change_num_lanes", "num_to_links",
+                 "junction_inc_lanes", "priority_lower", "priority_equal", "priority_higher",
+                 "is_secondary_or_higher", "is_primary_or_higher", "is_motorway", "is_link"]]
+
+    else:
+        raise ValueError("Illegal model type:" + model_type)
 
     return df
+
 
 def read_edges(folder):
     """ Combine resulting files for edges """
