@@ -26,7 +26,7 @@ def setup(parser: ArgumentParser):
                         required=True)
     parser.add_argument("--input-routes", type=str, nargs="+", help="Path to file with route results.", required=True)
     parser.add_argument("--model-type", help="Type of model (features to use)", choices=["default", "extended"],
-                        default="full")
+                        default="default")
 
 
 def main(args):
