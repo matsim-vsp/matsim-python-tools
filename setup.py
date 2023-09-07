@@ -33,7 +33,7 @@ setup(
         'calibration': ["optuna >= 2.7.0"],
         # m2cgen has problems with newer xgb, see this issue
         # https://github.com/BayesWitnesses/m2cgen/issues/581
-        'scenariogen': ["sumolib", "traci", "lxml", "optax", "requests", "tqdm", "sklearn", "xgboost==1.7.1", "lightgbm",
+        'scenariogen': ["sumolib", "traci", "lxml", "optax", "requests", "tqdm", "scikit-learn", "xgboost==1.7.1", "lightgbm",
                         "sklearn-contrib-lightning", "numpy", "sympy", "m2cgen"]
     },
     tests_require=["assertpy", "pytest"],
