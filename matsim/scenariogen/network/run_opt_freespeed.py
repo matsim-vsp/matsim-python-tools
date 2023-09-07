@@ -48,22 +48,21 @@ def setup(parser: argparse.ArgumentParser):
     parser.add_argument("--resume", help="File with parameters to to resume", default=None)
     parser.add_argument("--port", type=int, help="Port to connect on", default=9090)
     parser.add_argument("--ref-model", required=False, default=None,
-                        help="Use an integrated model instead of importing", choices=["tree_regression"])
+                        help="Use an integrated model instead of importing", choices=["tree"])
     parser.add_argument("--learning-rate", type=float, help="Start learning rate", default=1e-4)
+    parser.add_argument("--batch-size", type=int, help="Batch size", default=128)
     parser.add_argument("--output", help="Output folder for params", default="output-params")
 
 
 def main(args):
-    batch_size = 128
+    batch_size = args.batch_size
     batches = 5
 
     models = {}
     resume = {}
 
-    # TODO: test optimizing the custom model
-
-    if args.ref_model == "tree_regression":
-        from .ref_model import tree_regression as p
+    if args.ref_model == "tree":
+        from .ref_model import tree as p
         rbl = tl = p
     else:
         # Import model, must be present on path
@@ -106,7 +105,7 @@ def main(args):
             params, result = req(args.port, models["priority"].params,
                                  models["right_before_left"].params, models["traffic_light"].params)
 
-            name = "it%03d_mae_%.3f_rmse_%.3f.json" % (i, result["mae"], result["rmse"])
+            name = "it%04d_mae_%.3f_rmse_%.3f.json" % (i, result["mae"], result["rmse"])
 
             with open(os.path.join(out, name), "w") as f:
                 json.dump(params, f)
