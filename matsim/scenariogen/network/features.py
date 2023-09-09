@@ -8,7 +8,7 @@ import pandas as pd
 
 def build_datasets(network, inter, routes, model_type):
     """ Build all datasets needed for training models"""
-    ft = pd.read_csv(network)
+    ft = pd.concat([pd.read_csv(n) for n in network])
 
     df_i = pd.concat([pd.merge(pd.read_csv(i), ft, left_on="fromEdgeId", right_on="linkId") for i in inter])
     df_r = pd.concat(

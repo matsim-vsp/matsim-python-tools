@@ -21,7 +21,7 @@ def setup(parser: ArgumentParser):
     parser.add_argument("--name", help="Name of the model", default="Model")
     parser.add_argument("--package", help="Package name", default="org.matsim.prepare.network")
     parser.add_argument("--output", help="Output folder", default="gen_code")
-    parser.add_argument("--network-features", type=str, help="Path to file with edge features", required=True)
+    parser.add_argument("--network-features", type=str, nargs="+", help="Path to file with edge features", required=True)
     parser.add_argument("--input-intersections", type=str, nargs="+", help="Path to file with intersection results",
                         required=True)
     parser.add_argument("--input-routes", type=str, nargs="+", help="Path to file with route results.", required=True)
