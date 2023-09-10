@@ -5,8 +5,10 @@ import json
 import os
 import time
 from dataclasses import dataclass
+from functools import reduce
 from random import Random
 
+import numpy as np
 import jax.numpy as jnp
 import optax
 from jax import grad, random
@@ -29,8 +31,19 @@ def req(port, priority, rbl, traffic_light):
         "traffic_light": as_list(traffic_light),
     }
 
-    res = post(URL % port, json=req)
-    return req, res.json()
+    results = [post(URL % p, json=req).json() for p in port]
+
+    data = {}
+    for k in results[0]["data"].keys():
+        data[k] = reduce(lambda x, y: x + y, [d["data"][k] for d in results])
+
+    res = {
+        "rmse": np.mean([x["rmse"] for x in results]),
+        "mae": np.mean([x["mae"] for x in results]),
+        "data": data
+    }
+
+    return req, res
 
 
 @dataclass
@@ -46,7 +59,7 @@ class Model:
 def setup(parser: argparse.ArgumentParser):
     parser.add_argument("--steps", type=int, help="Number of training steps", default=1500)
     parser.add_argument("--resume", help="File with parameters to to resume", default=None)
-    parser.add_argument("--port", type=int, help="Port to connect on", default=9090)
+    parser.add_argument("--port", type=int, nargs="+", help="Port to connect on", default=[9090])
     parser.add_argument("--ref-model", required=False, default=None,
                         help="Use an integrated model instead of importing", choices=["tree"])
     parser.add_argument("--learning-rate", type=float, help="Start learning rate", default=1e-4)
