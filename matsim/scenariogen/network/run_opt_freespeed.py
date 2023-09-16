@@ -61,7 +61,7 @@ def setup(parser: argparse.ArgumentParser):
     parser.add_argument("--resume", help="File with parameters to to resume", default=None)
     parser.add_argument("--port", type=int, nargs="+", help="Port to connect on", default=[9090])
     parser.add_argument("--ref-model", required=False, default=None,
-                        help="Use an integrated model instead of importing", choices=["tree"])
+                        help="Use an integrated model instead of importing", choices=["tree", "germany"])
     parser.add_argument("--learning-rate", type=float, help="Start learning rate", default=1e-4)
     parser.add_argument("--batch-size", type=int, help="Batch size", default=128)
     parser.add_argument("--output", help="Output folder for params", default="output-params")
@@ -77,6 +77,10 @@ def main(args):
     if args.ref_model == "tree":
         from .ref_model import tree as p
         rbl = tl = p
+    elif args.ref_model == "germany":
+        from .ref_model.germany import speedRelative_priority as p
+        from .ref_model.germany import speedRelative_right_before_left as rbl
+        from .ref_model.germany import speedRelative_traffic_light as tl
     else:
         # Import model, must be present on path
         from gen_code import speedRelative_priority as p
