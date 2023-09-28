@@ -380,6 +380,8 @@ def create_mode_calibration_study(name: str,  params: set,
 
     mode_share = target.groupby("mode").agg(share=("share", "sum"))
 
+    # TODO: normalize target share for given modes
+
     study = optuna.create_study(
             study_name=name, 
             storage=storage, 
