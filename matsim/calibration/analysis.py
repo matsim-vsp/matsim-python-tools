@@ -3,9 +3,61 @@
 
 import glob
 
-import pandas as pd
-import numpy as np
+from typing import Any, Tuple
+
 import geopandas
+import numpy as np
+import pandas as pd
+
+
+def calc_adjusted_mode_share(sim: pd.DataFrame, survey: pd.DataFrame,
+                             count_var: str = "trips", dist_var: str = "dist_group") -> Tuple[Any, pd.DataFrame]:
+    """ This function can be used if the given input trip data has a different distance distribution than the survey data.
+        It will rescale the survey data to match simulated data, which allows to calculate an adjusted overall mode share.
+
+        :param sim: data frame containing shares for distance group and modes
+        :param survey: data frame containing shares from survey data
+        :param count_var: name of column containing the number of trips or share in 'sim'
+        :param dist_var: name of the column holding the distance group information
+        :return: tuple of optimization result and adjusted mode share
+    """
+    from scipy.optimize import minimize
+
+    sagg = sim.groupby(dist_var).sum()
+    sagg['share'] = sagg[count_var] / np.sum(sagg[count_var])
+
+    # Rescale the distance groups of the survey data so that it matches the distance group distribution of the simulation
+    # The overall mode share after this adjustment will the resulting adjusted mode share
+    def f(x, result=False):
+        adj = survey.copy()
+
+        for i, t in enumerate(x):
+            adj.loc[adj[dist_var] == sagg.index[i], "share"] *= t
+
+        adj.share = adj.share / np.sum(adj.share)
+
+        agg = adj.groupby(dist_var).sum()
+
+        # Minimized difference between adjusted and simulated distribution
+        err = sum((sagg.share - agg.share)**2)
+
+        if result:
+            return adj
+
+        return err
+
+    # One variable for each distance group
+    x0 = np.ones(len(sagg.index)) / len(sagg.index)
+
+    # Sum should be less than one
+    cons = [{'type': 'ineq', 'fun': lambda x:  1 - sum(x)}]
+    bnds = tuple((0, 1) for x in x0)
+
+    res = minimize(f, x0, method='SLSQP', bounds=bnds, constraints=cons)
+
+    df = f(res.x, True)
+
+    return res, df
 
 
 def read_trips_and_persons(run, transform_persons=None, transform_trips=None):    

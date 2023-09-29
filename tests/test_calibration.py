@@ -1,18 +1,11 @@
-import gzip
-import pathlib
-import math
-
-import pytest
-
 import numpy as np
-import pandas as pd
 
-from matsim.calibration import CalibrationSampler
+from matsim.calibration import ASCCalibrator
+
 
 def test_asc_sampler():
-
     # variables are not needed for this test
-    sampler = CalibrationSampler(None, None, None, None, None)
+    sampler = ASCCalibrator([], {}, {})
 
     np.random.seed(0)
 
@@ -37,6 +30,7 @@ def test_asc_sampler():
         print(share, ascs, err)
 
     assert err < 0.12
+
 
 if __name__ == "__main__":
     test_asc_sampler()
