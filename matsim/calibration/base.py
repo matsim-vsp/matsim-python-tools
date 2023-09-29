@@ -70,8 +70,8 @@ class CalibratorBase(ABC):
 
     def sample_initial(self, param: str) -> float:
         """  Sample initial value for parameter """
-        if param in self.initial:
-            return self.initial[param]
+        if param in self.initial.index:
+            return float(self.initial.loc[param])
 
         return 0
 

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """ Contains calibration related functions """
 
-__all__ = ["create_calibration", "ASCCalibrator"]
+__all__ = ["create_calibration", "ASCCalibrator", "utils"]
 
 import os
 import shutil
@@ -10,25 +10,15 @@ import subprocess
 import sys
 from os import path, makedirs
 from time import sleep
-from typing import Union, Sequence, Callable
+from typing import Union, Sequence, Callable, Tuple
 
 import optuna
 import yaml
 from optuna.trial import TrialState
 
-from .analysis import *
+from . import utils
 from .base import CalibratorBase
 from .calib_asc import ASCCalibrator
-
-
-def _completed_trials(study):
-    completed = filter(lambda s: s.state == TrialState.COMPLETE, study.trials)
-    return sorted(completed, key=lambda s: s.number)
-
-
-def _same_sign(x):
-    x = x.to_numpy()
-    return np.all(x >= 0) if x[0] >= 0 else np.all(x < 0)
 
 
 class CalibrationSampler(optuna.samplers.BaseSampler):
@@ -49,7 +39,7 @@ class CalibrationSampler(optuna.samplers.BaseSampler):
         prefix, _, param = param_name.partition("_")
         c : CalibratorBase = self.calibrators[prefix]
 
-        completed = _completed_trials(study)
+        completed = utils.completed_trials(study)
         if len(completed) == 0:
             initial = c.sample_initial(param)
 
@@ -87,71 +77,6 @@ class CalibrationSampler(optuna.samplers.BaseSampler):
         return last_param
 
 
-
-def study_as_df(study):
-    """ Convert study to dataframe """
-    completed = _completed_trials(study)
-
-    modes = study.user_attrs["modes"]
-    # fixed_mode = study.user_attrs["fixed_mode"]
-
-    data = []
-
-    for i, trial in enumerate(completed):
-
-        for j, m in enumerate(modes):
-            entry = {
-                "trial": i,
-                "mode": m,
-                "asc": trial.params[m],
-                "error": trial.values[j]
-            }
-
-            for k, v in trial.user_attrs.items():
-                if k.startswith(m + "_"):
-                    entry[k[len(m) + 1:]] = v
-
-            data.append(entry)
-
-    return pd.DataFrame(data)
-
-def default_chain_scheduler(completed):
-    """ Default function to determine when to chain runs. """
-
-    n = len(completed)
-
-    if n <= 6:
-        return n % 2 == 0
-
-    if n <= 15:
-        return n % 5 == 0
-
-    if n <= 50:
-        return n % 10 == 0
-
-    return False
-
-
-def linear_lr_scheduler(start=0.6, end=1, interval=3):
-    """ Creates a lr scheduler that will interpolate linearly from start to end over the first n iterations.
-
-        :param start: Initial learning rate.
-        :param end: Finial learning rate to reach.
-        :param interval: Number of runs until end rate should be reached.
-    """
-    if interval < 2:
-        raise ValueError("N must be greater or equal 2.")
-
-    def _fn(n, *args, **kwargs):
-
-        if n > interval:
-            return end
-
-        return start + (n - 1) * (end - start) / interval
-
-    return _fn
-
-
 def create_calibration(name: str, calibrate: Union[CalibratorBase, Sequence[CalibratorBase]],
                        jar: Union[str, os.PathLike], config: Union[str, os.PathLike],
                        args: Union[str, Callable] = "", jvm_args="",
@@ -159,6 +84,7 @@ def create_calibration(name: str, calibrate: Union[CalibratorBase, Sequence[Cali
                        transform_trips: Callable = None,
                        chain_runs: Union[bool, int, Callable] = False,
                        storage: optuna.storages.RDBStorage = None,
+                       custom_cli: Callable = None,
                        debug: bool = False
                        ) -> Tuple[optuna.Study, Callable]:
     """ Create or load an existing study for mode share calibration using asc values.
@@ -176,6 +102,7 @@ def create_calibration(name: str, calibrate: Union[CalibratorBase, Sequence[Cali
     :param transform_trips: callable to modify trips included in mode share
     :param chain_runs: automatically use the output plans of each run as input for the next, either True or number of iterations or callable
     :param storage: custom storage object to overwrite default sqlite backend
+    :param custom_cli: the scenario is not a matsim application and needs a different command line syntax
     :param debug: enable debug output
     :return: tuple of study and optimization objective.
     """
@@ -189,6 +116,12 @@ def create_calibration(name: str, calibrate: Union[CalibratorBase, Sequence[Cali
         storage = optuna.storages.RDBStorage(url="sqlite:///%s.db" % name,
                                              engine_kwargs={"connect_args": {"timeout": 100},
                                                             "isolation_level": "AUTOCOMMIT"})
+
+    if not os.access(jar, os.R_OK):
+        raise ValueError("Can not access JAR File: %s" % jar)
+
+    if not os.access(config, os.R_OK):
+        raise ValueError("Can not access config File: %s" % config)
 
     study = optuna.create_study(
         study_name=name,
@@ -225,13 +158,16 @@ def create_calibration(name: str, calibrate: Union[CalibratorBase, Sequence[Cali
         if os.path.exists(run_dir):
             shutil.rmtree(run_dir)
 
-        completed = _completed_trials(study)
+        completed = utils.completed_trials(study)
 
         # Call args if necessary
         run_args = args(completed) if callable(args) else args
 
-        cmd = "java %s -jar %s run --config %s --yaml %s --output %s --runId %03d %s" \
-              % (jvm_args, jar, config, params_path, run_dir, trial.number, run_args)
+        if custom_cli:
+            cmd = custom_cli(jvm_args, jar, config, params_path, run_dir, trial.number, run_args)
+        else:
+            cmd = "java %s -jar %s run --config %s --yaml %s --output %s --runId %03d %s" \
+                  % (jvm_args, jar, config, params_path, run_dir, trial.number, run_args)
 
         # Max fix extra whitespaces in args
         cmd = cmd.strip()

@@ -8,7 +8,6 @@ import optuna
 from .base import CalibratorBase, CalibrationInput
 from .analysis import calc_mode_share
 
-
 class ASCCalibrator(CalibratorBase):
     """ Calibrates the alternative specific constant for desired modes """
 
