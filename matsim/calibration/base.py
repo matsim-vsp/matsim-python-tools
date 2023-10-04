@@ -11,6 +11,8 @@ import pandas as pd
 # Type alias for input variables
 CalibrationInput = Union[str, os.PathLike, dict, pd.DataFrame]
 
+def to_float(x):
+    return float(x.iloc[0]) if isinstance(x, pd.Series) else float(x)
 
 class CalibratorBase(ABC):
     """ Base class for calibrators.  """
@@ -71,7 +73,7 @@ class CalibratorBase(ABC):
     def sample_initial(self, param: str) -> float:
         """  Sample initial value for parameter """
         if param in self.initial.index:
-            return float(self.initial.loc[param])
+            return self.initial.loc[param]
 
         return 0
 

@@ -15,11 +15,12 @@ from time import sleep
 from typing import Union, Sequence, Callable, Tuple
 
 import optuna
+import pandas as pd
 import yaml
 from optuna.trial import TrialState
 
 from . import utils
-from .base import CalibratorBase
+from .base import CalibratorBase, to_float
 from .calib_asc import ASCCalibrator
 
 
@@ -43,7 +44,7 @@ class CalibrationSampler(optuna.samplers.BaseSampler):
 
         completed = utils.completed_trials(study)
         if len(completed) == 0:
-            initial = c.sample_initial(param)
+            initial = to_float(c.sample_initial(param))
 
             if c.constraints is not None and param in c.constraints:
                 initial = c.constraints[param](param, initial)
@@ -53,7 +54,7 @@ class CalibrationSampler(optuna.samplers.BaseSampler):
         last = completed[-1]
         last_param = last.params[param_name]
 
-        step = c.update_step(param, last)
+        step = to_float(c.update_step(param, last))
 
         rate = 1.0
         if c.lr is not None:
@@ -65,7 +66,7 @@ class CalibrationSampler(optuna.samplers.BaseSampler):
                 rate = 1
 
             # numpy types need casting
-            rate = float(rate)
+            rate = to_float(rate)
 
         trial.set_user_attr("%s_rate" % param_name, rate)
         trial.set_user_attr("%s_step" % param_name, step)
@@ -224,7 +225,7 @@ def create_calibration(name: str, calibrate: Union[CalibratorBase, Sequence[Cali
         err = []
         for c in calibrate:
             e = c.calc_stats(trial, run_dir, transform_persons, transform_trips)
-            err.extend(e)
+            err.extend(to_float(f) for f in e)
 
         return err
 
