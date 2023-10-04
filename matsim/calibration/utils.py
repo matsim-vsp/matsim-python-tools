@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 
+import numpy as np
+import pandas as pd
+
 from optuna.trial import TrialState
+
 
 def study_as_df(study):
     """ Convert study to dataframe """
