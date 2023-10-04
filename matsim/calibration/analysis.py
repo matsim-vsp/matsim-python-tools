@@ -133,7 +133,7 @@ def calc_mode_stats(run, attrs=[],
         data = dict(n=len(x), mean_dist=np.average(x.traveled_distance))               
         return pd.Series(data=data)
 
-    aggr = trips.groupby(attrs + ["dist_group", "main_mode"]).apply(aggr)
+    aggr = trips.groupby(attrs + ["dist_group", "main_mode"], observed=True).apply(aggr)
     
     aggr["n"].fillna(0, inplace=True)
 

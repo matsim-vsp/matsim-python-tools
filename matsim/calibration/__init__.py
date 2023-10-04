@@ -8,6 +8,8 @@ import os
 import shutil
 import subprocess
 import sys
+import glob
+
 from os import path, makedirs
 from time import sleep
 from typing import Union, Sequence, Callable, Tuple
@@ -219,13 +221,12 @@ def create_calibration(name: str, calibrate: Union[CalibratorBase, Sequence[Cali
 
         trial.set_user_attr("mode_stats", mode_stats.to_dict(orient="tight"))
 
-        res = []
+        err = []
         for c in calibrate:
-            c.calc_stats(trial, run_dir, transform_persons, transform_trips)
+            e = c.calc_stats(trial, run_dir, transform_persons, transform_trips)
+            err.extend(e)
 
-            res.extend(c.error_metrics(trial))
-
-        return res
+        return err
 
     return study, f
 

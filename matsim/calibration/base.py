@@ -3,7 +3,7 @@
 import math
 import os
 from abc import ABC, abstractmethod
-from typing import Union, Sequence, Dict, Callable
+from typing import Union, Sequence, Dict, Tuple, Callable
 
 import optuna
 import pandas as pd
@@ -61,7 +61,7 @@ class CalibratorBase(ABC):
     @abstractmethod
     def calc_stats(self, trial: optuna.Trial, run_dir: str,
                    transform_persons: Callable = None,
-                   transform_trips: Callable = None) -> Sequence[float]:
+                   transform_trips: Callable = None) -> Tuple[float]:
         """ Calculate and store statistics for a trial. These usually needs to be accessed for calculating updates.
 
          :return: reported error metrics
