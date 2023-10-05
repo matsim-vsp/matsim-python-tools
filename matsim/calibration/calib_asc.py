@@ -8,6 +8,7 @@ import optuna
 from .base import CalibratorBase, CalibrationInput
 from .analysis import calc_mode_share
 
+
 class ASCCalibrator(CalibratorBase):
     """ Calibrates the alternative specific constant for desired modes """
 
@@ -50,6 +51,12 @@ class ASCCalibrator(CalibratorBase):
         for mode in self.modes:
             m = self.get_mode_params(config, mode)
             m["constant"] = trial.suggest_float(prefix + mode, sys.float_info.min, sys.float_info.max)
+
+    def sample_initial(self, param: str) -> float:
+        if param in self.initial.index:
+            return self.initial.loc[param]
+
+        return 0
 
     def update_step(self, param: str, last_trial: optuna.Trial) -> float:
 

@@ -2,26 +2,26 @@
 # -*- coding: utf-8 -*-
 """ Contains calibration related functions """
 
-__all__ = ["create_calibration", "ASCCalibrator", "utils"]
+__all__ = ["create_calibration", "ASCCalibrator", "ASCGroupCalibrator", "utils"]
 
+import glob
 import os
 import shutil
 import subprocess
 import sys
-import glob
-
 from os import path, makedirs
 from time import sleep
 from typing import Union, Sequence, Callable, Tuple
 
 import optuna
-import pandas as pd
 import yaml
-from optuna.trial import TrialState
 
 from . import utils
 from .base import CalibratorBase, to_float
 from .calib_asc import ASCCalibrator
+from .calib_group_asc import ASCGroupCalibrator
+from .utils import study_as_df
+from .analysis import calc_mode_stats
 
 
 class CalibrationSampler(optuna.samplers.BaseSampler):
@@ -39,15 +39,17 @@ class CalibrationSampler(optuna.samplers.BaseSampler):
 
     def sample_independent(self, study, trial, param_name, param_distribution):
 
-        prefix, _, param = param_name.partition("_")
-        c : CalibratorBase = self.calibrators[prefix]
+        prefix, _, param = param_name.partition("-")
+        c: CalibratorBase = self.calibrators[prefix]
+
+        mode = param.rpartition("-")[2] if "-" in param else param
 
         completed = utils.completed_trials(study)
         if len(completed) == 0:
             initial = to_float(c.sample_initial(param))
 
-            if c.constraints is not None and param in c.constraints:
-                initial = c.constraints[param](param, initial)
+            if c.constraints is not None and mode in c.constraints:
+                initial = c.constraints[mode](mode, initial)
 
             return initial
 
@@ -74,8 +76,8 @@ class CalibrationSampler(optuna.samplers.BaseSampler):
         last_param += rate * step
 
         # Call constraint if present
-        if c.constraints is not None and param in c.constraints:
-            last_param = c.constraints[param](param, last_param)
+        if c.constraints is not None and mode in c.constraints:
+            last_param = c.constraints[mode](mode, last_param)
 
         return last_param
 
@@ -150,7 +152,7 @@ def create_calibration(name: str, calibrate: Union[CalibratorBase, Sequence[Cali
         params = {}
 
         for c in calibrate:
-            prefix = c.name + "_"
+            prefix = c.name + "-"
             c.update_config(trial, prefix, params)
 
         with open(params_path, "w") as f:
@@ -218,7 +220,9 @@ def create_calibration(name: str, calibrate: Union[CalibratorBase, Sequence[Cali
         finally:
             p.terminate()
 
-        mode_stats = analysis.calc_mode_stats(run_dir, transform_persons=transform_persons,transform_trips=transform_trips)
+        mode_stats = calc_mode_stats(run_dir,
+                                     transform_persons=transform_persons,
+                                     transform_trips=transform_trips)
 
         trial.set_user_attr("mode_stats", mode_stats.to_dict(orient="tight"))
 

@@ -11,8 +11,17 @@ import pandas as pd
 # Type alias for input variables
 CalibrationInput = Union[str, os.PathLike, dict, pd.DataFrame]
 
+
 def to_float(x):
     return float(x.iloc[0]) if isinstance(x, pd.Series) else float(x)
+
+
+def sanitize(x):
+    if 'main_mode' in x.columns and 'mode' not in x.columns:
+        x.rename(columns={'main_mode': 'mode'}, inplace=True)
+
+    return x
+
 
 class CalibratorBase(ABC):
     """ Base class for calibrators.  """
@@ -32,8 +41,8 @@ class CalibratorBase(ABC):
         :param constraints: constraints for each mode, must return asc and will be called with original asc
         """
         self.modes = modes
-        self.initial = self.convert_input(initial)
-        self.target = self.convert_input(target)
+        self.initial = sanitize(self.convert_input(initial))
+        self.target = sanitize(self.convert_input(target))
         self.lr = lr
         self.constraints = constraints
 
@@ -56,6 +65,11 @@ class CalibratorBase(ABC):
         raise NotImplemented
 
     @abstractmethod
+    def sample_initial(self, param: str) -> float:
+        """  Sample initial value for parameter """
+        raise NotImplemented
+
+    @abstractmethod
     def update_step(self, param: str, last_trial: optuna.Trial) -> float:
         """ Return update step for param based on last trial """
         raise NotImplemented
@@ -69,13 +83,6 @@ class CalibratorBase(ABC):
          :return: reported error metrics
          """
         raise NotImplemented
-
-    def sample_initial(self, param: str) -> float:
-        """  Sample initial value for parameter """
-        if param in self.initial.index:
-            return self.initial.loc[param]
-
-        return 0
 
     @classmethod
     def convert_input(cls, arg) -> pd.DataFrame:

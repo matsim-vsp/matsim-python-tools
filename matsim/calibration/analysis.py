@@ -60,7 +60,7 @@ def calc_adjusted_mode_share(sim: pd.DataFrame, survey: pd.DataFrame,
     return res, df
 
 
-def read_trips_and_persons(run, transform_persons=None, transform_trips=None):    
+def read_trips_and_persons(run, transform_persons=None, transform_trips=None) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """ Read trips and persons from run directory """
 
     # Return input as output
