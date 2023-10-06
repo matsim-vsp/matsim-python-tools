@@ -27,8 +27,13 @@ from .analysis import calc_mode_stats
 class CalibrationSampler(optuna.samplers.BaseSampler):
     """ Run calibrators on obtained mode shares """
 
-    def __init__(self, calibrators):
-        self.calibrators = {c.name: c for c in calibrators}
+    def __init__(self, calibrators: Sequence[CalibratorBase]):
+        self.calibrators = {}
+        for c in calibrators:
+            if c.name not in self.calibrators:
+                self.calibrators[c.name] = c
+            else:
+                raise ValueError("Incompatible calibrators with same name occurred: %s (%s)" % (c.name, c))
 
     def infer_relative_search_space(self, study, trial):
         return {}
@@ -132,7 +137,7 @@ def create_calibration(name: str, calibrate: Union[CalibratorBase, Sequence[Cali
         study_name=name,
         storage=storage,
         load_if_exists=True,
-        directions=["minimize"] * sum(len(c.target) for c in calibrate),
+        directions=["minimize"] * sum(c.num_targets for c in calibrate),
         sampler=CalibrationSampler(calibrate)
     )
 

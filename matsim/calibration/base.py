@@ -53,6 +53,11 @@ class CalibratorBase(ABC):
 
         raise NotImplemented
 
+    @property
+    def num_targets(self):
+        """ Number of targets/errors that will be returned in calc stats"""
+        return len(self.target)
+
     @abstractmethod
     def init_study(self, study: optuna.Study):
         """ Initialize study instance  """
@@ -128,4 +133,7 @@ class CalibratorBase(ABC):
         # (2) Run the simulation to convergence. Obtain simulated mode shares m_i.
         # (3) Do nothing for mode 0. For all other modes: add [ln(z_i) - ln(m_i)] – [ln(z_0) - ln(m_0)] to its ASC.
         # (4) Goto 2.
+        if m_i == 0:
+            return 0
+
         return math.log(z_i) - math.log(m_i) - (math.log(z_0) - math.log(m_0))

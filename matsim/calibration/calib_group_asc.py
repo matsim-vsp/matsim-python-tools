@@ -50,6 +50,9 @@ def get_sbb_params(config, group, value, mode):
                        [{"attributeValues": value, "absoluteModeCorrections": [m]}]})
     return m
 
+def parse_group(p):
+    p = p.strip("[]")
+    return {x.split("=")[0]:x.split("=")[1] for x in p.split(",")}
 
 class ASCGroupCalibrator(CalibratorBase):
     """ Calibrates the alternative specific for specific subpopulations """
@@ -88,7 +91,7 @@ class ASCGroupCalibrator(CalibratorBase):
         self.groups = [t for t in self.target.columns if t not in ('mode', 'share', 'asc')]
 
         self.base = self.get_group(self.target, None)
-        self.base = self.base.groupby("mode").agg(share=("share", "sum"))
+        self.base = self.base.groupby("mode").agg(target=("share", "sum"))
 
         if len(self.base) == 0:
             raise ValueError("Target must contain base without any attributes")
@@ -100,9 +103,16 @@ class ASCGroupCalibrator(CalibratorBase):
             idx = reduce(lambda x, y: x & y, [pd.isna(df[g]) for g in self.groups])
             return df[idx]
 
+        idx = reduce(lambda x, y: x & y, [df[g] == v for g, v in groups.items()])
+        return df[idx]
+
     @property
     def name(self):
         return "asc"
+
+    @property
+    def num_targets(self):
+        return len(self.base)
 
     def init_study(self, study: optuna.Trial):
         study.set_user_attr("modes", self.modes)
@@ -122,6 +132,7 @@ class ASCGroupCalibrator(CalibratorBase):
             m["constant"] = trial.suggest_float(prefix + mode, sys.float_info.min, sys.float_info.max)
             base[mode] = m["constant"]
 
+        # Grouped ascs
         for g in self.groups:
             for v in set(self.target[g]):
                 if pd.isna(v):
@@ -129,18 +140,17 @@ class ASCGroupCalibrator(CalibratorBase):
 
                 attr = (str(g) + "=" + str(v))
                 for mode in self.modes:
-                    # TODO: build config correctly
                     # Update constants
                     if self.config_format == "sbb":
                         p = trial.suggest_float(prefix + "[%s]-%s" % (attr, mode),
-                                            sys.float_info.min, sys.float_info.max)
+                                                sys.float_info.min, sys.float_info.max)
 
                         # don't write certain values
                         if p == 0 and mode == self.fixed_mode:
                             continue
 
                         m = get_sbb_params(config, g, v, mode)
-                        m["deltaConstant"] = p
+                        m["deltaConstant"] = p - base[mode]
 
                     else:
                         raise ValueError("Currently only ssb config format is supported")
@@ -148,7 +158,7 @@ class ASCGroupCalibrator(CalibratorBase):
     def sample_initial(self, param: str) -> float:
         attr, _, mode = param.rpartition("-")
 
-        if mode in self.initial.index and attr == "":
+        if mode in self.initial.index:
             return self.initial.loc[mode]
 
         # TODO: Load from column with same format as input
@@ -160,11 +170,23 @@ class ASCGroupCalibrator(CalibratorBase):
         if param == self.fixed_mode:
             return 0
 
-        step = self.calc_asc_update(self.target.loc[param].share, last_trial.user_attrs["%s_share" % param],
-                                    self.target.loc[self.fixed_mode].share,
-                                    last_trial.user_attrs["%s_share" % self.fixed_mode])
+        # Base mode shares
+        if not param.startswith("["):
+            return self.calc_asc_update(self.base.loc[param].target, last_trial.user_attrs["%s_share" % param],
+                                        self.base.loc[self.fixed_mode].target,
+                                        last_trial.user_attrs["%s_share" % self.fixed_mode])
 
-        return step
+        else:
+            p, _, mode = param.rpartition("-")
+
+            if mode == self.fixed_mode:
+                return 0
+
+            t = self.get_group(self.target, parse_group(p)).set_index("mode")
+
+            return self.calc_asc_update(t.loc[mode].share, last_trial.user_attrs["%s_share" % param],
+                                        t.loc[self.fixed_mode].share,
+                                        last_trial.user_attrs["%s-%s_share" % (p, self.fixed_mode)])
 
     def calc_stats(self, trial: optuna.Trial, run_dir: str,
                    transform_persons: Callable = None,
@@ -174,8 +196,48 @@ class ASCGroupCalibrator(CalibratorBase):
                                                 transform_persons=transform_persons,
                                                 transform_trips=transform_trips)
 
+        base_share = trips.groupby("main_mode").count()["trip_number"] / len(trips)
+        base_share = self.base.merge(base_share, left_index=True, right_index=True).rename(
+            columns={"trip_number": "share"})
+
+        for kv in base_share.itertuples():
+            trial.set_user_attr("%s_share" % kv.Index, kv.share)
+
+        base_share["mae"] = np.abs(base_share.share - base_share.target)
+
+        print("Obtained base shares:")
+        print(base_share)
+
         errs = []
 
-        print("TODO")
+        for g in self.groups:
+            for v in set(self.target[g]):
+                if pd.isna(v):
+                    continue
 
-        return [(abs(self.target.loc[mode] - trial.user_attrs["%s_share" % mode])) for mode in self.modes]
+                sub_trips = self.get_group(trips, {g: v})
+                sub_share = sub_trips.groupby("main_mode").count()["trip_number"] / len(sub_trips)
+                sub_share.rename("share", inplace=True)
+
+                if len(sub_trips) == 0:
+                    print("Empty subgroup %s=%s" % (g, v), file=sys.stderr)
+
+                target = self.get_group(self.target, {g: v}).rename(columns={"share": "target"})
+                target = target.merge(sub_share, how="outer", left_on="mode", right_index=True)
+                target.share.fillna(0, inplace=True)
+
+                target["mae"] = np.abs(target.share - target.target)
+
+                attr = (str(g) + "=" + str(v))
+                for kv in target.itertuples():
+                    trial.set_user_attr("[%s]-%s_share" % (attr, kv.mode), kv.share)
+
+                errs.append(target)
+
+        errs = pd.concat(errs)
+        print("Grouped sum of errors:")
+        for g in self.groups:
+            sub_err = errs.groupby(g).agg(sum_mae=("mae", "sum"))
+            print(sub_err)
+
+        return base_share.mae.to_numpy()
