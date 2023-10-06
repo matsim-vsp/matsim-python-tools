@@ -78,5 +78,6 @@ class ASCCalibrator(CalibratorBase):
 
         for k, v in shares.items():
             trial.set_user_attr("%s_share" % k, v)
+            trial.set_user_attr("%s_mae" % k, abs(self.target.loc[k] - v))
 
         return [(abs(self.target.loc[mode] - trial.user_attrs["%s_share" % mode])) for mode in self.modes]
