@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """ Contains calibration related functions """
 
-__all__ = ["create_calibration", "ASCCalibrator", "ASCGroupCalibrator", "utils"]
+__all__ = ["create_calibration", "study_as_df", "ASCCalibrator", "ASCGroupCalibrator", "utils"]
 
 import glob
 import os

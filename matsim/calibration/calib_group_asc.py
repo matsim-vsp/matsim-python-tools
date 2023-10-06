@@ -200,10 +200,11 @@ class ASCGroupCalibrator(CalibratorBase):
         base_share = self.base.merge(base_share, left_index=True, right_index=True).rename(
             columns={"trip_number": "share"})
 
+        base_share["mae"] = np.abs(base_share.share - base_share.target)
+
         for kv in base_share.itertuples():
             trial.set_user_attr("%s_share" % kv.Index, kv.share)
-
-        base_share["mae"] = np.abs(base_share.share - base_share.target)
+            trial.set_user_attr("%s_mae" % kv.Index, kv.mae)
 
         print("Obtained base shares:")
         print(base_share)
@@ -239,5 +240,8 @@ class ASCGroupCalibrator(CalibratorBase):
         for g in self.groups:
             sub_err = errs.groupby(g).agg(sum_mae=("mae", "sum"))
             print(sub_err)
+
+            for e in sub_err.itertuples():
+                trial.set_user_attr("%s=%s_sum_mae" % (g, e.Index), e.sum_mae)
 
         return base_share.mae.to_numpy()

@@ -13,6 +13,8 @@ def study_as_df(study):
     modes = study.user_attrs["modes"]
     # fixed_mode = study.user_attrs["fixed_mode"]
 
+    # TODO: rework for multiple studies
+
     data = []
 
     for i, trial in enumerate(completed):
