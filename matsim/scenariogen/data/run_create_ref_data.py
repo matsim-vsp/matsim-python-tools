@@ -71,7 +71,7 @@ def default_person_filter(df):
     return df[df.present_on_day & (df.reporting_day <= 4)]
 
 
-def create(survey_dirs, transform_persons):
+def create(survey_dirs, transform_persons, filter_persons_with_invalid_trips=True):
     """ Create reference data from survey data. """
 
     all_hh, all_persons, all_trips = read_all(survey_dirs)
@@ -84,9 +84,12 @@ def create(survey_dirs, transform_persons):
     # TODO: configurable attributes
     persons["age_group"] = pd.cut(persons.age, [0, 18, 66, np.inf], labels=["0 - 17", "18 - 65", "65+"], right=False)
 
-    invalid = set(all_trips[~all_trips.valid].p_id)
+    # Filter persons, if they have at least one invalid trip
+    if filter_persons_with_invalid_trips:
+        invalid = set(all_trips[~all_trips.valid].p_id)
+        persons = persons[~persons.index.isin(invalid)]
 
-    persons = persons[~persons.index.isin(invalid)]
+    # TODO: only filter inviduall trips if invalid
 
     trips = all_trips.drop(columns=["hh_id"]).join(persons, on="p_id", how="inner")
 
