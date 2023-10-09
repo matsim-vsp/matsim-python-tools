@@ -65,21 +65,21 @@ def summarize_mode_usage(x, trips):
 def setup(parser: argparse.ArgumentParser):
     parser.add_argument("dirs", nargs="+", help="Directories with survey data")
 
-def create(hh, persons, trips):
-    pass
-    # TODO
+
+def default_person_filter(df):
+    """ Default person filter for reference data. """
+    return df[df.present_on_day & (df.reporting_day <= 4)]
 
 
-def main(args):
-    all_hh, all_persons, all_trips = read_all(args.dirs)
+def create(survey_dirs, transform_persons):
+    """ Create reference data from survey data. """
+
+    all_hh, all_persons, all_trips = read_all(survey_dirs)
 
     # Filter person ad trips for area
     df = all_persons.join(all_hh, on="hh_id")
 
-    # TODO: configurable filter
-    persons = df[df.present_on_day &
-                 (df.reporting_day <= 4) &
-                 (df.region_type == 1)]
+    persons = transform_persons(df) if transform_persons is not None else df
 
     # TODO: configurable attributes
     persons["age_group"] = pd.cut(persons.age, [0, 18, 66, np.inf], labels=["0 - 17", "18 - 65", "65+"], right=False)
@@ -103,7 +103,8 @@ def main(args):
     aggr["share"] = aggr.n / aggr.n.sum()
     aggr["share"].fillna(0, inplace=True)
 
-    aggr = aggr.drop(columns=["n"])
+    share = aggr.drop(columns=["n"])
+    aggr = share.copy()
 
     # TODO: configurable output
 
@@ -124,3 +125,8 @@ def main(args):
     aggr.to_csv("mode_users_ref.csv")
 
     # TODO: ref data per attribute ?
+    return persons, trips, share.groupby("main_mode").sum().drop(columns=["mean_dist"])
+
+
+def main(args):
+    create(args.dirs, default_person_filter)

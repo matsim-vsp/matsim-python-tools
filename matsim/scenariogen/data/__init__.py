@@ -42,13 +42,12 @@ def read_all(dirs: Union[str, List[str]], regio=None) -> Tuple[pd.DataFrame]:
 
     for d in dirs:
 
-        files = []
-
         for format in (srv, mid):
+
+            files = []
 
             # Collect all files for each format
             for f in os.scandir(d):
-                fp = f.name
                 if not f.is_file():
                     continue
                 if format.is_format(f):
