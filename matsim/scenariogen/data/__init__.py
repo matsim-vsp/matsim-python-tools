@@ -187,6 +187,7 @@ class TripMode(AutoNameLowerStrEnum):
     CAR = auto()
     RIDE = auto()
     PT = auto()
+    MOTORCYCLE = auto()
     OTHER = auto()
 
 

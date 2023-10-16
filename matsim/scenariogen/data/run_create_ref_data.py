@@ -6,11 +6,21 @@ import argparse
 import numpy as np
 import pandas as pd
 
+from enum import Enum, auto
+
 from . import *
 from .preparation import _fill
 
 METADATA = "data-create-ref", "Extract and create reference data from surveys."
 
+class InvalidHandling(Enum):
+    """ How to handle invalid trips. """
+    # Invalid trips are ignored
+    KEEP = auto()
+    # Drop single invalid trips
+    REMOVE_TRIPS = auto()
+    # Drop whole person if any trip is invalid
+    REMOVE_PERSONS = auto()
 
 def weighted(x):
     data = dict(n=x.t_weight.sum(), mean_dist=np.average(x.gis_length * 1000, weights=x.t_weight))
@@ -71,7 +81,9 @@ def default_person_filter(df):
     return df[df.present_on_day & (df.reporting_day <= 4)]
 
 
-def create(survey_dirs, transform_persons, filter_persons_with_invalid_trips=True):
+def create(survey_dirs, transform_persons, transform_trips,
+           invalid_trip_handling: InvalidHandling = InvalidHandling.REMOVE_TRIPS,
+           impute_modes=None):
     """ Create reference data from survey data. """
 
     all_hh, all_persons, all_trips = read_all(survey_dirs)
@@ -84,16 +96,24 @@ def create(survey_dirs, transform_persons, filter_persons_with_invalid_trips=Tru
     # TODO: configurable attributes
     persons["age_group"] = pd.cut(persons.age, [0, 18, 66, np.inf], labels=["0 - 17", "18 - 65", "65+"], right=False)
 
-    # Filter persons, if they have at least one invalid trip
-    if filter_persons_with_invalid_trips:
+    if invalid_trip_handling == InvalidHandling.REMOVE_PERSONS:
+        # Filter persons, if they have at least one invalid trip
         invalid = set(all_trips[~all_trips.valid].p_id)
         persons = persons[~persons.index.isin(invalid)]
+    elif invalid_trip_handling == InvalidHandling.REMOVE_TRIPS:
+        # Use only valid trips
+        all_trips = all_trips[all_trips.valid]
 
-    # TODO: only filter inviduall trips if invalid
-
+    # Because of inner join, trips might be filtered if person was removed
     trips = all_trips.drop(columns=["hh_id"]).join(persons, on="p_id", how="inner")
 
-    _fill(trips, "main_mode", TripMode.OTHER)
+    # Transform existing trips
+    trips = transform_trips(trips) if transform_trips is not None else trips
+
+    # Fill certain modes with distribution from existing
+    if impute_modes is not None:
+        for m in impute_modes:
+            _fill(trips, "main_mode", m)
 
     # TODO: configurable dist binds
     labels = ["0 - 1000", "1000 - 2000", "2000 - 5000", "5000 - 10000", "10000 - 20000", "20000+"]
