@@ -232,6 +232,7 @@ class ASCGroupCalibrator(CalibratorBase):
                 attr = (str(g) + "=" + str(v))
                 for kv in target.itertuples():
                     trial.set_user_attr("[%s]-%s_share" % (attr, kv.mode), kv.share)
+                    trial.set_user_attr("[%s]-%s_mae" % (attr, kv.mode), kv.mae)
 
                 errs.append(target)
 

@@ -10,28 +10,24 @@ def study_as_df(study):
     """ Convert study to dataframe """
     completed = completed_trials(study)
 
-    modes = study.user_attrs["modes"]
+    # modes = study.user_attrs["modes"]
     # fixed_mode = study.user_attrs["fixed_mode"]
-
-    # TODO: rework for multiple studies
 
     data = []
 
     for i, trial in enumerate(completed):
 
-        for j, m in enumerate(modes):
-            entry = {
-                "trial": i,
-                "mode": m,
-                "asc": trial.params[m],
-                "error": trial.values[j]
-            }
+        entry = {
+            "trial": i,
+            "start": trial.datetime_start,
+            "duration": trial.duration,
+        }
 
-            for k, v in trial.user_attrs.items():
-                if k.startswith(m + "_"):
-                    entry[k[len(m) + 1:]] = v
+        for k, v in trial.user_attrs.items():
+            if type(v) in (float, int):
+                entry[k] = v
 
-            data.append(entry)
+        data.append(entry)
 
     return pd.DataFrame(data)
 
