@@ -64,6 +64,7 @@ class ASCGroupCalibrator(CalibratorBase):
                  fixed_mode: str = "walk",
                  lr: Callable[[int, str, float, optuna.Trial, optuna.Study], float] = None,
                  constraints: Dict[str, Callable[[str, float], float]] = None,
+                 corr_correction: float = 0.5,
                  config_format: Literal['default', 'sbb'] = "default"):
         """Abstract constructors for all calibrations. Usually the same parameters should be made available subclasses.
 
@@ -73,11 +74,13 @@ class ASCGroupCalibrator(CalibratorBase):
         :param fixed_mode: the fixed mode with asc=0
         :param lr: learning rate schedule, will be called with (trial number, mode, update, trial, study)
         :param constraints: constraints for each mode, must return asc and will be called with original asc
+        :param corr_correction: factor to reduce learning rates for possibly correlated groups, 0 disables this correction
         :param config_format: use SBBBehaviorGroups for the parameter config
         """
         super().__init__(modes, initial, target, lr, constraints)
 
         self.fixed_mode = fixed_mode
+        self.corr_correction = corr_correction
         self.config_format = config_format
 
         if "mode" not in self.target.columns:
@@ -172,7 +175,13 @@ class ASCGroupCalibrator(CalibratorBase):
 
         # Base mode shares
         if not param.startswith("["):
-            return self.calc_asc_update(self.base.loc[param].target, last_trial.user_attrs["%s_share" % param],
+            step = 1
+
+            # If all groups would be fully correlated, update step needs to be divided by number of groups
+            if self.corr_correction > 0:
+                step = 1 / (len(self.groups) * self.corr_correction)
+
+            return step * self.calc_asc_update(self.base.loc[param].target, last_trial.user_attrs["%s_share" % param],
                                         self.base.loc[self.fixed_mode].target,
                                         last_trial.user_attrs["%s_share" % self.fixed_mode])
 
