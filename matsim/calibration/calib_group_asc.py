@@ -175,13 +175,7 @@ class ASCGroupCalibrator(CalibratorBase):
 
         # Base mode shares
         if not param.startswith("["):
-            step = 1
-
-            # If all groups would be fully correlated, update step needs to be divided by number of groups
-            if self.corr_correction > 0:
-                step = 1 / (len(self.groups) * self.corr_correction)
-
-            return step * self.calc_asc_update(self.base.loc[param].target, last_trial.user_attrs["%s_share" % param],
+            return self.calc_asc_update(self.base.loc[param].target, last_trial.user_attrs["%s_share" % param],
                                         self.base.loc[self.fixed_mode].target,
                                         last_trial.user_attrs["%s_share" % self.fixed_mode])
 
@@ -193,7 +187,12 @@ class ASCGroupCalibrator(CalibratorBase):
 
             t = self.get_group(self.target, parse_group(p)).set_index("mode")
 
-            return self.calc_asc_update(t.loc[mode].share, last_trial.user_attrs["%s_share" % param],
+            step = 1
+            # If all groups would be fully correlated, update step needs to be divided by number of groups
+            if self.corr_correction > 0:
+                step = 1 / (len(self.groups) * self.corr_correction)
+
+            return step * self.calc_asc_update(t.loc[mode].share, last_trial.user_attrs["%s_share" % param],
                                         t.loc[self.fixed_mode].share,
                                         last_trial.user_attrs["%s-%s_share" % (p, self.fixed_mode)])
 
