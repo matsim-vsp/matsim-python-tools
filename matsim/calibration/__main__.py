@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import optuna
+import traceback
 
 from . import study_as_df
 
@@ -24,3 +25,12 @@ if __name__ == "__main__":
 
     df = study_as_df(study)
     df.to_csv(args.output, index=False)
+
+    try:
+        from .plot import plot_study
+        plot_study(study)
+
+    except ImportError:
+        print("Could not plot study.")
+        traceback.print_exc()
+
