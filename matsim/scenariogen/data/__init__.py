@@ -60,7 +60,7 @@ def read_all(dirs: Union[str, List[str]], regio=None) -> Tuple[pd.DataFrame]:
                 raise ValueError("File structure is wrong. Need exactly %d files per region." % format.INPUT_FILES)
 
             for input_files in _batch(files, format.INPUT_FILES):
-                print("Reading", *input_files)
+                print("Reading", format, *input_files)
 
                 data = format.read_raw(*input_files)
                 df = format.convert(data, regio)
