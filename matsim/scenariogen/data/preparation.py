@@ -2,11 +2,14 @@
 # -*- coding: utf-8 -*-
 
 import functools
+from typing import Tuple
+
 import numpy as np
 import pandas as pd
 from sklearn.utils import shuffle
 
 from . import *
+
 
 def prepare_persons(hh, pp, tt, augment=5, max_hh_size=5, core_weekday=False, remove_with_invalid_trips=False):
     """ Cleans common data errors and fill missing values """
@@ -44,8 +47,7 @@ def prepare_persons(hh, pp, tt, augment=5, max_hh_size=5, core_weekday=False, re
         mobile = set(tt[tt.valid].p_id)
 
         # Filter persons that are supposed to be mobile but have no trips
-        df = df[ (df.p_id.isin(mobile) | (~df.mobile_on_day) )]
-
+        df = df[(df.p_id.isin(mobile) | (~df.mobile_on_day))]
 
     df = df.drop(columns=['hh_id', 'present_on_day', 'reporting_day', 'location', 'h_weight',
                           'n_cars', 'n_bikes', 'n_other_vehicles', 'car_parking'])
@@ -269,3 +271,16 @@ def calc_commute(pp, tt):
 
     return work.groupby("p_id").agg(work_commute=("gis_length", "max")), \
         edu.groupby("p_id").agg(edu_commute=("gis_length", "max"))
+
+
+def calc_needed_short_distance_trips(ref_trips: pd.DataFrame, sim_trips: pd.DataFrame, max_dist=1000) -> Tuple[float, int]:
+    """ Calculate number of short distance trips needed to add to match required share """
+
+    target_share = float(ref_trips[ref_trips.gis_length < (max_dist / 1000)].t_weight.sum() / ref_trips.t_weight.sum())
+
+    short_trips = sim_trips[sim_trips.traveled_distance < max_dist]
+
+    current_share = len(short_trips) / len(sim_trips)
+    num_trips = (len(short_trips) - len(sim_trips) * target_share) / (target_share - 1)
+
+    return target_share, num_trips
