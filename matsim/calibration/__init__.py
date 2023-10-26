@@ -75,8 +75,9 @@ class CalibrationSampler(optuna.samplers.BaseSampler):
             # numpy types need casting
             rate = to_float(rate)
 
-        trial.set_user_attr("%s_rate" % param_name, rate)
-        trial.set_user_attr("%s_step" % param_name, step)
+        # Need to use storage directly, frozen trial does not save attributes
+        study._storage.set_trial_user_attr(trial._trial_id, "%s_rate" % param_name, rate)
+        study._storage.set_trial_user_attr(trial._trial_id, "%s_step" % param_name, step)
 
         last_param += rate * step
 
