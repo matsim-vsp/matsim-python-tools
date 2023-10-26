@@ -5,7 +5,7 @@ from typing import Sequence, Callable, Dict
 
 import optuna
 
-from .base import CalibratorBase, CalibrationInput
+from .base import CalibratorBase, CalibrationInput, to_float
 from .analysis import calc_mode_share
 
 
@@ -78,6 +78,6 @@ class ASCCalibrator(CalibratorBase):
 
         for k, v in shares.items():
             trial.set_user_attr("%s_share" % k, v)
-            trial.set_user_attr("%s_mae" % k, abs(self.target.loc[k] - v))
+            trial.set_user_attr("%s_mae" % k, to_float(abs(self.target.loc[k] - v)))
 
-        return [(abs(self.target.loc[mode] - trial.user_attrs["%s_share" % mode])) for mode in self.modes]
+        return [to_float(abs(self.target.loc[mode] - trial.user_attrs["%s_share" % mode])) for mode in self.modes]

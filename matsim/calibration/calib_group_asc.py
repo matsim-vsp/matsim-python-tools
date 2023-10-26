@@ -64,7 +64,7 @@ class ASCGroupCalibrator(CalibratorBase):
                  fixed_mode: str = "walk",
                  lr: Callable[[int, str, float, optuna.Trial, optuna.Study], float] = None,
                  constraints: Dict[str, Callable[[str, float], float]] = None,
-                 corr_correction: float = 0.5,
+                 corr_correction: float = 1,
                  config_format: Literal['default', 'sbb'] = "default"):
         """Abstract constructors for all calibrations. Usually the same parameters should be made available subclasses.
 
