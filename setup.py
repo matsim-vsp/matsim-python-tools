@@ -25,7 +25,7 @@ setup(
     ],
     packages=["matsim"] + ["matsim." + x for x in find_packages(where="matsim")],
     install_requires=[
-        "protobuf >= 3.10.0",
+        "protobuf >= 3.20.0",
         "xopen",
         "pandas",
     ],
