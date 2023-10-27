@@ -229,18 +229,17 @@ class Mid2017:
         x = int(p.mobil)
         if x == 0:
             return False
-        elif x == 1:
-            return True
-        return None
+
+        # potential null values are ignored, and true returned
+        return True
 
     @staticmethod
     def present_on_day(p):
         x = int(p.P_STUM)
-        if x == 3:
-            return True
-        elif x == 1 or x == 2:
+        if x == 1 or x == 2:
             return False
-        return None
+
+        return True
 
     @staticmethod
     def parse_time(x):

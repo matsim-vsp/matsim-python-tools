@@ -2,6 +2,9 @@
 
 import os
 
+import pandas as pd
+import numpy as np
+
 from .. import *
 
 # Has households, persons and trips
@@ -111,7 +114,8 @@ def convert(data: tuple, regio=None):
                 SrV2018.trip_mode(t.E_HVM),
                 SrV2018.trip_purpose(t.V_ZWECK),
                 SrV2018.sd_group(int(t.E_QZG_17)),
-                t.E_WEG_GUELTIG != 0 and t.GIS_LAENGE_GUELTIG != 0
+                # Trip is valid if length and duration are present
+                0 <= t.GIS_LAENGE and t.E_DAUER > 0
             )
         )
 
@@ -313,9 +317,11 @@ class SrV2018:
     def trip_mode(x):
         if x == 1:
             return TripMode.WALK
-        if x == 2 or x == 18 or x == 19:
+        elif x == 2 or x == 18 or x == 19:
             return TripMode.BIKE
-        if x == 4 or x == 5 or x == 6:
+        elif x == 3:
+            return TripMode.MOTORCYCLE
+        elif x == 4 or x == 5 or x == 6:
             return TripMode.CAR
         elif x == 7 or x == 8 or x == 9:
             return TripMode.RIDE

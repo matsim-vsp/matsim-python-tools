@@ -42,13 +42,12 @@ def read_all(dirs: Union[str, List[str]], regio=None) -> Tuple[pd.DataFrame]:
 
     for d in dirs:
 
-        files = []
-
         for format in (srv, mid):
+
+            files = []
 
             # Collect all files for each format
             for f in os.scandir(d):
-                fp = f.name
                 if not f.is_file():
                     continue
                 if format.is_format(f):
@@ -61,7 +60,7 @@ def read_all(dirs: Union[str, List[str]], regio=None) -> Tuple[pd.DataFrame]:
                 raise ValueError("File structure is wrong. Need exactly %d files per region." % format.INPUT_FILES)
 
             for input_files in _batch(files, format.INPUT_FILES):
-                print("Reading", *input_files)
+                print("Reading", format.__name__, *input_files)
 
                 data = format.read_raw(*input_files)
                 df = format.convert(data, regio)
@@ -188,6 +187,7 @@ class TripMode(AutoNameLowerStrEnum):
     CAR = auto()
     RIDE = auto()
     PT = auto()
+    MOTORCYCLE = auto()
     OTHER = auto()
 
 
