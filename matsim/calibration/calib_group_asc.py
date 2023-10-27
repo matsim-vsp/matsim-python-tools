@@ -64,6 +64,7 @@ class ASCGroupCalibrator(CalibratorBase):
                  fixed_mode: str = "walk",
                  lr: Callable[[int, str, float, optuna.Trial, optuna.Study], float] = None,
                  constraints: Dict[str, Callable[[str, float], float]] = None,
+                 multi_groups: Sequence[str] = None,
                  corr_correction: float = 1,
                  config_format: Literal['default', 'sbb'] = "default"):
         """Abstract constructors for all calibrations. Usually the same parameters should be made available subclasses.
@@ -74,21 +75,23 @@ class ASCGroupCalibrator(CalibratorBase):
         :param fixed_mode: the fixed mode with asc=0
         :param lr: learning rate schedule, will be called with (trial number, mode, update, trial, study)
         :param constraints: constraints for each mode, must return asc and will be called with original asc
+        :param multi_groups: Groups that contain multiple values, that will be split by ","
         :param corr_correction: factor to reduce learning rates for possibly correlated groups, 0 disables this correction
         :param config_format: use SBBBehaviorGroups for the parameter config
         """
         super().__init__(modes, initial, target, lr, constraints)
 
         self.fixed_mode = fixed_mode
+        self.multi_groups = multi_groups
         self.corr_correction = corr_correction
         self.config_format = config_format
 
-        if "mode" not in self.target.columns:
+        if "mode" not in self.target.columns and "main_mode" not in self.target.columns:
             raise ValueError("Target must have 'mode' or 'main_mode' column")
 
-        self.target = self.target.rename(columns={"value": "share"}, errors="ignore")
+        self.target = self.target.rename(columns={"value": "share", "main_mode": "mode"}, errors="ignore")
 
-        if "mode" not in self.target.columns:
+        if "share" not in self.target.columns:
             raise ValueError("Target must have 'share' column")
 
         self.groups = [t for t in self.target.columns if t not in ('mode', 'share', 'asc')]
