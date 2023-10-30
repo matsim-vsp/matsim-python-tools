@@ -3,6 +3,7 @@
 import sys
 from typing import Sequence, Callable, Dict, Literal
 from functools import reduce
+from collections import defaultdict
 
 import numpy as np
 import optuna
@@ -64,6 +65,7 @@ class ASCGroupCalibrator(CalibratorBase):
                  fixed_mode: str = "walk",
                  lr: Callable[[int, str, float, optuna.Trial, optuna.Study], float] = None,
                  constraints: Dict[str, Callable[[str, float], float]] = None,
+                 calib_base: bool = True,
                  multi_groups: Sequence[str] = None,
                  corr_correction: float = 1,
                  config_format: Literal['default', 'sbb'] = "default"):
@@ -75,6 +77,7 @@ class ASCGroupCalibrator(CalibratorBase):
         :param fixed_mode: the fixed mode with asc=0
         :param lr: learning rate schedule, will be called with (trial number, mode, update, trial, study)
         :param constraints: constraints for each mode, must return asc and will be called with original asc
+        :param calib_base: whether to calibrate the ungrouped base ASC
         :param multi_groups: Groups that contain multiple values, that will be split by ","
         :param corr_correction: factor to reduce learning rates for possibly correlated groups, 0 disables this correction
         :param config_format: use SBBBehaviorGroups for the parameter config
@@ -96,11 +99,15 @@ class ASCGroupCalibrator(CalibratorBase):
 
         self.groups = [t for t in self.target.columns if t not in ('mode', 'share', 'asc')]
 
-        self.base = self.get_group(self.target, None)
-        self.base = self.base.groupby("mode").agg(target=("share", "sum"))
+        # If self.base is None, base calibration won't be performed
+        if calib_base:
+            self.base = self.get_group(self.target, None)
+            self.base = self.base.groupby("mode").agg(target=("share", "sum"))
 
-        if len(self.base) == 0:
-            raise ValueError("Target must contain base without any attributes")
+            if len(self.base) == 0:
+                raise ValueError("Target must contain base without any attributes")
+        else:
+            self.base = None
 
     def get_group(self, df, groups: dict = None):
         """ Get data of one group"""
@@ -131,12 +138,13 @@ class ASCGroupCalibrator(CalibratorBase):
     def update_config(self, trial: optuna.Trial, prefix: str, config: dict):
 
         # Base ascs for each mode
-        base = {}
+        base = defaultdict(lambda: 0)
 
-        for mode in self.modes:
-            m = self.get_mode_params(config, mode)
-            m["constant"] = trial.suggest_float(prefix + mode, sys.float_info.min, sys.float_info.max)
-            base[mode] = m["constant"]
+        if self.base is not None:
+            for mode in self.modes:
+                m = self.get_mode_params(config, mode)
+                m["constant"] = trial.suggest_float(prefix + mode, sys.float_info.min, sys.float_info.max)
+                base[mode] = m["constant"]
 
         # Grouped ascs
         for g in self.groups:
@@ -207,18 +215,19 @@ class ASCGroupCalibrator(CalibratorBase):
                                                 transform_persons=transform_persons,
                                                 transform_trips=transform_trips)
 
-        base_share = trips.groupby("main_mode").count()["trip_number"] / len(trips)
-        base_share = self.base.merge(base_share, left_index=True, right_index=True).rename(
-            columns={"trip_number": "share"})
+        if self.base is not None:
+            base_share = trips.groupby("main_mode").count()["trip_number"] / len(trips)
+            base_share = self.base.merge(base_share, left_index=True, right_index=True).rename(
+                columns={"trip_number": "share"})
 
-        base_share["mae"] = np.abs(base_share.share - base_share.target)
+            base_share["mae"] = np.abs(base_share.share - base_share.target)
 
-        for kv in base_share.itertuples():
-            trial.set_user_attr("%s_share" % kv.Index, kv.share)
-            trial.set_user_attr("%s_mae" % kv.Index, kv.mae)
+            for kv in base_share.itertuples():
+                trial.set_user_attr("%s_share" % kv.Index, kv.share)
+                trial.set_user_attr("%s_mae" % kv.Index, kv.mae)
 
-        print("Obtained base shares:")
-        print(base_share)
+            print("Obtained base shares:")
+            print(base_share)
 
         errs = []
 
