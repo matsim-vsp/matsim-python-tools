@@ -3,8 +3,7 @@
 
 from argparse import ArgumentParser
 
-import clean_iters as ci
-
+from . import clean_iters as ci
 
 def main():
     """ Main entry point. """
