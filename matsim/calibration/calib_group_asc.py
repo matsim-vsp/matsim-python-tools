@@ -146,6 +146,11 @@ class ASCGroupCalibrator(CalibratorBase):
                 m["constant"] = trial.suggest_float(prefix + mode, sys.float_info.min, sys.float_info.max)
                 base[mode] = m["constant"]
 
+        step = 1
+        # If all groups were fully correlated, update step needs to be divided by number of groups
+        if self.corr_correction > 0:
+            step = 1 / (len(self.groups) * self.corr_correction)
+
         # Grouped ascs
         for g in self.groups:
             for v in set(self.target[g]):
@@ -164,7 +169,7 @@ class ASCGroupCalibrator(CalibratorBase):
                             continue
 
                         m = get_sbb_params(config, g, v, mode)
-                        m["deltaConstant"] = p - base[mode]
+                        m["deltaConstant"] = (p - base[mode]) * step
 
                     else:
                         raise ValueError("Currently only ssb config format is supported")
@@ -198,12 +203,7 @@ class ASCGroupCalibrator(CalibratorBase):
 
             t = self.get_group(self.target, parse_group(p)).set_index("mode")
 
-            step = 1
-            # If all groups would be fully correlated, update step needs to be divided by number of groups
-            if self.corr_correction > 0:
-                step = 1 / (len(self.groups) * self.corr_correction)
-
-            return step * self.calc_asc_update(t.loc[mode].share, last_trial.user_attrs["%s_share" % param],
+            return self.calc_asc_update(t.loc[mode].share, last_trial.user_attrs["%s_share" % param],
                                         t.loc[self.fixed_mode].share,
                                         last_trial.user_attrs["%s-%s_share" % (p, self.fixed_mode)])
 
