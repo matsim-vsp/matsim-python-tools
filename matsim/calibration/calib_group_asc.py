@@ -51,9 +51,11 @@ def get_sbb_params(config, group, value, mode):
                        [{"attributeValues": value, "absoluteModeCorrections": [m]}]})
     return m
 
+
 def parse_group(p):
     p = p.strip("[]")
-    return {x.split("=")[0]:x.split("=")[1] for x in p.split(",")}
+    return {x.split("=")[0]: x.split("=")[1] for x in p.split(",")}
+
 
 class ASCGroupCalibrator(CalibratorBase):
     """ Calibrates the alternative specific for specific subpopulations """
@@ -161,18 +163,21 @@ class ASCGroupCalibrator(CalibratorBase):
                 for mode in self.modes:
                     # Update constants
                     if self.config_format == "sbb":
-                        p = trial.suggest_float(prefix + "[%s]-%s" % (attr, mode),
-                                                sys.float_info.min, sys.float_info.max)
+                        param = "[%s]-%s" % (attr, mode)
+                        p = trial.suggest_float(prefix + param, sys.float_info.min, sys.float_info.max)
 
                         # don't write certain values
                         if p == 0 and mode == self.fixed_mode:
                             continue
 
                         m = get_sbb_params(config, g, v, mode)
-                        m["deltaConstant"] = (p - base[mode]) * step
 
-                    else:
-                        raise ValueError("Currently only ssb config format is supported")
+                        delta = (p - base[mode]) * step
+                        m["deltaConstant"] = delta
+                        trial.set_user_attr("%s_delta" % param, delta)
+
+                else:
+                    raise ValueError("Currently only ssb config format is supported")
 
     def sample_initial(self, param: str) -> float:
         attr, _, mode = param.rpartition("-")
@@ -202,6 +207,8 @@ class ASCGroupCalibrator(CalibratorBase):
                 return 0
 
             t = self.get_group(self.target, parse_group(p)).set_index("mode")
+
+            # TODO: the previous applied correction might be considered here as well
 
             return self.calc_asc_update(t.loc[mode].share, last_trial.user_attrs["%s_share" % param],
                                         t.loc[self.fixed_mode].share,
