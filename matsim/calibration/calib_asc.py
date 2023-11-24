@@ -45,7 +45,7 @@ class ASCCalibrator(CalibratorBase):
 
         print("Running study with target:", self.target)
 
-    def update_config(self, trial: optuna.Trial, prefix: str, config: dict):
+    def update_config(self, study: optuna.Study, trial: optuna.Trial, prefix: str, config: dict):
 
         # Update constants
         for mode in self.modes:

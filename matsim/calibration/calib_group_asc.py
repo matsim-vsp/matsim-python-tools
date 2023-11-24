@@ -11,6 +11,7 @@ import pandas as pd
 
 from .base import CalibratorBase, CalibrationInput
 from .analysis import read_trips_and_persons
+from .utils import completed_trials
 
 
 def get_sbb_params(config, group, value, mode):
@@ -67,7 +68,7 @@ class ASCGroupCalibrator(CalibratorBase):
                  fixed_mode: str = "walk",
                  lr: Callable[[int, str, float, optuna.Trial, optuna.Study], float] = None,
                  constraints: Dict[str, Callable[[str, float], float]] = None,
-                 calib_base: bool = True,
+                 calib_base: Literal['always', 'alternating', 'never'] = "always",
                  multi_groups: Sequence[str] = None,
                  corr_correction: float = 1,
                  config_format: Literal['default', 'sbb'] = "default"):
@@ -79,7 +80,7 @@ class ASCGroupCalibrator(CalibratorBase):
         :param fixed_mode: the fixed mode with asc=0
         :param lr: learning rate schedule, will be called with (trial number, mode, update, trial, study)
         :param constraints: constraints for each mode, must return asc and will be called with original asc
-        :param calib_base: whether to calibrate the ungrouped base ASC
+        :param calib_base: how to calibrate the ungrouped base ASC, can be always, alternating (every 2nd iteration) or never
         :param multi_groups: Groups that contain multiple values, that will be split by ","
         :param corr_correction: factor to reduce learning rates for possibly correlated groups, 0 disables this correction
         :param config_format: use SBBBehaviorGroups for the parameter config
@@ -94,6 +95,9 @@ class ASCGroupCalibrator(CalibratorBase):
         if "mode" not in self.target.columns and "main_mode" not in self.target.columns:
             raise ValueError("Target must have 'mode' or 'main_mode' column")
 
+        if calib_base not in ("always", "alternating", "never"):
+            raise ValueError("calib_base must be one of 'always', 'alternating' or 'never'")
+
         self.target = self.target.rename(columns={"value": "share", "main_mode": "mode"}, errors="ignore")
 
         if "share" not in self.target.columns:
@@ -101,15 +105,16 @@ class ASCGroupCalibrator(CalibratorBase):
 
         self.groups = [t for t in self.target.columns if t not in ('mode', 'share', 'asc')]
 
-        # If self.base is None, base calibration won't be performed
-        if calib_base:
+        if calib_base != "never":
             self.base = self.get_group(self.target, None)
             self.base = self.base.groupby("mode").agg(target=("share", "sum"))
+            self.alternate_base = calib_base == "alternating"
 
             if len(self.base) == 0:
                 raise ValueError("Target must contain base without any attributes")
         else:
             self.base = None
+            self.alternate_base = False
 
     def get_group(self, df, groups: dict = None):
         """ Get data of one group"""
@@ -137,16 +142,27 @@ class ASCGroupCalibrator(CalibratorBase):
         print("Calibrating groups:", self.groups)
         print("Running with base target:", self.base)
 
-    def update_config(self, trial: optuna.Trial, prefix: str, config: dict):
+    def update_config(self, study: optuna.Study, trial: optuna.Trial, prefix: str, config: dict):
 
         # Base ascs for each mode
         base = defaultdict(lambda: 0)
 
+        completed = completed_trials(study)
+
         if self.base is not None:
-            for mode in self.modes:
-                m = self.get_mode_params(config, mode)
-                m["constant"] = trial.suggest_float(prefix + mode, sys.float_info.min, sys.float_info.max)
-                base[mode] = m["constant"]
+
+            if not self.alternate_base or len(completed) % 2 == 0:
+                for mode in self.modes:
+                    m = self.get_mode_params(config, mode)
+                    m["constant"] = trial.suggest_float(prefix + mode, sys.float_info.min, sys.float_info.max)
+                    base[mode] = m["constant"]
+            else:
+                # Use attribute from last trial
+                last_trial = completed[-1]
+                for mode in self.modes:
+                    m = self.get_mode_params(config, mode)
+                    m["constant"] = last_trial.params[prefix + mode]
+                    base[mode] = m["constant"]
 
         step = 1
         # If all groups were fully correlated, update step needs to be divided by number of groups

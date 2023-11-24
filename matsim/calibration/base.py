@@ -64,7 +64,7 @@ class CalibratorBase(ABC):
         raise NotImplemented
 
     @abstractmethod
-    def update_config(self, trial: optuna.Trial, prefix: str, config: dict):
+    def update_config(self, study: optuna.Study, trial: optuna.Trial, prefix: str, config: dict):
         """ Calculate updated config for this trial. This method must interact with the trial using
          `trial.suggest_float` and by using the given prefix . """
         raise NotImplemented

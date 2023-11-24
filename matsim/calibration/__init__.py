@@ -159,7 +159,7 @@ def create_calibration(name: str, calibrate: Union[CalibratorBase, Sequence[Cali
 
         for c in calibrate:
             prefix = c.name + "-"
-            c.update_config(trial, prefix, params)
+            c.update_config(study, trial, prefix, params)
 
         with open(params_path, "w") as f:
             yaml.dump(params, f, sort_keys=False)
