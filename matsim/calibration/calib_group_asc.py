@@ -180,7 +180,13 @@ class ASCGroupCalibrator(CalibratorBase):
                     # Update constants
                     if self.config_format == "sbb":
                         param = "[%s]-%s" % (attr, mode)
-                        p = trial.suggest_float(prefix + param, sys.float_info.min, sys.float_info.max)
+
+                        if not self.alternate_base or len(completed) == 0 or len(completed) % 2 == 1:
+                            p = trial.suggest_float(prefix + param, sys.float_info.min, sys.float_info.max)
+                        else:
+                            # Use from previous iteration
+                            last_trial = completed[-1]
+                            p = last_trial.params[prefix + mode]
 
                         # don't write certain values
                         if p == 0 and mode == self.fixed_mode:
