@@ -200,9 +200,8 @@ class ASCGroupCalibrator(CalibratorBase):
                         delta = (p - base[mode]) * step
                         m["deltaConstant"] = delta
                         trial.set_user_attr("%s_delta" % param, delta)
-
-                else:
-                    raise ValueError("Currently only ssb config format is supported")
+                    else:
+                        raise ValueError("Currently only ssb config format is supported")
 
     def sample_initial(self, param: str) -> float:
         attr, _, mode = param.rpartition("-")
