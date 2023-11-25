@@ -98,6 +98,9 @@ class ASCGroupCalibrator(CalibratorBase):
         if calib_base not in ("always", "alternating", "never"):
             raise ValueError("calib_base must be one of 'always', 'alternating' or 'never'")
 
+        if config_format not in ("default", "sbb"):
+            raise ValueError("config_format must be one of 'default' or 'sbb'")
+
         self.target = self.target.rename(columns={"value": "share", "main_mode": "mode"}, errors="ignore")
 
         if "share" not in self.target.columns:
