@@ -75,7 +75,7 @@ class CalibratorBase(ABC):
         raise NotImplemented
 
     @abstractmethod
-    def update_step(self, param: str, last_trial: optuna.Trial) -> float:
+    def update_step(self, param: str, last_trial: optuna.Trial, completed: Sequence[optuna.Trial]) -> float:
         """ Return update step for param based on last trial """
         raise NotImplemented
 

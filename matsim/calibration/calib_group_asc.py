@@ -150,22 +150,11 @@ class ASCGroupCalibrator(CalibratorBase):
         # Base ascs for each mode
         base = defaultdict(lambda: 0)
 
-        completed = completed_trials(study)
-
         if self.base is not None:
-
-            if not self.alternate_base or len(completed) % 2 == 0:
-                for mode in self.modes:
-                    m = self.get_mode_params(config, mode)
-                    m["constant"] = trial.suggest_float(prefix + mode, sys.float_info.min, sys.float_info.max)
-                    base[mode] = m["constant"]
-            else:
-                # Use attribute from last trial
-                last_trial = completed[-1]
-                for mode in self.modes:
-                    m = self.get_mode_params(config, mode)
-                    m["constant"] = last_trial.params[prefix + mode]
-                    base[mode] = m["constant"]
+            for mode in self.modes:
+                m = self.get_mode_params(config, mode)
+                m["constant"] = trial.suggest_float(prefix + mode, sys.float_info.min, sys.float_info.max)
+                base[mode] = m["constant"]
 
         step = 1
         # If all groups were fully correlated, update step needs to be divided by number of groups
@@ -183,13 +172,7 @@ class ASCGroupCalibrator(CalibratorBase):
                     # Update constants
                     if self.config_format == "sbb":
                         param = "[%s]-%s" % (attr, mode)
-
-                        if not self.alternate_base or len(completed) == 0 or len(completed) % 2 == 1:
-                            p = trial.suggest_float(prefix + param, sys.float_info.min, sys.float_info.max)
-                        else:
-                            # Use from previous iteration
-                            last_trial = completed[-1]
-                            p = last_trial.params[prefix + mode]
+                        p = trial.suggest_float(prefix + param, sys.float_info.min, sys.float_info.max)
 
                         # don't write certain values
                         if p == 0 and mode == self.fixed_mode:
@@ -213,19 +196,27 @@ class ASCGroupCalibrator(CalibratorBase):
 
         return 0
 
-    def update_step(self, param: str, last_trial: optuna.Trial) -> float:
+    def update_step(self, param: str, last_trial: optuna.Trial, completed: Sequence[optuna.Trial]) -> float:
 
         if param == self.fixed_mode:
             return 0
 
         # Base mode shares
         if not param.startswith("["):
+            # No update every 2nd iteration
+            if self.alternate_base and len(completed) % 2 == 1:
+                return 0
+
             return self.calc_asc_update(self.base.loc[param].target, last_trial.user_attrs["%s_share" % param],
                                         self.base.loc[self.fixed_mode].target,
                                         last_trial.user_attrs["%s_share" % self.fixed_mode])
 
         else:
             p, _, mode = param.rpartition("-")
+
+            # No update every other iteration
+            if self.alternate_base and len(completed) % 2 == 0:
+                return 0
 
             if mode == self.fixed_mode:
                 return 0
