@@ -11,7 +11,6 @@ import pandas as pd
 
 from .base import CalibratorBase, CalibrationInput
 from .analysis import read_trips_and_persons
-from .utils import completed_trials
 
 
 def get_sbb_params(config, group, value, mode):
@@ -88,7 +87,7 @@ class ASCGroupCalibrator(CalibratorBase):
         super().__init__(modes, initial, target, lr, constraints)
 
         self.fixed_mode = fixed_mode
-        self.multi_groups = multi_groups
+        self.multi_groups = set(multi_groups)
         self.corr_correction = corr_correction
         self.config_format = config_format
 
@@ -119,14 +118,26 @@ class ASCGroupCalibrator(CalibratorBase):
             self.base = None
             self.alternate_base = False
 
-    def get_group(self, df, groups: dict = None):
+    def get_group(self, df, groups: dict = None, use_multi=False):
         """ Get data of one group"""
         # return result for empty groups
         if groups is None:
             idx = reduce(lambda x, y: x & y, [pd.isna(df[g]) for g in self.groups])
             return df[idx]
 
-        idx = reduce(lambda x, y: x & y, [df[g] == v for g, v in groups.items()])
+        if use_multi:
+            idx = []
+            for g, v in groups.items():
+                if g in self.multi_groups:
+                    vs = v.split(",")
+                    idx.append(df[g].isin(vs))
+                else:
+                    idx.append(df[g] == v)
+
+            idx = reduce(lambda x, y: x & y, idx)
+        else:
+            idx = reduce(lambda x, y: x & y, [df[g] == v for g, v in groups.items()])
+
         return df[idx]
 
     @property
@@ -258,7 +269,7 @@ class ASCGroupCalibrator(CalibratorBase):
                 if pd.isna(v):
                     continue
 
-                sub_trips = self.get_group(trips, {g: v})
+                sub_trips = self.get_group(trips, {g: v}, g in self.multi_groups)
                 sub_share = sub_trips.groupby("main_mode").count()["trip_number"] / len(sub_trips)
                 sub_share.rename("share", inplace=True)
 
