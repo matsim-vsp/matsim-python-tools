@@ -269,8 +269,9 @@ def calc_commute(pp, tt):
     edu = tt[tt.valid &
              ((tt.sd_group == SourceDestinationGroup.HOME_EDU) | (tt.sd_group == SourceDestinationGroup.EDU_HOME))]
 
-    return work.groupby("p_id").agg(work_commute=("gis_length", "max")), \
-        edu.groupby("p_id").agg(edu_commute=("gis_length", "max"))
+    # t_weight is always the same for one person
+    return work.groupby("p_id").agg(commute_dist=("gis_length", "mean"), weight=("t_weight", "max")), \
+        edu.groupby("p_id").agg(commute_dist=("gis_length", "mean"), weight=("t_weight", "max"))
 
 
 def calc_needed_short_distance_trips(ref_trips: pd.DataFrame, sim_trips: pd.DataFrame, max_dist=1000) -> Tuple[float, int]:
