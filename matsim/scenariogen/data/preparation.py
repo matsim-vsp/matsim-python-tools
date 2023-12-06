@@ -17,11 +17,13 @@ def prepare_persons(hh, pp, tt, augment=5, max_hh_size=5, core_weekday=False, re
 
     # Augment data using p_weight
     if augment > 1:
-        df = augment_persons(df, augment)
+        # in the cdmx case we dont need to do p_weight * augment = 5 (see method augment_persons)
+        # the sum of all person weights already sums up to the total (more or less) no of inhab. of ZMVM (~21 mio)
+        df = augment_persons(df)
         df = shuffle(df, random_state=0).reset_index(drop=True)
 
     # set car avail
-    df.loc[df.age < 17, "driving_license"] = Availability.NO
+    df.loc[df.age < 18, "driving_license"] = Availability.NO
     _fill(df, "driving_license", Availability.UNKNOWN)
 
     df["car_avail"] = (df.n_cars > 0) & (df.driving_license == Availability.YES)
@@ -57,6 +59,7 @@ def prepare_persons(hh, pp, tt, augment=5, max_hh_size=5, core_weekday=False, re
 
     # Regions other than 1 and 3 are massively under-represented
     # Regions are reduced to 1 (Berlin) and 3 (Outside Berlin)
+    # for the mexico city metropolitan area dataset this is already done in previous steps: 1 mexico city, 3 outside of mexico city
     df.loc[df.region_type != 1, "region_type"] = 3
 
     # Maximum age is 99, also to be able to encode age with two tokens
@@ -161,11 +164,11 @@ def create_activities(all_persons: pd.DataFrame, tt: pd.DataFrame, core_weekday=
                 return "%s_%d" % (p.Index, t_i)
 
             if len(trips) == 0:
-                acts.append(Activity(a_id(0), p.Index, 0, Purpose.HOME, 1440, 0, 0, TripMode.OTHER))
+                acts.append(Activity(a_id(0), p.Index, 0, Purpose.HOME, 1440, 0, 0, TripMode.OTHER, "999", "999", 0))
             else:
                 acts.append(
                     Activity(a_id(0), p.Index, 0, trips.iloc[0].sd_group.source(), trips.iloc[0].departure, 0, 0,
-                             TripMode.OTHER))
+                             TripMode.OTHER, trips.iloc[0].dep_district, trips.iloc[0].arr_district, trips.iloc[0].departure))
 
             for i in range(len(trips) - 1):
                 t0 = trips.iloc[i]
@@ -177,7 +180,7 @@ def create_activities(all_persons: pd.DataFrame, tt: pd.DataFrame, core_weekday=
                     valid = False
 
                 acts.append(Activity(a_id(i + 1), p.Index, i + 1, t0.purpose,
-                                     duration, t0.gis_length, t0.duration, t0.main_mode))
+                                     duration, t0.gis_length, t0.duration, t0.main_mode, t0.dep_district, t0.arr_district, t0.departure))
 
             if len(trips) > 1:
                 i += 1
@@ -189,15 +192,17 @@ def create_activities(all_persons: pd.DataFrame, tt: pd.DataFrame, core_weekday=
 
                 # Duration is set to rest of day
                 acts.append(
-                    Activity(a_id(i + 1), p.Index, i + 1, tl.purpose, 1440, tl.gis_length, tl.duration, tl.main_mode))
+                    Activity(a_id(i + 1), p.Index, i + 1, tl.purpose
+                             , 1440, tl.gis_length, tl.duration, tl.main_mode, tl.dep_district, tl.arr_district, tl.departure))
 
             if valid:
                 res.extend(acts)
 
         return res
 
-    with mp.Pool(8) as pool:
+    with mp.Pool(16) as pool:
         docs = pool.map(convert, np.array_split(all_persons, 16))
+        # docs = pool.map(convert, np.array_split(all_persons, 64))
         result = functools.reduce(lambda a, b: a + b, docs)
 
     activities = pd.DataFrame(result).set_index("a_id")
