@@ -4,7 +4,7 @@
 import argparse
 
 # from matsim.scenariogen.data import run_create_ref_data
-from .data import run_extract_activities
+from data import run_extract_activities
 # from matsim.scenariogen.data import run_lookup_regiostar
 # from matsim.scenariogen.network import run_collect_results
 # from matsim.scenariogen.network import run_edges as sumo_edges
