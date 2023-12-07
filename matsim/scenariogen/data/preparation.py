@@ -17,7 +17,7 @@ def prepare_persons(hh, pp, tt, augment=5, max_hh_size=5, core_weekday=False, re
 
     # Augment data using p_weight
     if augment > 1:
-        # in the cdmx case we dont need to do p_weight * augment = 5 (see method augment_persons)
+        # in the cdmx case we do not need to do p_weight * augment = 5 (see method augment_persons)
         # the sum of all person weights already sums up to the total (more or less) no of inhab. of ZMVM (~21 mio)
         df = augment_persons(df)
         df = shuffle(df, random_state=0).reset_index(drop=True)
@@ -202,7 +202,6 @@ def create_activities(all_persons: pd.DataFrame, tt: pd.DataFrame, core_weekday=
 
     with mp.Pool(16) as pool:
         docs = pool.map(convert, np.array_split(all_persons, 16))
-        # docs = pool.map(convert, np.array_split(all_persons, 64))
         result = functools.reduce(lambda a, b: a + b, docs)
 
     activities = pd.DataFrame(result).set_index("a_id")
