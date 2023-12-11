@@ -53,7 +53,7 @@ def linear_scheduler(start=0.6, end=1, interval=3):
     """ Creates a lr scheduler that will interpolate linearly from start to end over the first n iterations.
 
         :param start: Initial learning rate.
-        :param end: Finial learning rate to reach.
+        :param end: Final learning rate to reach.
         :param interval: Number of runs until end rate should be reached.
     """
     if interval < 2:
