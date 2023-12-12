@@ -332,6 +332,7 @@ class Trip:
     valid: bool
     dep_district: str = ""
     arr_district: str = ""
+    arrival: int = 0
 
 
 @dataclass
@@ -348,3 +349,4 @@ class Activity:
     dep_district: str = ""
     arr_district: str = ""
     departure: int = 0
+    start_time: int = 0

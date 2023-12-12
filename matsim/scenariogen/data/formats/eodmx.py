@@ -103,7 +103,8 @@ def convert(data: tuple, regio=None):
         hh_id = str(pint(ps[ps.index == str(pint(t.id_soc))].hh_id))
         # hh_id = "10"
         departure = EOD2017.calc_minutes(t.p5_9_1, t.p5_9_2)
-        duration = EOD2017.calc_minutes(t.p5_10_1, t.p5_10_2) - departure
+        arrival = EOD2017.calc_minutes(t.p5_10_1, t.p5_10_2)
+        duration = arrival - departure
         ts.append(
             Trip(
                 t_id=hh_id + "_" + str(pint(t.id_soc)) + "_" + str(pint(t.id_via)),
@@ -121,9 +122,10 @@ def convert(data: tuple, regio=None):
                 purpose=EOD2017.trip_purpose(t.p5_13),
                 sd_group=EOD2017.determine_sdGroup(int(t.p5_6)),
                 # Trip is valid if length and duration are present
-                valid=(str(pint(t.dto_origen)).zfill(3) != "999" and str(pint(t.dto_dest)).zfill(3) != "999") and duration > 0,
+                valid=EOD2017.trip_valid(str(pint(t.dto_origen)).zfill(3), str(pint(t.dto_dest)).zfill(3), duration),
                 dep_district=str(int(t.dto_origen)).zfill(3),
-                arr_district=str(int(t.dto_dest)).zfill(3)
+                arr_district=str(int(t.dto_dest)).zfill(3),
+                arrival=arrival
             )
         )
 
@@ -182,18 +184,6 @@ class EOD2017:
         # other: 0.0011 split into other, mexicable and transporte personal
         'p5_14_20': 0.00036,
     }
-
-    # @staticmethod
-    # def parking_position(x):
-    #
-    #     if x == 1:
-    #         return ParkingPosition.PRIVATE
-    #     elif x == 2:
-    #         return ParkingPosition.PUBLIC
-    #     elif x == 3:
-    #         return ParkingPosition.DIFFERENT
-    #
-    #     return ParkingPosition.NA
 
     @staticmethod
     def economic_status(status):
@@ -411,5 +401,20 @@ class EOD2017:
             return SourceDestinationGroup.VISIT_OTHER
 
         return SourceDestinationGroup.OTHER_OTHER
+
+    @staticmethod
+    def trip_valid(dep_district, arr_district, duration):
+        # validation: trip must not be from or to unknown district, nor have a duration of 0 or lower (invalid)
+        if dep_district == "999":
+            return False
+        if arr_district == "999":
+            return False
+        if duration <= 0:
+            return False
+        # it is assumed that trips to another district take at least 10 minutes. This filters out a share of about 0.4% (205314 / 49144928) of trips.
+        if dep_district != arr_district and duration < 10:
+            return False
+
+        return True
 
 
