@@ -194,7 +194,7 @@ def create_activities(all_persons: pd.DataFrame, tt: pd.DataFrame, core_weekday=
                 # Duration is set to rest of day
                 acts.append(
                     Activity(a_id=a_id(i + 1), p_id=p.Index, n=i + 1, type=tl.purpose, duration=1440 - tl.arrival, leg_dist=tl.gis_length,
-                             leg_duration=tl.duration, leg_mode=tl.main_mode, dep_district=tl.dep_district, arr_district=tl.arr_district, departure=tl.departure, start_time=tl.arrival, end_time=1440))
+                             leg_duration=tl.duration, leg_mode=tl.main_mode, dep_district=tl.dep_district, arr_district=tl.arr_district, departure=tl.departure, start_time=tl.arrival))
 
             if valid:
                 res.extend(acts)
