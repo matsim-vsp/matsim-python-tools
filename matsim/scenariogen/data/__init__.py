@@ -312,6 +312,7 @@ class Person:
     present_on_day: bool
     reporting_day: int
     n_trips: int
+    home_district: str = ""
 
 
 @dataclass

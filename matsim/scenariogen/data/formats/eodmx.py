@@ -64,8 +64,9 @@ def convert(data: tuple, regio=None):
                 # same  as mobile_on_day as there is no specific question on this
                 present_on_day= True if p.p4_2 == 1 else False,
                 # there is no data on which weekday it is, so we just assume it always is a tuesday = valid
-                reporting_day= 2,
-                n_trips= 0 if math.isnan(p.p5_4) else pint(p.p5_4)
+                reporting_day=2,
+                n_trips=0 if math.isnan(p.p5_4) else pint(p.p5_4),
+                home_district=str(int(p.distrito)).zfill(3)
             )
         )
 
