@@ -338,15 +338,16 @@ class Trip:
 @dataclass
 class Activity:
     """ Activity information (including leg) """
+    # all leg information relates to the leg leading to the activity
     a_id: str
-    p_id: str
+    p_index: str
     n: int
     type: Purpose
     duration: int
     leg_dist: float
     leg_duration: float
     leg_mode: TripMode
-    dep_district: str = ""
-    arr_district: str = ""
-    departure: int = 0
+    leg_dep_district: str = ""
+    leg_arr_district: str = ""
+    leg_departure: int = 0
     start_time: int = 0

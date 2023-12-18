@@ -101,13 +101,12 @@ def convert(data: tuple, regio=None):
             continue
 
         hh_id = str(pint(ps[ps.index == str(pint(t.id_soc))].hh_id))
-        # hh_id = "10"
         departure = EOD2017.calc_minutes(t.p5_9_1, t.p5_9_2)
         arrival = EOD2017.calc_minutes(t.p5_10_1, t.p5_10_2)
         duration = arrival - departure
         ts.append(
             Trip(
-                t_id=hh_id + "_" + str(pint(t.id_soc)) + "_" + str(pint(t.id_via)),
+                t_id=str(pint(t.id_via)),
                 t_weight=t.factor,
                 p_id=str(pint(t.id_soc)),
                 hh_id=hh_id,
@@ -384,7 +383,7 @@ class EOD2017:
 
     @staticmethod
     def determine_sdGroup(x):
-        # only destination will be assigned as it is needed for the first act of the day
+        # here, only source will be assigned as it is needed for the first act of the day
         # the following is based on assumptions, as e.g. not all trips from / to a shopping center do have the purpose "shopping"
         # but also could be "work" or other purposes
         if x == 1:
