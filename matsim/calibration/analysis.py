@@ -3,15 +3,72 @@
 
 import glob
 
-import pandas as pd
-import numpy as np
+from typing import Any, Tuple
+
 import geopandas
+import numpy as np
+import pandas as pd
 
 
-def read_trips_and_persons(run, transform_persons=None, transform_trips=None):    
+def calc_adjusted_mode_share(sim: pd.DataFrame, survey: pd.DataFrame,
+                             count_var: str = "trips", dist_var: str = "dist_group") -> Tuple[Any, pd.DataFrame]:
+    """ This function can be used if the given input trip data has a different distance distribution than the survey data.
+        It will rescale the survey data to match simulated data, which allows to calculate an adjusted overall mode share.
+
+        :param sim: data frame containing shares for distance group and modes
+        :param survey: data frame containing shares from survey data
+        :param count_var: name of column containing the number of trips or share in 'sim'
+        :param dist_var: name of the column holding the distance group information
+        :return: tuple of optimization result and adjusted mode share
+    """
+    from scipy.optimize import minimize
+
+    sagg = sim.groupby(dist_var).sum()
+    sagg['share'] = sagg[count_var] / np.sum(sagg[count_var])
+
+    # Rescale the distance groups of the survey data so that it matches the distance group distribution of the simulation
+    # The overall mode share after this adjustment will the resulting adjusted mode share
+    def f(x, result=False):
+        adj = survey.copy()
+
+        for i, t in enumerate(x):
+            adj.loc[adj[dist_var] == sagg.index[i], "share"] *= t
+
+        adj.share = adj.share / np.sum(adj.share)
+
+        agg = adj.groupby(dist_var).sum()
+
+        # Minimized difference between adjusted and simulated distribution
+        err = sum((sagg.share - agg.share)**2)
+
+        if result:
+            return adj
+
+        return err
+
+    # One variable for each distance group
+    x0 = np.ones(len(sagg.index)) / len(sagg.index)
+
+    # Sum should be less than one
+    cons = [{'type': 'ineq', 'fun': lambda x:  1 - sum(x)}]
+    bnds = tuple((0, 1) for x in x0)
+
+    res = minimize(f, x0, method='SLSQP', bounds=bnds, constraints=cons)
+
+    df = f(res.x, True)
+
+    return res, df
+
+
+def read_trips_and_persons(run, transform_persons=None, transform_trips=None) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """ Read trips and persons from run directory """
-    trips = glob.glob(run.rstrip("/") + "/*.output_trips.csv.gz")[0]
 
+    # Return input as output
+    # This allows to re-use input for the calc functions
+    if type(run) is tuple and len(run) == 2:
+        return run
+
+    trips = glob.glob(run.rstrip("/") + "/*.output_trips.csv.gz")[0]
     persons = glob.glob(run.rstrip("/") + "/*.output_persons.csv.gz")[0]
 
     df = pd.read_csv(trips, sep=";",  dtype={"person": "str"})
@@ -66,7 +123,7 @@ def calc_mode_share(run, transform_persons=None, transform_trips=None):
 def calc_mode_stats(run, attrs=[], 
                     dist_bins = [0, 1000, 2000, 5000, 10000, 20000, np.inf],
                     dist_labels = ["0 - 1000", "1000 - 2000", "2000 - 5000", "5000 - 10000", "10000 - 20000", "20000+"],
-                    transform_persons=None, transform_trips=None):    
+                    transform_persons=None, transform_trips=None) -> pd.DataFrame:    
     """ Calculate detailed mode statistics """
 
     trips, _ = read_trips_and_persons(run, transform_persons, transform_trips)
@@ -76,19 +133,17 @@ def calc_mode_stats(run, attrs=[],
         data = dict(n=len(x), mean_dist=np.average(x.traveled_distance))               
         return pd.Series(data=data)
 
-    aggr = trips.groupby(attrs + ["dist_group", "main_mode"]).apply(aggr)
+    aggr = trips.groupby(attrs + ["dist_group", "main_mode"], observed=True).apply(aggr)
     
     aggr["n"].fillna(0, inplace=True)
 
     aggr["share"] = aggr.n / aggr.n.sum()
     aggr["share"].fillna(0, inplace=True)
 
-
-
     return aggr
 
 
-def calc_population_stats(run, attrs=[], transform_persons=None, transform_trips=None):
+def calc_population_stats(run, attrs=[], transform_persons=None, transform_trips=None) -> pd.DataFrame:
     """ Calculate population statistics """
 
     trips, persons = read_trips_and_persons(run, transform_persons, transform_trips)
@@ -126,8 +181,11 @@ def calc_population_stats(run, attrs=[], transform_persons=None, transform_trips
         
         return pd.Series(data=data)
 
-
-    aggr = persons.groupby(attrs).apply(summarize)
+    if attrs:
+        aggr = persons.groupby(attrs).apply(summarize)
+    else:
+        aggr = summarize(persons)
+        aggr = aggr.to_frame(0).T
 
     aggr["population_share"] = aggr.n / aggr.n.sum()
     

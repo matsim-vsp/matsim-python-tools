@@ -237,6 +237,8 @@ Scenarios created with the `matsim-application` contrib provide an interface tha
 # -------------------------------------------------------------------
 # 5. CALIBRATION: Automatic calibration for MATSim scenario.
 
+from matsim.calibration import create_calibration, ASCCalibrator, utils, study_as_df
+
 modes = ["walk", "car", "pt", "bike"]
 fixed_mode = "walk"
 target = {
@@ -246,11 +248,29 @@ target = {
     "car": 0.359
 }
 
-study, obj = calibration.create_mode_share_study("calib", "./matsim-scenario-1.0-SNAPSHOT.jar",
-                                        "./scenarios/input/scenario-v1.0-10pct.config.xml",
-                                        modes, fixed_mode, target)
+def filter_persons(df):
+    return df[df.subpopulation == "person"]
 
+def filter_modes(df):
+    return df[df.main_mode.isin(modes)]
+
+study, obj = create_calibration("calib", ASCCalibrator(modes, initial, target, fixed_mode=fixed_mode,
+                                                       lr=utils.linear_scheduler(start=0.25, interval=10)),
+                                "./matsim-scenario-1.0-SNAPSHOT.jar",
+                                "./scenarios/input/scenario-v1.0-10pct.config.xml",
+                                args="--config:controler.lastIteration 400",
+                                jvm_args="-Xmx12G -Xmx12G -XX:+AlwaysPreTouch -XX:+UseParallelGC",
+                                transform_persons=filter_persons,
+                                transform_trips=filter_modes,
+                                chain_runs=utils.default_chain_scheduler, debug=False)
 
 study.optimize(obj, 10)
+
+df = study_as_df(study)
+df.to_csv("report.csv")
+
+from matsim.calibration.plot import plot_study
+
+plot_study(study)
 
 ```
