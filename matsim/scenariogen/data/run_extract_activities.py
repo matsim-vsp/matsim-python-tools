@@ -26,10 +26,12 @@ def main(args):
     print("Written survey csvs")
 
     df = prepare_persons(hh, persons, trips, augment=5, max_hh_size=7, core_weekday=True, remove_with_invalid_trips=False)
+    df = df.reset_index(names=["idx"])
 
-    df.to_csv(args.output + "-persons.csv", index_label="idx")
-    print("Created %d synthetics persons" % len(df))
-
-    activities = create_activities(df, trips, include_person_context=False, cut_groups=False)
+    activities, persons = create_activities(df, trips, include_person_context=False, cut_groups=False)
     print("About to write %d activities to csv, this might take a while." % len(activities))
     activities.to_csv(args.output + "-activities.csv", index=False)
+    persons = persons.set_index("idx")
+    print("Created %d synthetics persons. About to write them to csv, this might take a while." % len(persons))
+    persons.to_csv(args.output + "-persons.csv", index_label="idx")
+
