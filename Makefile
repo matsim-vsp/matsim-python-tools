@@ -35,7 +35,7 @@ version:
 > npx standard-version
 .PHONY: version
 
-.build-sentinel: $(shell find matsim/*.py) $(shell find docs/*) README.md setup.py
+.build-sentinel: $(shell find matsim/*.py) $(shell find docs/*) README.md setup.py VERSION
 > rm -rf dist
 > python3 setup.py sdist bdist_wheel
 > twine check dist/*
