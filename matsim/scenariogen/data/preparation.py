@@ -17,11 +17,13 @@ def prepare_persons(hh, pp, tt, augment=5, max_hh_size=5, core_weekday=False, re
 
     # Augment data using p_weight
     if augment > 1:
-        df = augment_persons(df, augment)
+        # in the cdmx case we do not need to do p_weight * augment = 5 (see method augment_persons)
+        # the sum of all person weights already sums up to the total (more or less) no of inhab. of ZMVM (~21 mio)
+        df = augment_persons(df)
         df = shuffle(df, random_state=0).reset_index(drop=True)
 
     # set car avail
-    df.loc[df.age < 17, "driving_license"] = Availability.NO
+    df.loc[df.age < 18, "driving_license"] = Availability.NO
     _fill(df, "driving_license", Availability.UNKNOWN)
 
     df["car_avail"] = (df.n_cars > 0) & (df.driving_license == Availability.YES)
@@ -57,6 +59,7 @@ def prepare_persons(hh, pp, tt, augment=5, max_hh_size=5, core_weekday=False, re
 
     # Regions other than 1 and 3 are massively under-represented
     # Regions are reduced to 1 (Berlin) and 3 (Outside Berlin)
+    # for the mexico city metropolitan area dataset this is already done in previous steps: 1 mexico city, 3 outside of mexico city
     df.loc[df.region_type != 1, "region_type"] = 3
 
     # Maximum age is 99, also to be able to encode age with two tokens
@@ -139,7 +142,8 @@ def create_activities(all_persons: pd.DataFrame, tt: pd.DataFrame, core_weekday=
             if "present_on_day" in persons.keys() and not p.present_on_day:
                 continue
 
-            p_id = p.p_id if "p_id" in persons.keys() else p.Index
+            # p_id = p.p_id if "p_id" in persons.keys() else p.Index
+            p_id = p.p_id
 
             try:
                 #            trips = tt[tt.p_id == p_id]
@@ -149,6 +153,7 @@ def create_activities(all_persons: pd.DataFrame, tt: pd.DataFrame, core_weekday=
                 trips = tt.iloc[:0, :].copy()
 
             if (~trips.valid).any():
+                persons.drop(p.Index, inplace=True)
                 continue
 
             if core_weekday:
@@ -158,14 +163,15 @@ def create_activities(all_persons: pd.DataFrame, tt: pd.DataFrame, core_weekday=
 
             # id generator
             def a_id(t_i):
-                return "%s_%d" % (p.Index, t_i)
+                return "%s_%d" % (p.idx, t_i)
 
             if len(trips) == 0:
-                acts.append(Activity(a_id(0), p.Index, 0, Purpose.HOME, 1440, 0, 0, TripMode.OTHER))
+                acts.append(Activity(a_id=a_id(0), p_index=p.idx, n=0, type=Purpose.HOME, duration=1440, leg_dist=0,
+                                     leg_duration=0, leg_mode=TripMode.OTHER, leg_dep_district="999", leg_arr_district="999", leg_departure=0, start_time=0))
             else:
                 acts.append(
-                    Activity(a_id(0), p.Index, 0, trips.iloc[0].sd_group.source(), trips.iloc[0].departure, 0, 0,
-                             TripMode.OTHER))
+                    Activity(a_id=a_id(0), p_index=p.idx, n=0, type=trips.iloc[0].sd_group.source(), duration=trips.iloc[0].departure, leg_dist=0, leg_duration=0,
+                             leg_mode=TripMode.OTHER, leg_dep_district=trips.iloc[0].dep_district, leg_arr_district=trips.iloc[0].dep_district, leg_departure=0, start_time=0))
 
             for i in range(len(trips) - 1):
                 t0 = trips.iloc[i]
@@ -176,8 +182,8 @@ def create_activities(all_persons: pd.DataFrame, tt: pd.DataFrame, core_weekday=
                 if duration < 0 or t0.gis_length < 0:
                     valid = False
 
-                acts.append(Activity(a_id(i + 1), p.Index, i + 1, t0.purpose,
-                                     duration, t0.gis_length, t0.duration, t0.main_mode))
+                acts.append(Activity(a_id=a_id(i + 1), p_index=p.idx, n=i + 1, type=t0.purpose, duration=duration, leg_dist=t0.gis_length,
+                                     leg_duration=t0.duration, leg_mode=t0.main_mode, leg_dep_district=t0.dep_district, leg_arr_district=t0.arr_district, leg_departure=t0.departure, start_time=t0.arrival))
 
             if len(trips) > 1:
                 i += 1
@@ -189,16 +195,22 @@ def create_activities(all_persons: pd.DataFrame, tt: pd.DataFrame, core_weekday=
 
                 # Duration is set to rest of day
                 acts.append(
-                    Activity(a_id(i + 1), p.Index, i + 1, tl.purpose, 1440, tl.gis_length, tl.duration, tl.main_mode))
+                    Activity(a_id=a_id(i + 1), p_index=p.idx, n=i + 1, type=tl.purpose, duration=1440 - tl.arrival, leg_dist=tl.gis_length,
+                             leg_duration=tl.duration, leg_mode=tl.main_mode, leg_dep_district=tl.dep_district, leg_arr_district=tl.arr_district, leg_departure=tl.departure, start_time=tl.arrival))
 
             if valid:
                 res.extend(acts)
 
-        return res
+        return res, persons
 
-    with mp.Pool(8) as pool:
+    result = []
+    cleaned = pd.DataFrame()
+    with mp.Pool(16) as pool:
         docs = pool.map(convert, np.array_split(all_persons, 16))
-        result = functools.reduce(lambda a, b: a + b, docs)
+
+        for element in docs:
+            result.extend(element[0])
+            cleaned = pd.concat([cleaned, element[1]], ignore_index=True)
 
     activities = pd.DataFrame(result).set_index("a_id")
     # Reverse columns because it will be reversed again at the end
@@ -206,8 +218,10 @@ def create_activities(all_persons: pd.DataFrame, tt: pd.DataFrame, core_weekday=
     persons = all_persons.iloc[:, ::-1].drop(columns=["p_id"], errors="ignore")
 
     if include_person_context:
+        persons = cleaned.iloc[:, ::-1].drop(columns=["p_id"], errors="ignore")
         df = activities.join(persons, on="p_id", rsuffix="_p")
     else:
+        persons = cleaned
         df = activities
 
     df = df.drop(columns=["mobile_on_day", "p_weight", "hh_id", "present_on_day"], errors="ignore")
@@ -219,7 +233,7 @@ def create_activities(all_persons: pd.DataFrame, tt: pd.DataFrame, core_weekday=
         df.leg_dist = DistanceGroup.cut(df.leg_dist)
 
     # reverse columns so activities are at the end
-    return df.iloc[:, ::-1]
+    return df.iloc[:, ::-1], persons
 
 
 def check_age_employment(column_names, df):

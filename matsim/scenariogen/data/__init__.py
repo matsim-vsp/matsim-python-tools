@@ -30,7 +30,7 @@ def _batch(iterable: list, max_batch_size: int):
 def read_all(dirs: Union[str, List[str]], regio=None) -> Tuple[pd.DataFrame]:
     """ Scan directories and read everything into one dataframe """
 
-    from .formats import srv, mid
+    from .formats import srv, mid, eodmx
 
     hh = []
     pp = []
@@ -42,7 +42,7 @@ def read_all(dirs: Union[str, List[str]], regio=None) -> Tuple[pd.DataFrame]:
 
     for d in dirs:
 
-        for format in (srv, mid):
+        for format in (srv, mid, eodmx):
 
             files = []
 
@@ -112,14 +112,16 @@ class HouseholdType(AutoNameLowerStrEnum):
     MULTI_W_CHILDREN = auto()
     MULTI_WO_CHILDREN = auto()
     SINGLE = auto()
+    UNKNOWN = auto()
 
 
 class EconomicStatus(AutoNameLowerStrEnum):
-    VERY_LOW = auto()
+    # VERY_LOW = auto()
     LOW = auto()
-    MEDIUM = auto()
+    MEDIUMLOW= auto()
+    MEDIUMHIGH= auto()
     HIGH = auto()
-    VERY_HIGH = auto()
+    # VERY_HIGH = auto()
     UNKNOWN = auto()
 
 
@@ -189,6 +191,7 @@ class TripMode(AutoNameLowerStrEnum):
     PT = auto()
     MOTORCYCLE = auto()
     OTHER = auto()
+    COLECTIVO = auto()
 
 
 class DistanceGroup(AutoNameLowerStrEnum):
@@ -262,6 +265,7 @@ class SourceDestinationGroup(AutoNameLowerStrEnum):
     OTHER_WORK = auto()
     WORK_OTHER = auto()
     OTHER_OTHER = auto()
+    VISIT_OTHER = auto()
 
     UNKNOWN = auto()
 
@@ -309,6 +313,7 @@ class Person:
     present_on_day: bool
     reporting_day: int
     n_trips: int
+    home_district: str = ""
 
 
 @dataclass
@@ -327,16 +332,24 @@ class Trip:
     purpose: Purpose
     sd_group: SourceDestinationGroup
     valid: bool
+    dep_district: str = ""
+    arr_district: str = ""
+    arrival: int = 0
 
 
 @dataclass
 class Activity:
     """ Activity information (including leg) """
+    # all leg information relates to the leg leading to the activity
     a_id: str
-    p_id: str
+    p_index: str
     n: int
     type: Purpose
     duration: int
     leg_dist: float
     leg_duration: float
     leg_mode: TripMode
+    leg_dep_district: str = ""
+    leg_arr_district: str = ""
+    leg_departure: int = 0
+    start_time: int = 0
