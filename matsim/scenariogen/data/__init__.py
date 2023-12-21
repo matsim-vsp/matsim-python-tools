@@ -191,6 +191,7 @@ class TripMode(AutoNameLowerStrEnum):
     PT = auto()
     MOTORCYCLE = auto()
     OTHER = auto()
+    COLECTIVO = auto()
 
 
 class DistanceGroup(AutoNameLowerStrEnum):

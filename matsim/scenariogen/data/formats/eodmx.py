@@ -333,7 +333,10 @@ class EOD2017:
     def mode_from_var_name(varName):
         if varName == "p5_14_01":
             return TripMode.CAR
-        elif (varName == "p5_14_02" or varName == "p5_14_03" or varName == "p5_14_04" or varName == "p5_14_05" or varName == "p5_14_06" or
+        # colectivo will be handled as single mode from now on, as it needs to be routed separately from "normal" pt -sme1223
+        elif varName == "p5_14_02":
+            return TripMode.COLECTIVO
+        elif (varName == "p5_14_03" or varName == "p5_14_04" or varName == "p5_14_05" or varName == "p5_14_06" or
               varName == "p5_14_08" or varName == "p5_14_10" or varName == "p5_14_11" or varName == "p5_14_12" or varName == "p5_14_13" or
               varName == "p5_14_15" or varName == "p5_14_16" or varName == "p5_14_17"):
             return TripMode.PT
