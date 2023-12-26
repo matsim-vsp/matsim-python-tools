@@ -2,16 +2,18 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+from dataclasses import dataclass
+from enum import Enum, auto
+from typing import List, Union, Tuple
 
 import numpy as np
 import pandas as pd
 
-from enum import Enum, auto
-
 from . import *
-from .preparation import _fill
+from .preparation import cut
 
 METADATA = "data-create-ref", "Extract and create reference data from surveys."
+
 
 class InvalidHandling(Enum):
     """ How to handle invalid trips. """
@@ -22,8 +24,20 @@ class InvalidHandling(Enum):
     # Drop whole person if any trip is invalid
     REMOVE_PERSONS = auto()
 
+
+@dataclass
+class AggregationResult:
+    """ Return value of create function. """
+
+    persons: pd.DataFrame
+    trips: pd.DataFrame
+    share: pd.DataFrame
+
+    groups: pd.DataFrame = None
+
+
 def weighted(x):
-    data = dict(n=x.t_weight.sum(), mean_dist=np.average(x.gis_length * 1000, weights=x.t_weight))
+    data = dict(n=x.t_weight.sum())
     return pd.Series(data=data)
 
 
@@ -83,8 +97,18 @@ def default_person_filter(df):
 
 def create(survey_dirs, transform_persons, transform_trips,
            invalid_trip_handling: InvalidHandling = InvalidHandling.REMOVE_TRIPS,
-           impute_modes=None):
-    """ Create reference data from survey data. """
+           dist_groups=[0, 1000, 2000, 5000, 10000, 20000, np.inf],
+           ref_groups: List[Union[str, Tuple[str]]] = None,
+           output_prefix="") -> AggregationResult:
+    """ Create reference data from survey data.
+    :param survey_dirs: Directories with survey data
+    :param transform_persons: Function to transform person data frame
+    :param transform_trips: Function to transform trip data frame
+    :param invalid_trip_handling: How to handle invalid trips
+    :param groups: Create reference data for these attribute groups
+    :param output_prefix: prefix for the ouput files
+    :return:
+    """
 
     all_hh, all_persons, all_trips = read_all(survey_dirs)
 
@@ -92,9 +116,6 @@ def create(survey_dirs, transform_persons, transform_trips,
     df = all_persons.join(all_hh, on="hh_id")
 
     persons = transform_persons(df) if transform_persons is not None else df
-
-    # TODO: configurable attributes
-    persons["age_group"] = pd.cut(persons.age, [0, 18, 66, np.inf], labels=["0 - 17", "18 - 65", "65+"], right=False)
 
     if invalid_trip_handling == InvalidHandling.REMOVE_PERSONS:
         # Filter persons, if they have at least one invalid trip
@@ -110,16 +131,8 @@ def create(survey_dirs, transform_persons, transform_trips,
     # Transform existing trips
     trips = transform_trips(trips) if transform_trips is not None else trips
 
-    # Fill certain modes with distribution from existing
-    if impute_modes is not None:
-        for m in impute_modes:
-            _fill(trips, "main_mode", m)
-
-    # TODO: configurable dist binds
-    labels = ["0 - 1000", "1000 - 2000", "2000 - 5000", "5000 - 10000", "10000 - 20000", "20000+"]
-    bins = [0, 1000, 2000, 5000, 10000, 20000, np.inf]
-
-    trips["dist_group"] = pd.cut(trips.gis_length * 1000, bins, labels=labels, right=False)
+    # Set dist groups
+    trips["dist_group"] = cut(trips.gis_length * 1000, dist_groups)
 
     aggr = trips.groupby(["dist_group", "main_mode"]).apply(weighted)
 
@@ -129,26 +142,52 @@ def create(survey_dirs, transform_persons, transform_trips,
     share = aggr.drop(columns=["n"])
     aggr = share.copy()
 
-    # TODO: configurable output
+    aggr.to_csv(output_prefix + "mode_share_ref.csv")
 
-    aggr.to_csv("mode_share_ref.csv")
-
-    # Also normalize der distance group
+    # Also normalize per distance group
     for dist_group in aggr.index.get_level_values(0).categories:
         sub = aggr.loc[dist_group, :]
         sub.share /= sub.share.sum()
 
-    aggr.to_csv("mode_share_per_dist_ref.csv")
+    aggr.to_csv(output_prefix + "mode_share_per_dist_ref.csv")
 
     aggr = summarize_purposes(trips)
 
-    aggr.to_csv("trip_purposes_by_hour_ref.csv")
+    aggr.to_csv(output_prefix + "trip_purposes_by_hour_ref.csv")
 
     aggr = summarize_mode_usage(persons, trips)
-    aggr.to_csv("mode_users_ref.csv")
+    aggr.to_csv(output_prefix + "mode_users_ref.csv")
 
-    # TODO: ref data per attribute ?
-    return persons, trips, share.groupby("main_mode").sum().drop(columns=["mean_dist"])
+    groups = None
+    if ref_groups:
+
+        groups = []
+
+        for g in ref_groups:
+
+            if type(g) is str:
+                g = [g]
+
+            for x in g:
+                if x not in persons.columns:
+                    raise ValueError("Column %s not found in persons" % x)
+
+            aggr = trips.groupby(g + ["main_mode"]).apply(weighted)
+            aggr["share"] = aggr.n / aggr.n.sum()
+            aggr["share"].fillna(0, inplace=True)
+            aggr.drop(columns=["n"], inplace=True)
+
+            # todo only works with one subgroup level
+            # Normalize per group
+            for group in aggr.index.get_level_values(0).categories:
+                sub = aggr.loc[group, :]
+                sub.share /= sub.share.sum()
+
+            groups.append(aggr)
+
+        groups = pd.concat(groups, axis=1)
+
+    return AggregationResult(persons, trips, share.groupby("main_mode").sum(), groups=groups)
 
 
 def main(args):

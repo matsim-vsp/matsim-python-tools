@@ -64,6 +64,18 @@ def prepare_persons(hh, pp, tt, augment=5, max_hh_size=5, core_weekday=False, re
 
     return df
 
+def bins_to_labels(bins):
+    """ Convert bins to labels """
+    res =  ["%.0f - %.0f" % (bins[i], bins[i + 1]) for i in range(len(bins) - 1)]
+
+    if bins[-1] == np.inf:
+        res[-1] = "%.0f+" % bins[-2]
+
+    return res
+
+def cut(x, bins):
+    """ Cut x into bind and return labels """
+    return pd.cut(x, bins, labels=bins_to_labels(bins), right=False)
 
 def augment_persons(pp, factor=1, permute_age=0.5):
     """ Augment persons using p weight
