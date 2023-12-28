@@ -2,12 +2,11 @@
 # -*- coding: utf-8 -*-
 
 import argparse
-from dataclasses import dataclass
-from enum import Enum, auto
-from typing import List, Union, Tuple
-
 import numpy as np
 import pandas as pd
+from dataclasses import dataclass
+from enum import Enum, auto
+from typing import List
 
 from . import *
 from .preparation import cut
@@ -67,6 +66,20 @@ def mode_usage(mode):
 
     return f
 
+def grouped_share(df, groups):
+    """ Compute share of each group. """
+
+    aggr = df.groupby(groups).apply(weighted)
+    aggr["share"] = aggr.n / aggr.n.sum()
+    aggr["share"].fillna(0, inplace=True)
+    aggr.drop(columns=["n"], inplace=True)
+
+    # Normalize per group
+    for group in set(aggr.index.get_level_values(0)):
+        sub = aggr.loc[group, :]
+        sub.share /= sub.share.sum()
+
+    return aggr
 
 def summarize_mode_usage(x, trips):
     total_mobile = x[x.mobile_on_day].p_weight.sum()
@@ -164,35 +177,27 @@ def create(survey_dirs, transform_persons, transform_trips,
         overall = share.groupby("main_mode").sum().reset_index()
 
         groups = [overall]
+        dist = []
 
         for g in ref_groups:
 
             if g not in persons.columns:
                 raise ValueError("Column %s not found in persons" % g)
 
-            aggr = trips.groupby([g] + ["main_mode"]).apply(weighted)
-            aggr["share"] = aggr.n / aggr.n.sum()
-            aggr["share"].fillna(0, inplace=True)
-            aggr.drop(columns=["n"], inplace=True)
-
-            # Normalize per group
-            for group in set(aggr.index.get_level_values(0)):
-                sub = aggr.loc[group, :]
-                sub.share /= sub.share.sum()
-
+            aggr = grouped_share(trips, [g, "main_mode"])
             groups.append(aggr.reset_index())
 
-        groups = pd.concat(groups, sort=False)
+            aggr = grouped_share(trips, [g, "dist_group", "main_mode"])
+            dist.append(aggr.reset_index())
 
+        groups = pd.concat(groups, sort=False)
         # Reorder columns
         groups = groups[ref_groups + ["main_mode", "share"]]
-
         groups.to_csv(output_prefix + "mode_share_per_group_ref.csv", index=False)
 
-        # TODO: long format, which might be easier to plot
-
-        # TODO groups also by distance group
-
+        dist = pd.concat(dist, sort=False)
+        dist = dist[ref_groups + ["dist_group", "main_mode", "share"]]
+        dist.to_csv(output_prefix + "mode_share_per_group_dist_ref.csv", index=False)
 
     return AggregationResult(persons, trips, share.groupby("main_mode").sum(), groups=groups)
 
