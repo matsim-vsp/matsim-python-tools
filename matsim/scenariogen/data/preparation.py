@@ -22,17 +22,17 @@ def prepare_persons(hh, pp, tt, augment=5, max_hh_size=5, core_weekday=False, re
 
     # set car avail
     df.loc[df.age < 17, "driving_license"] = Availability.NO
-    _fill(df, "driving_license", Availability.UNKNOWN)
+    fill(df, "driving_license", Availability.UNKNOWN)
 
     df["car_avail"] = (df.n_cars > 0) & (df.driving_license == Availability.YES)
     df["bike_avail"] = (df.n_bikes > 0) | (df.bike_avail == Availability.YES)
 
     # small children don't have pt abo
     df.loc[df.age < 6, "pt_abo_avail"] = Availability.NO
-    _fill(df, "pt_abo_avail", Availability.UNKNOWN)
+    fill(df, "pt_abo_avail", Availability.UNKNOWN)
 
     # Replace unknown income group
-    _fill(df, "economic_status", EconomicStatus.UNKNOWN)
+    fill(df, "economic_status", EconomicStatus.UNKNOWN)
 
     # Large households are underrepresented and capped
     df.n_persons = np.minimum(df.n_persons, max_hh_size)
@@ -121,7 +121,7 @@ def prepare_trips(pp, trips, core_weekday=True):
     return df[df.columns[::-1]]
 
 
-def _fill(df, col, val=None):
+def fill(df, col, val=None):
     """ Fill null values with dist of the rest (or replace val)"""
     if val is not None:
         df.loc[df[col] == val, col] = None

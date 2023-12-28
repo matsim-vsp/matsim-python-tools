@@ -98,7 +98,7 @@ def default_person_filter(df):
 def create(survey_dirs, transform_persons, transform_trips,
            invalid_trip_handling: InvalidHandling = InvalidHandling.REMOVE_TRIPS,
            dist_groups=[0, 1000, 2000, 5000, 10000, 20000, np.inf],
-           ref_groups: List[Union[str, Tuple[str]]] = None,
+           ref_groups: List[str] = None,
            output_prefix="") -> AggregationResult:
     """ Create reference data from survey data.
     :param survey_dirs: Directories with survey data
@@ -161,31 +161,38 @@ def create(survey_dirs, transform_persons, transform_trips,
     groups = None
     if ref_groups:
 
-        groups = []
+        overall = share.groupby("main_mode").sum().reset_index()
+
+        groups = [overall]
 
         for g in ref_groups:
 
-            if type(g) is str:
-                g = [g]
+            if g not in persons.columns:
+                raise ValueError("Column %s not found in persons" % g)
 
-            for x in g:
-                if x not in persons.columns:
-                    raise ValueError("Column %s not found in persons" % x)
-
-            aggr = trips.groupby(g + ["main_mode"]).apply(weighted)
+            aggr = trips.groupby([g] + ["main_mode"]).apply(weighted)
             aggr["share"] = aggr.n / aggr.n.sum()
             aggr["share"].fillna(0, inplace=True)
             aggr.drop(columns=["n"], inplace=True)
 
-            # todo only works with one subgroup level
             # Normalize per group
-            for group in aggr.index.get_level_values(0).categories:
+            for group in set(aggr.index.get_level_values(0)):
                 sub = aggr.loc[group, :]
                 sub.share /= sub.share.sum()
 
-            groups.append(aggr)
+            groups.append(aggr.reset_index())
 
-        groups = pd.concat(groups, axis=1)
+        groups = pd.concat(groups, sort=False)
+
+        # Reorder columns
+        groups = groups[ref_groups + ["main_mode", "share"]]
+
+        groups.to_csv(output_prefix + "mode_share_per_group_ref.csv", index=False)
+
+        # TODO: long format, which might be easier to plot
+
+        # TODO groups also by distance group
+
 
     return AggregationResult(persons, trips, share.groupby("main_mode").sum(), groups=groups)
 
