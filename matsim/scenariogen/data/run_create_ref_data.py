@@ -2,11 +2,12 @@
 # -*- coding: utf-8 -*-
 
 import argparse
-import numpy as np
-import pandas as pd
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import List
+from typing import List, Sequence, SupportsFloat
+
+import numpy as np
+import pandas as pd
 
 from . import *
 from .preparation import cut
@@ -66,7 +67,8 @@ def mode_usage(mode):
 
     return f
 
-def grouped_share(df, groups):
+
+def grouped_share(df, groups, normalize=True):
     """ Compute share of each group. """
 
     aggr = df.groupby(groups).apply(weighted)
@@ -75,11 +77,13 @@ def grouped_share(df, groups):
     aggr.drop(columns=["n"], inplace=True)
 
     # Normalize per group
-    for group in set(aggr.index.get_level_values(0)):
-        sub = aggr.loc[group, :]
-        sub.share /= sub.share.sum()
+    if normalize:
+        for group in set(aggr.index.get_level_values(0)):
+            sub = aggr.loc[group, :]
+            sub.share /= sub.share.sum()
 
     return aggr
+
 
 def summarize_mode_usage(x, trips):
     total_mobile = x[x.mobile_on_day].p_weight.sum()
@@ -110,7 +114,7 @@ def default_person_filter(df):
 
 def create(survey_dirs, transform_persons, transform_trips,
            invalid_trip_handling: InvalidHandling = InvalidHandling.REMOVE_TRIPS,
-           dist_groups=[0, 1000, 2000, 5000, 10000, 20000, np.inf],
+           dist_groups: Sequence[SupportsFloat] = None,
            ref_groups: List[str] = None,
            output_prefix="") -> AggregationResult:
     """ Create reference data from survey data.
@@ -118,10 +122,14 @@ def create(survey_dirs, transform_persons, transform_trips,
     :param transform_persons: Function to transform person data frame
     :param transform_trips: Function to transform trip data frame
     :param invalid_trip_handling: How to handle invalid trips
-    :param groups: Create reference data for these attribute groups
+    :param dist_groups: distance group bins in meters
+    :param ref_groups: Create reference data for these attribute groups
     :param output_prefix: prefix for the ouput files
     :return:
     """
+
+    if dist_groups is None:
+        dist_groups = [0, 1000, 2000, 5000, 10000, 20000, np.inf]
 
     all_hh, all_persons, all_trips = read_all(survey_dirs)
 
@@ -176,8 +184,9 @@ def create(survey_dirs, transform_persons, transform_trips,
 
         overall = share.groupby("main_mode").sum().reset_index()
 
+        # Include total share in reference data
         groups = [overall]
-        dist = []
+        dist = [grouped_share(trips, ["dist_group", "main_mode"], normalize=False).reset_index()]
 
         for g in ref_groups:
 

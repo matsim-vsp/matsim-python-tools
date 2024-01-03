@@ -19,7 +19,7 @@ class ASCCalibrator(CalibratorBase):
                  fixed_mode: str = "walk",
                  lr: Callable[[int, str, float, optuna.Trial, optuna.Study], float] = None,
                  constraints: Dict[str, Callable[[str, float], float]] = None):
-        """Abstract constructors for all calibrations. Usually the same parameters should be made available subclasses.
+        """Constructor
 
         :param modes: list of all relevant modes
         :param initial: dict of initial asc values

@@ -27,7 +27,7 @@ def _batch(iterable: list, max_batch_size: int):
         yield batch
 
 
-def read_all(dirs: Union[str, List[str]], regio=None) -> Tuple[pd.DataFrame]:
+def read_all(dirs: Union[str, List[str]], regio=None) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """ Scan directories and read everything into one dataframe """
 
     from .formats import srv, mid
