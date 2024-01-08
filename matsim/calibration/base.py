@@ -103,13 +103,13 @@ class CalibratorBase(ABC):
     @staticmethod
     def get_mode_params(config: dict, mode: str):
         """ Retrieve the mode params from config object. Create if they don't exist yet. """
-        if "planCalcScore" not in config:
-            config["planCalcScore"] = {}
+        if "scoring" not in config:
+            config["scoring"] = {}
 
-        if "scoringParameters" not in config["planCalcScore"]:
-            config["planCalcScore"]["scoringParameters"] = []
+        if "scoringParameters" not in config["scoring"]:
+            config["scoring"]["scoringParameters"] = []
 
-        ps = config["planCalcScore"]["scoringParameters"]
+        ps = config["scoring"]["scoringParameters"]
 
         for p in ps:
             if "modeParams" in p:

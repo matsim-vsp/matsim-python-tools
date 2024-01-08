@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """ Contains calibration related functions """
 
-__all__ = ["create_calibration", "study_as_df", "ASCCalibrator", "ASCGroupCalibrator", "utils"]
+__all__ = ["create_calibration", "study_as_df", "ASCCalibrator", "ASCDistCalibrator", "ASCGroupCalibrator", "utils"]
 
 import glob
 import os
@@ -19,6 +19,7 @@ import yaml
 from . import utils
 from .base import CalibratorBase, to_float
 from .calib_asc import ASCCalibrator
+from .calib_asc_dist import ASCDistCalibrator
 from .calib_group_asc import ASCGroupCalibrator
 from .utils import study_as_df
 from .analysis import calc_mode_stats
