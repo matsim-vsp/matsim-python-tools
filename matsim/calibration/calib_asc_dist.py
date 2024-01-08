@@ -8,7 +8,8 @@ import optuna
 import pandas as pd
 
 from .analysis import read_trips_and_persons
-from .base import CalibratorBase, CalibrationInput
+from .base import CalibratorBase, CalibrationInput, to_float
+from .utils import last_completed_trial
 
 
 def detect_dist_groups(s: pd.Series) -> Tuple[Sequence, Sequence]:
@@ -69,7 +70,7 @@ class ASCDistCalibrator(CalibratorBase):
                  fixed_mode: str = "walk",
                  lr: Callable[[int, str, float, optuna.Trial, optuna.Study], float] = None,
                  constraints: Dict[str, Callable[[str, float], float]] = None,
-                 dist_step: float = 0.5,
+                 dist_update_step: float = 1,
                  adjust_dist: bool = False):
         """Constructor
 
@@ -79,20 +80,21 @@ class ASCDistCalibrator(CalibratorBase):
         :param fixed_mode: the fixed mode with asc=0
         :param lr: learning rate schedule, will be called with (trial number, mode, update, trial, study)
         :param constraints: constraints for each mode, must return asc and will be called with original asc
-        :param dist_step: how strong to adjust the distance parameters
+        :param dist_update_step: how strong to adjust the distance parameters
         :param adjust_dist: adjust the distance distributions so that reference and obtained match
         """
         super().__init__(modes, initial, target, lr, constraints)
 
         self.fixed_mode = fixed_mode
-        self.dist_step = dist_step
+        self.dist_update_step = dist_update_step
 
         self.target = self.target.rename(columns={"value": "share", "main_mode": "mode"}, errors="ignore")
 
-        self.base = self.target.groupby("mode").agg(share=("share", "sum"))
+        self.base = self.target.groupby("mode").agg(target=("share", "sum"))
+
         self.dist_bins, self.dist_groups = detect_dist_groups(self.target.dist_group)
 
-        self.target = self.target.set_index(["dist_group", "mode"])
+        self.target = self.target.rename(columns={"share": "target"}, errors="ignore").set_index(["dist_group", "mode"])
 
     @property
     def name(self):
@@ -117,27 +119,52 @@ class ASCDistCalibrator(CalibratorBase):
             m = self.get_mode_params(config, mode)
 
             # Constant
-            base = trial.suggest_float(prefix + mode, sys.float_info.min, sys.float_info.max)
-            m["constant"] = base
+            constant = trial.suggest_float(prefix + mode, sys.float_info.min, sys.float_info.max)
+            m["constant"] = constant
 
-            offset = base
+            last_trial = last_completed_trial(study)
 
             if mode == self.fixed_mode:
                 continue
 
+            # first group always starts at 0 for 0 meter
+            offset = 0
             dist_param = get_dist_params(config, mode)
 
             for i, dist_group in enumerate(self.dist_groups):
                 param = "[%s]-%s" % (dist_group, mode)
 
+                dist = self.dist_bins[i]
+
                 # returns target util which is converted to dist utility
                 target_util = trial.suggest_float(prefix + param, sys.float_info.min, sys.float_info.max)
 
-                delta = (target_util - base) * self.dist_step
+                if last_trial is None:
+                    # TODO: Initial util per meter is not the same as internal asc
+                    dist_param[dist] = 0
+                    continue
 
-                # TODO: finish this calculation
+                median_dist = last_trial.user_attrs[dist_group + "_median_dist"]
 
-                dist_param[self.dist_bins[i]] = delta
+                # difference needed for this group
+                diff = target_util - constant
+
+                # target_util *= self.dist_update_step
+                # TODO: update step not used
+                # TODO: calculation needs to be evaluated
+                # may lead to alternating behaviour
+
+                # solve equation to to distance utility
+                util_m = diff / median_dist
+
+                # dist utility must be negative
+                util_m = min(0, util_m)
+
+                # Increase the offset until last group is reached
+                if i < len(self.dist_bins) - 1:
+                    offset += util_m * (self.dist_bins[i + 1] - dist)
+
+                dist_param[dist] = util_m
 
         # inf group is not written
         config["vspScoring"]["distGroups"] = ",".join("%d" % x for x in self.dist_bins[:-1])
@@ -158,7 +185,8 @@ class ASCDistCalibrator(CalibratorBase):
 
         # Base mode shares
         if not param.startswith("["):
-            return self.calc_asc_update(self.base.loc[param].target, last_trial.user_attrs["%s_share" % param],
+            return self.calc_asc_update(self.base.loc[param].target,
+                                        last_trial.user_attrs["%s_share" % param],
                                         self.base.loc[self.fixed_mode].target,
                                         last_trial.user_attrs["%s_share" % self.fixed_mode])
 
@@ -168,9 +196,9 @@ class ASCDistCalibrator(CalibratorBase):
         if mode == self.fixed_mode:
             return 0
 
-        return self.calc_asc_update(self.target.loc[dist_group, mode].share,
+        return self.calc_asc_update(self.target.loc[dist_group, mode].target,
                                     last_trial.user_attrs["%s-%s_share" % (dist_group, mode)],
-                                    self.target.loc[dist_group, self.fixed_mode].share,
+                                    self.target.loc[dist_group, self.fixed_mode].target,
                                     last_trial.user_attrs["%s-%s_share" % (dist_group, self.fixed_mode)])
 
     def calc_stats(self, trial: optuna.Trial, run_dir: str,
@@ -195,13 +223,25 @@ class ASCDistCalibrator(CalibratorBase):
 
         print("Obtained base shares:")
         print(base_share)
+        print()
 
         for dist_group in self.dist_groups:
             df = trips[trips.dist_group == dist_group]
 
-            base_share = df.groupby("main_mode").count()["trip_number"] / len(df)
+            share = df.groupby("main_mode").count()["trip_number"] / len(df)
+            share = self.target.loc[dist_group, :].merge(share, left_index=True, right_index=True).rename(
+                columns={"trip_number": "share"})
 
-            # TODO: store and evaluate dist group shares
-            # store median dist
+            share["mae"] = np.abs(share.share - share.target)
+
+            for kv in share.itertuples():
+                trial.set_user_attr("%s-%s_share" % (dist_group, kv.Index), kv.share)
+                trial.set_user_attr("%s-%s_mae" % (dist_group, kv.Index), kv.mae)
+
+            trial.set_user_attr("%s_median_dist" % dist_group, to_float(df.traveled_distance.median()))
+            trial.set_user_attr("%s_sum_mae" % dist_group, to_float(share.mae.sum()))
+
+            print("Obtained shares for dist group %s:" % dist_group)
+            print(share)
 
         return base_share.mae.to_numpy()

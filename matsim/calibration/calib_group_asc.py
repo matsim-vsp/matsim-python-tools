@@ -234,8 +234,6 @@ class ASCGroupCalibrator(CalibratorBase):
 
             t = self.get_group(self.target, parse_group(p)).set_index("mode")
 
-            # TODO: the previous applied correction might be considered here as well
-
             return self.calc_asc_update(t.loc[mode].share, last_trial.user_attrs["%s_share" % param],
                                         t.loc[self.fixed_mode].share,
                                         last_trial.user_attrs["%s-%s_share" % (p, self.fixed_mode)])

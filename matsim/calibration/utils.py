@@ -70,8 +70,18 @@ def linear_scheduler(start=0.6, end=1, interval=3):
 
 
 def completed_trials(study):
+    """ Returns all completed trials sorted by number """
     completed = filter(lambda s: s.state == TrialState.COMPLETE, study.trials)
     return sorted(completed, key=lambda s: s.number)
+
+
+def last_completed_trial(study):
+    """ Returns the last completed trial """
+    completed = completed_trials(study)
+    if not completed:
+        return None
+
+    return completed[-1]
 
 
 def same_sign(x):
