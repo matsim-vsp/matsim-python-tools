@@ -36,7 +36,7 @@ setup(
         'scenariogen': ["sumolib", "traci", "lxml", "optax", "requests", "tqdm", "scikit-learn", "xgboost==1.7.1", "lightgbm",
                         "sklearn-contrib-lightning", "numpy", "sympy", "m2cgen", "shapely", "optuna"]
     },
-    tests_require=["assertpy", "pytest"],
+    tests_require=["assertpy", "pytest", "scipy"],
     entry_points={
         'console_scripts': [
             'matsim-tools=matsim.cli.main:main',
