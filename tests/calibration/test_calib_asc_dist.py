@@ -40,8 +40,11 @@ def dist_share(probs, dists, z_dist):
         d = dists[:, 0]
         # probs only for distance group
         p = probs[(d > lower_bound) & (d <= upper_bound)]
-        s = np.sum(p, axis=0) / len(d)
+        s = np.sum(p, axis=0)
+        s /= s.sum(axis=0)
+
         result[upper_bound] = s
+        lower_bound = upper_bound
 
     return result
 
@@ -52,6 +55,16 @@ def dist_err(share_dist, z_dist):
         err[k] = np.sum(np.abs(v - z_dist[k]))
 
     return err
+
+
+def calc_median_dist(dists, z_dist):
+    result = {}
+    lower_bound = 0
+    for k, v in z_dist.items():
+        result[k] = np.median(dists[:, 0][(dists[:, 0] > lower_bound) & (dists[:, 0] <= k)])
+        lower_bound = k
+
+    return result
 
 
 def test_algorithm():
@@ -72,6 +85,7 @@ def test_algorithm():
     ascs = np.zeros(4)
     # marginal utility per m for each mode
     utils_m = 0.01 * np.ones(4)
+    utils_m[0] = 0
 
     # dist shares
     z_dist = {
@@ -80,6 +94,8 @@ def test_algorithm():
         10000: [0.3, 0.2, 0.2, 0.3],
         np.inf: [0.4, 0.4, 0.1, 0.1],
     }
+
+    median_dist = calc_median_dist(dists, z_dist)
 
     z = target_share(dists, z_dist)
 
@@ -108,12 +124,21 @@ def test_algorithm():
             for j, (dist_group, v) in enumerate(z_dist.items()):
                 # Real share in distance group
                 z_i = z_dist[dist_group][i]
+                z_0 = z_dist[dist_group][0]
                 # Obtained share
                 m_i = share_dist[dist_group][i]
+                m_0 = share_dist[dist_group][0]
+
+                update = sampler.calc_asc_update(z_i, m_i, z_0, m_0)
+
+                utils_m[i] += update / median_dist[dist_group]
+
+                # TODO: might diverge otherwise
+                utils_m[i] = min(0, utils_m[i])
 
         err = np.sum(np.abs(z - share))
 
-        print("ASCs", ascs)
+        print("ASCs", ascs, "Dist utils", utils_m)
 
     print("Error", err)
     print("Share dist", share_dist, "Error", dist_errs)
