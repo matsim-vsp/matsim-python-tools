@@ -116,12 +116,12 @@ class HouseholdType(AutoNameLowerStrEnum):
 
 
 class EconomicStatus(AutoNameLowerStrEnum):
-    # VERY_LOW = auto()
+    VERY_LOW = auto()
     LOW = auto()
-    MEDIUMLOW= auto()
-    MEDIUMHIGH= auto()
+    MEDIUM_LOW = auto()
+    MEDIUM_HIGH = auto()
     HIGH = auto()
-    # VERY_HIGH = auto()
+    VERY_HIGH = auto()
     UNKNOWN = auto()
 
 
@@ -191,7 +191,8 @@ class TripMode(AutoNameLowerStrEnum):
     PT = auto()
     MOTORCYCLE = auto()
     OTHER = auto()
-    COLECTIVO = auto()
+    # This transport mode represents what in english is known as shared taxi / taxibus / minibus / colectivo in spanish:
+    TAXIBUS = auto()
 
 
 class DistanceGroup(AutoNameLowerStrEnum):
@@ -313,7 +314,7 @@ class Person:
     present_on_day: bool
     reporting_day: int
     n_trips: int
-    home_district: str = ""
+    home_district: str = None
 
 
 @dataclass
@@ -332,24 +333,23 @@ class Trip:
     purpose: Purpose
     sd_group: SourceDestinationGroup
     valid: bool
-    dep_district: str = ""
-    arr_district: str = ""
-    arrival: int = 0
+    dep_district: str = None
+    arr_district: str = None
 
 
 @dataclass
 class Activity:
-    """ Activity information (including leg) """
-    # all leg information relates to the leg leading to the activity
+    """ Activity information (including leg)
+    all leg information relates to the leg leading to the activity """
     a_id: str
-    p_index: str
+    p_id: str
     n: int
     type: Purpose
     duration: int
     leg_dist: float
     leg_duration: float
     leg_mode: TripMode
-    leg_dep_district: str = ""
-    leg_arr_district: str = ""
+    leg_dep_district: str = None
+    leg_arr_district: str = None
     leg_departure: int = 0
     start_time: int = 0

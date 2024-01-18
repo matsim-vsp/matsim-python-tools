@@ -3,14 +3,14 @@
 
 import argparse
 
-# from matsim.scenariogen.data import run_create_ref_data
+from matsim.scenariogen.data import run_create_ref_data
 from data import run_extract_activities
-# from matsim.scenariogen.data import run_lookup_regiostar
-# from matsim.scenariogen.network import run_collect_results
-# from matsim.scenariogen.network import run_edges as sumo_edges
-# from matsim.scenariogen.network import run_intersections as sumo_intersections
-# from matsim.scenariogen.network import run_routes as sumo_routes
-# from matsim.scenariogen.network import run_train_model
+from matsim.scenariogen.data import run_lookup_regiostar
+from matsim.scenariogen.network import run_collect_results
+from matsim.scenariogen.network import run_edges as sumo_edges
+from matsim.scenariogen.network import run_intersections as sumo_intersections
+from matsim.scenariogen.network import run_routes as sumo_routes
+from matsim.scenariogen.network import run_train_model
 
 
 def _add(subparsers, m):
@@ -28,11 +28,11 @@ def main():
 
     subparsers = parser.add_subparsers(title="Subcommands")
 
-    # _add(subparsers, sumo_edges)
-    # _add(subparsers, sumo_routes)
-    # _add(subparsers, sumo_intersections)
-    # _add(subparsers, run_train_model)
-    # _add(subparsers, run_collect_results)
+    _add(subparsers, sumo_edges)
+    _add(subparsers, sumo_routes)
+    _add(subparsers, sumo_intersections)
+    _add(subparsers, run_train_model)
+    _add(subparsers, run_collect_results)
 
     try:
         from .network import run_opt_freespeed
@@ -41,8 +41,8 @@ def main():
         print("Opt freespeed not available", e)
 
     _add(subparsers, run_extract_activities)
-    # _add(subparsers, run_create_ref_data)
-    # _add(subparsers, run_lookup_regiostar)
+    _add(subparsers, run_create_ref_data)
+    _add(subparsers, run_lookup_regiostar)
 
     args = parser.parse_args()
 
