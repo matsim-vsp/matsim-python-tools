@@ -347,7 +347,7 @@ class EOD2017:
         elif varName == "p5_14_14":
             return TripMode.WALK
         elif varName == "p5_14_18" or varName == "p5_14_19":
-            return TripMode.RIDE
+            return TripMode.OTHER
         return TripMode.OTHER
 
     @staticmethod
