@@ -191,9 +191,9 @@ class EOD2017:
         if status == 1:
             return EconomicStatus.LOW
         elif status == 2:
-            return EconomicStatus.MEDIUMLOW
+            return EconomicStatus.MEDIUM_LOW
         elif status == 3:
-            return EconomicStatus.MEDIUMHIGH
+            return EconomicStatus.MEDIUM_HIGH
         elif status == 4:
             return EconomicStatus.HIGH
 
