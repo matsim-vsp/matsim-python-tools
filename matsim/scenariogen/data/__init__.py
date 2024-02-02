@@ -181,6 +181,7 @@ class Purpose(AutoNameLowerStrEnum):
     HOME = auto()
     WAYBACK = auto()
     OTHER = auto()
+    ACCOMP_OTHER = auto()
 
 
 class TripMode(AutoNameLowerStrEnum):

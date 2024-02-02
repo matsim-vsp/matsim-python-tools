@@ -364,7 +364,7 @@ class EOD2017:
         elif x == 5:
             return Purpose.LEISURE
         elif x == 6:
-            return Purpose.TRANSPORT
+            return Purpose.ACCOMP_OTHER
         elif x == 7 or x == 8:
             return Purpose.PERSONAL_BUSINESS
         elif x == 9:
