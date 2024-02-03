@@ -92,6 +92,7 @@ def convert(data: tuple, regio=None):
                 SrV2018.household_type(h.E_HHTYP),
                 SrV2018.region_type(h, regio, random_state),
                 h.ST_CODE_NAME,
+                income=SrV2018.income(h.V_EINK),
             )
         )
 
@@ -394,3 +395,28 @@ class SrV2018:
         else:
             name = d.ST_CODE_NAME
             return SrV2018.CODES[name]
+
+    @staticmethod
+    def income(x):
+        if x == 1:
+            return 0
+        elif x == 2:
+            return 500
+        elif x == 3:
+            return 900
+        elif x == 4:
+            return 1500
+        elif x == 5:
+            return 2000
+        elif x == 6:
+            return 2600
+        elif x == 7:
+            return 3000
+        elif x == 8:
+            return 3600
+        elif x == 9:
+            return 4600
+        elif x == 10:
+            return 5600
+
+        return -1

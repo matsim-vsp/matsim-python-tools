@@ -288,6 +288,7 @@ class Household:
     type: HouseholdType
     region_type: int
     location: str
+    income: float = None
     geom: object = None
 
 
