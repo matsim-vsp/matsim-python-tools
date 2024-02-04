@@ -83,9 +83,6 @@ def test_algorithm():
     dists = np.tile(dists, (4, 1)).T
 
     ascs = np.zeros(4)
-    # marginal utility per m for each mode
-    utils_m = 0.01 * np.ones(4)
-    utils_m[0] = 0
 
     # dist shares
     z_dist = {
@@ -95,6 +92,14 @@ def test_algorithm():
         np.inf: [0.4, 0.4, 0.1, 0.1],
     }
 
+    # marginal utility per m for each mode
+    utils_m = np.zeros((4, len(z_dist)))
+
+    # deermin used idx for each group
+    dist_idx = np.searchsorted(list(z_dist.keys()), dists[:,0])
+    dist_idx = np.tile(dist_idx, (4, 1)).T
+
+
     median_dist = calc_median_dist(dists, z_dist)
 
     z = target_share(dists, z_dist)
@@ -102,7 +107,9 @@ def test_algorithm():
     print("Target share", z)
 
     def choice(x_ascs, x_dist_utils):
-        dist_util = dists * costs * x_dist_utils
+
+        utils_for_group = np.take_along_axis(x_dist_utils, dist_idx, axis=0)
+        dist_util = dists * costs * utils_for_group
 
         x = utils + x_ascs + dist_util + np.random.normal(size=(1000, 4))
         probs = softmax(x, axis=1)
@@ -131,14 +138,11 @@ def test_algorithm():
 
                 update = sampler.calc_asc_update(z_i, m_i, z_0, m_0)
 
-                utils_m[i] += update / median_dist[dist_group]
-
-                # TODO: might diverge otherwise
-                utils_m[i] = min(0, utils_m[i])
+                utils_m[i, j] += update / median_dist[dist_group]
 
         err = np.sum(np.abs(z - share))
 
-        print("ASCs", ascs, "Dist utils", utils_m)
+  #      print("ASCs", ascs, "Dist utils", utils_m)
 
     print("Error", err)
     print("Share dist", share_dist, "Error", dist_errs)

@@ -136,4 +136,5 @@ class CalibratorBase(ABC):
         if m_i == 0:
             return 0
 
+#        return math.log((m_0 * z_i) / (m_i * z_0))
         return math.log(z_i) - math.log(m_i) - (math.log(z_0) - math.log(m_0))

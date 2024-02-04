@@ -128,7 +128,7 @@ class ASCDistCalibrator(CalibratorBase):
                 continue
 
             # first group always starts at 0 for 0 meter
-            offset = 0
+            offset_util = 0
             dist_param = get_dist_params(config, mode)
 
             for i, dist_group in enumerate(self.dist_groups):
@@ -146,36 +146,29 @@ class ASCDistCalibrator(CalibratorBase):
 
                 median_dist = last_trial.user_attrs[dist_group + "_median_dist"]
 
-                # difference needed for this group
-                diff = target_util - constant
+                # the target util is for the median_dist, here the required slope is calculated
+                util_m = (target_util * median_dist - offset_util) / (median_dist - dist)
 
-                # target_util *= self.dist_update_step
-                # TODO: update step not used
-                # TODO: calculation needs to be evaluated
-                # may lead to alternating behaviour
-
-                # solve equation to to distance utility
-                util_m = diff / median_dist
-
-                # dist utility must be negative
-                util_m = min(0, util_m)
+                dist_param[dist] = util_m
 
                 # Increase the offset until last group is reached
                 if i < len(self.dist_bins) - 1:
-                    offset += util_m * (self.dist_bins[i + 1] - dist)
-
-                dist_param[dist] = util_m
+                    offset_util += util_m * (self.dist_bins[i + 1] - dist)
 
         # inf group is not written
         config["vspScoring"]["distGroups"] = ",".join("%d" % x for x in self.dist_bins[:-1])
 
     def sample_initial(self, param: str) -> float:
-        attr, _, mode = param.rpartition("-")
+        group, _, mode = param.rpartition("-")
+
+        # Initial value for grouped asc
+        # TODO: load these as well
+        if group:
+            return 0
 
         if mode in self.initial.index:
             return self.initial.loc[mode]
 
-        # TODO: Load from column with same format as input
         return 0
 
     def update_step(self, param: str, last_trial: optuna.Trial, completed: Sequence[optuna.Trial]) -> float:
@@ -196,10 +189,11 @@ class ASCDistCalibrator(CalibratorBase):
         if mode == self.fixed_mode:
             return 0
 
+        median_dist = last_trial.user_attrs[dist_group + "_median_dist"]
         return self.calc_asc_update(self.target.loc[dist_group, mode].target,
                                     last_trial.user_attrs["%s-%s_share" % (dist_group, mode)],
                                     self.target.loc[dist_group, self.fixed_mode].target,
-                                    last_trial.user_attrs["%s-%s_share" % (dist_group, self.fixed_mode)])
+                                    last_trial.user_attrs["%s-%s_share" % (dist_group, self.fixed_mode)]) / median_dist
 
     def calc_stats(self, trial: optuna.Trial, run_dir: str,
                    transform_persons: Callable = None,
