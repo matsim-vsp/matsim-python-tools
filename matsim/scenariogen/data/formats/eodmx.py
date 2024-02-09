@@ -124,8 +124,7 @@ def convert(data: tuple, regio=None):
                 # Trip is valid if length and duration are present
                 valid=EOD2017.trip_valid(str(pint(t.dto_origen)).zfill(3), str(pint(t.dto_dest)).zfill(3), duration),
                 dep_district=str(int(t.dto_origen)).zfill(3),
-                arr_district=str(int(t.dto_dest)).zfill(3),
-                arrival=arrival
+                arr_district=str(int(t.dto_dest)).zfill(3)
             )
         )
 
