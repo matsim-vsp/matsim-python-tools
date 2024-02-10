@@ -3,6 +3,7 @@
 import math
 import os
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import Union, Sequence, Dict, Tuple, Callable
 
 import optuna
@@ -21,6 +22,17 @@ def sanitize(x):
         x.rename(columns={'main_mode': 'mode'}, inplace=True)
 
     return x
+
+
+@dataclass
+class TerminationCondition:
+    """ Termination criteria for calibration. If multiple threshold are given, all must be met. """
+
+    """ Absolute error threshold """
+    abs_error: float = None
+
+    """ Relative error threshold """
+    rel_error: float = None
 
 
 class CalibratorBase(ABC):
@@ -45,6 +57,19 @@ class CalibratorBase(ABC):
         self.target = sanitize(self.convert_input(target))
         self.lr = lr
         self.constraints = constraints
+        self.terminate_cond = None
+        self.terminate = False
+
+    def set_termination(self, terminate: TerminationCondition):
+        """ Set termination condition for calibration """
+        self.terminate_cond = terminate
+
+    def check_termination(self, target, observed):
+        """ Check if calibration should be terminated. This will update the terminate attribute internally. """
+        if self.terminate_cond is None:
+            self.terminate =  False
+
+        self.terminate = False
 
     @property
     @abstractmethod
@@ -136,5 +161,5 @@ class CalibratorBase(ABC):
         if m_i == 0:
             return 0
 
-#        return math.log((m_0 * z_i) / (m_i * z_0))
+        #        return math.log((m_0 * z_i) / (m_i * z_0))
         return math.log(z_i) - math.log(m_i) - (math.log(z_0) - math.log(m_0))

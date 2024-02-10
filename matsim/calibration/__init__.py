@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 """ Contains calibration related functions """
 
-__all__ = ["create_calibration", "study_as_df", "ASCCalibrator", "ASCDistCalibrator", "ASCGroupCalibrator", "utils"]
+__all__ = ["create_calibration", "study_as_df", "TerminationCondition",
+           "ASCCalibrator", "ASCDistCalibrator", "ASCGroupCalibrator", "utils"]
 
 import glob
 import os
@@ -17,12 +18,12 @@ import optuna
 import yaml
 
 from . import utils
-from .base import CalibratorBase, to_float
+from .analysis import calc_mode_stats
+from .base import CalibratorBase, TerminationCondition, to_float
 from .calib_asc import ASCCalibrator
 from .calib_asc_dist import ASCDistCalibrator
 from .calib_group_asc import ASCGroupCalibrator
 from .utils import study_as_df
-from .analysis import calc_mode_stats
 
 
 class CalibrationSampler(optuna.samplers.BaseSampler):
@@ -95,6 +96,7 @@ def create_calibration(name: str, calibrate: Union[CalibratorBase, Sequence[Cali
                        transform_persons: Callable = None,
                        transform_trips: Callable = None,
                        chain_runs: Union[bool, int, Callable] = False,
+                       termination: TerminationCondition = None,
                        storage: optuna.storages.RDBStorage = None,
                        custom_cli: Callable = None,
                        debug: bool = False
@@ -113,13 +115,14 @@ def create_calibration(name: str, calibrate: Union[CalibratorBase, Sequence[Cali
     :param transform_persons: callable to filter persons included in mode share
     :param transform_trips: callable to modify trips included in mode share
     :param chain_runs: automatically use the output plans of each run as input for the next, either True or number of iterations or callable
+    :param termination: termination condition for the study
     :param storage: custom storage object to overwrite default sqlite backend
     :param custom_cli: the scenario is not a matsim application and needs a different command line syntax
     :param debug: enable debug output
     :return: tuple of study and optimization objective.
     """
 
-    # Init with 0
+    # Convert to list if single instance
     if isinstance(calibrate, CalibratorBase):
         calibrate = [calibrate]
 
@@ -150,8 +153,10 @@ def create_calibration(name: str, calibrate: Union[CalibratorBase, Sequence[Cali
         makedirs("runs")
 
     study.set_user_attr("calib", [c.name for c in calibrate])
+
     for c in calibrate:
         c.init_study(study)
+        c.set_termination(termination)
 
     def f(trial):
 

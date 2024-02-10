@@ -70,7 +70,7 @@ class ASCDistCalibrator(CalibratorBase):
                  fixed_mode: str = "walk",
                  lr: Callable[[int, str, float, optuna.Trial, optuna.Study], float] = None,
                  constraints: Dict[str, Callable[[str, float], float]] = None,
-                 dist_update_step: float = 1,
+                 dist_update_weight: float = 1,
                  adjust_dist: bool = False):
         """Constructor
 
@@ -80,13 +80,13 @@ class ASCDistCalibrator(CalibratorBase):
         :param fixed_mode: the fixed mode with asc=0
         :param lr: learning rate schedule, will be called with (trial number, mode, update, trial, study)
         :param constraints: constraints for each mode, must return asc and will be called with original asc
-        :param dist_update_step: how strong to adjust the distance parameters
+        :param dist_update_weight: how strong to adjust the distance parameters in relation to asc
         :param adjust_dist: adjust the distance distributions so that reference and obtained match
         """
         super().__init__(modes, initial, target, lr, constraints)
 
         self.fixed_mode = fixed_mode
-        self.dist_update_step = dist_update_step
+        self.dist_update_weight = dist_update_weight
 
         self.target = self.target.rename(columns={"value": "share", "main_mode": "mode"}, errors="ignore")
 
@@ -176,9 +176,12 @@ class ASCDistCalibrator(CalibratorBase):
         if param == self.fixed_mode:
             return 0
 
+        # Both update steps sum to 1
+        update_step = 1 + self.dist_update_weight
+
         # Base mode shares
         if not param.startswith("["):
-            return self.calc_asc_update(self.base.loc[param].target,
+            return (1/update_step) * self.calc_asc_update(self.base.loc[param].target,
                                         last_trial.user_attrs["%s_share" % param],
                                         self.base.loc[self.fixed_mode].target,
                                         last_trial.user_attrs["%s_share" % self.fixed_mode])
@@ -190,7 +193,7 @@ class ASCDistCalibrator(CalibratorBase):
             return 0
 
         median_dist = last_trial.user_attrs[dist_group + "_median_dist"]
-        return self.calc_asc_update(self.target.loc[dist_group, mode].target,
+        return (self.dist_update_weight/update_step) * self.calc_asc_update(self.target.loc[dist_group, mode].target,
                                     last_trial.user_attrs["%s-%s_share" % (dist_group, mode)],
                                     self.target.loc[dist_group, self.fixed_mode].target,
                                     last_trial.user_attrs["%s-%s_share" % (dist_group, self.fixed_mode)]) / median_dist
