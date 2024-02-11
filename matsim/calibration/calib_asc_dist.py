@@ -85,6 +85,9 @@ class ASCDistCalibrator(CalibratorBase):
         """
         super().__init__(modes, initial, target, lr, constraints)
 
+        if adjust_dist:
+            raise NotImplementedError("Adjusting distance distributions is not implemented yet")
+
         self.fixed_mode = fixed_mode
         self.dist_update_weight = dist_update_weight
 
@@ -94,7 +97,14 @@ class ASCDistCalibrator(CalibratorBase):
 
         self.dist_bins, self.dist_groups = detect_dist_groups(self.target.dist_group)
 
-        self.target = self.target.rename(columns={"share": "target"}, errors="ignore").set_index(["dist_group", "mode"])
+        self.target = self.target.rename(columns={"share": "target"}, errors="ignore").set_index(["dist_group"])
+
+        # Normalize per distance group
+        for dist_group in self.dist_groups:
+            sub = self.target.loc[dist_group, "target"]
+            self.target.loc[dist_group, "target"] = sub / sub.sum()
+
+        self.target = self.target.reset_index().set_index(["dist_group", "mode"])
 
     @property
     def name(self):

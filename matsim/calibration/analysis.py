@@ -135,10 +135,10 @@ def calc_mode_stats(run, attrs=[],
 
     aggr = trips.groupby(attrs + ["dist_group", "main_mode"], observed=True).apply(aggr)
 
-    aggr["n"].fillna(0, inplace=True)
+    aggr["n"] = aggr["n"].fillna(0)
 
     aggr["share"] = aggr.n / aggr.n.sum()
-    aggr["share"].fillna(0, inplace=True)
+    aggr["share"] = aggr["share"].fillna(0)
 
     return aggr
 
