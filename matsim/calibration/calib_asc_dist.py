@@ -203,10 +203,12 @@ class ASCDistCalibrator(CalibratorBase):
             return 0
 
         median_dist = last_trial.user_attrs[dist_group + "_median_dist"]
+        base_dist = self.dist_bins[self.dist_groups.index(dist_group)]
+
         return (self.dist_update_weight/update_step) * self.calc_asc_update(self.target.loc[dist_group, mode].target,
                                     last_trial.user_attrs["%s-%s_share" % (dist_group, mode)],
                                     self.target.loc[dist_group, self.fixed_mode].target,
-                                    last_trial.user_attrs["%s-%s_share" % (dist_group, self.fixed_mode)]) / median_dist
+                                    last_trial.user_attrs["%s-%s_share" % (dist_group, self.fixed_mode)]) / (median_dist - base_dist)
 
     def calc_stats(self, trial: optuna.Trial, run_dir: str,
                    transform_persons: Callable = None,
