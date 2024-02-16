@@ -207,7 +207,7 @@ class ASCGroupCalibrator(CalibratorBase):
 
         return 0
 
-    def update_step(self, param: str, last_trial: optuna.Trial, completed: Sequence[optuna.Trial]) -> float:
+    def update_step(self, param: str, last_trial: optuna.Trial, trial: optuna.Trial, completed: Sequence[optuna.Trial]) -> float:
 
         if param == self.fixed_mode:
             return 0

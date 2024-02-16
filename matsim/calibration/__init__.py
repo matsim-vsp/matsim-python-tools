@@ -63,7 +63,7 @@ class CalibrationSampler(optuna.samplers.BaseSampler):
         last = completed[-1]
         last_param = last.params[param_name]
 
-        step = to_float(c.update_step(param, last, completed))
+        step = to_float(c.update_step(param, last, trial, completed))
 
         rate = 1.0
         if c.lr is not None:
