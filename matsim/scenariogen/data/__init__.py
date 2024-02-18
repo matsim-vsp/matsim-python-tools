@@ -288,6 +288,8 @@ class Household:
     type: HouseholdType
     region_type: int
     location: str
+    zone: str = None
+    """ A detailed zone, which can be more accurate than location. """
     income: float = None
     geom: object = None
 
@@ -328,6 +330,8 @@ class Trip:
     purpose: Purpose
     sd_group: SourceDestinationGroup
     valid: bool
+    from_zone: str = None
+    to_zone: str = None
 
 
 @dataclass
