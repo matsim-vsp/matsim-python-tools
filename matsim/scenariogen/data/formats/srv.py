@@ -443,7 +443,7 @@ class SrV2018:
     def parse_zone(h, prefix=""):
         ob = parse_int_str(getattr(h, prefix + "OBERBEZIRK"))
 
-        zone = None
+        zone = pd.NA
         if ob:
             zone = ob
             ub = parse_int_str(getattr(h, prefix + "UNTERBEZIRK"))
