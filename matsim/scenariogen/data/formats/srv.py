@@ -2,13 +2,14 @@
 
 import os
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 from .. import *
 
 # Has households, persons and trips
 INPUT_FILES = 3
+
 
 def is_format(f: os.DirEntry):
     fp = f.name
@@ -92,6 +93,7 @@ def convert(data: tuple, regio=None):
                 SrV2018.household_type(h.E_HHTYP),
                 SrV2018.region_type(h, regio, random_state),
                 h.ST_CODE_NAME,
+                zone=SrV2018.parse_zone(h),
                 income=SrV2018.income(h.V_EINK),
             )
         )
@@ -116,15 +118,31 @@ def convert(data: tuple, regio=None):
                 SrV2018.trip_purpose(t.V_ZWECK),
                 SrV2018.sd_group(int(t.E_QZG_17)),
                 # Trip is valid if length and duration are present
-                0 <= t.GIS_LAENGE and t.E_DAUER > 0
+                0 <= t.GIS_LAENGE and t.E_DAUER > 0,
+                from_zone=SrV2018.parse_zone(t, "V_START_"),
+                to_zone=SrV2018.parse_zone(t, "V_ZIEL_")
             )
         )
 
     return pd.DataFrame(hhs).set_index("hh_id"), ps, pd.DataFrame(ts).set_index("t_id")
 
+
 def pint(x):
     """ Convert to positive integer"""
     return max(0, int(x))
+
+
+def parse_int_str(x):
+    """ Return parsed int or string """
+    try:
+        i = int(x)
+        if i >= 0:
+            return str(i)
+        return None
+    except ValueError:
+        if not x:
+            return None
+        return x
 
 
 class SrV2018:
@@ -420,3 +438,19 @@ class SrV2018:
             return 5600
 
         return -1
+
+    @staticmethod
+    def parse_zone(h, prefix=""):
+        ob = parse_int_str(getattr(h, prefix + "OBERBEZIRK"))
+
+        zone = pd.NA
+        if ob:
+            zone = ob
+            ub = parse_int_str(getattr(h, prefix + "UNTERBEZIRK"))
+            if ub:
+                zone += "-" + ub
+                tb = parse_int_str(getattr(h, prefix + "TEILBEZIRK"))
+                if tb:
+                    zone += "-" + tb
+
+        return zone

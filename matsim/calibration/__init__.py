@@ -222,7 +222,12 @@ def create_calibration(name: str, calibrate: Union[CalibratorBase, Sequence[Cali
                 sleep(1)
 
             if p.returncode != 0:
-                raise Exception("Process returned with error code: %s" % p.returncode)
+                print("The scenario could not be run properly and returned with an error code.", file=sys.stderr)
+                if not debug:
+                    print("Set debug=True and check the output for any errors.", file=sys.stderr)
+                    print("Alternatively run the cmd from the log above manually and check for errors.", file=sys.stderr)
+
+                raise Exception("Process returned with error code: %s." % p.returncode)
         finally:
             p.terminate()
 
