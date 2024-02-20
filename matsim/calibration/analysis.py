@@ -71,11 +71,8 @@ def read_trips_and_persons(run, transform_persons=None, transform_trips=None) ->
     trips = glob.glob(run.rstrip("/") + "/*.output_trips.csv.gz")[0]
     persons = glob.glob(run.rstrip("/") + "/*.output_persons.csv.gz")[0]
 
-    df = pd.read_csv(trips, sep=";",  dtype={"person": "str"})
-    dfp = pd.read_csv(persons, sep=";", dtype={"person": "str"})
-
-    df = get_correct_delimiter(df, trips, persons)
-    dfp = get_correct_delimiter(dfp, trips, persons)
+    df = pd.read_csv(trips,  dtype={"person": "str"})
+    dfp = pd.read_csv(persons, dtype={"person": "str"})
 
     gdf = geopandas.GeoDataFrame(dfp, 
             geometry=geopandas.points_from_xy(dfp.first_act_x, dfp.first_act_y)
@@ -95,26 +92,6 @@ def read_trips_and_persons(run, transform_persons=None, transform_trips=None) ->
         df = transform_trips(df)
 
     return df, gdf
-
-def get_correct_delimiter(df : pd.DataFrame, trips : str, persons : str):
-    """ Determine correct delimiter """
-
-    delimiter = ""
-
-    if len(df.columns) == 1:
-        if str(df.columns).find(",") != -1:
-            delimiter = ","
-
-        if str(df.columns).find("\t") != -1:
-            delimiter = "\t"
-
-        if str(df.columns).find("trip") != -1:
-            df = pd.read_csv(trips, sep=delimiter,  dtype={"person": "str"})
-        else:
-            df = pd.read_csv(persons, sep=delimiter,  dtype={"person": "str"})
-
-    return df
-
 
 def read_leg_stats(run : str, transform_persons=None, transform_legs=None):
     """ Reads leg statistic from run directory """
