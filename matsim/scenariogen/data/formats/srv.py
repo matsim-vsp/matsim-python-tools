@@ -119,8 +119,10 @@ def convert(data: tuple, regio=None):
                 SrV2018.sd_group(int(t.E_QZG_17)),
                 # Trip is valid if length and duration are present
                 0 <= t.GIS_LAENGE and t.E_DAUER > 0,
+                from_location=SrV2018.parse_location(t, "V_START_"),
                 from_zone=SrV2018.parse_zone(t, "V_START_"),
-                to_zone=SrV2018.parse_zone(t, "V_ZIEL_")
+                to_location=SrV2018.parse_location(t, "V_ZIEL_"),
+                to_zone=SrV2018.parse_zone(t, "V_ZIEL_"),
             )
         )
 
@@ -454,3 +456,14 @@ class SrV2018:
                     zone += "-" + tb
 
         return zone
+
+    @staticmethod
+    def parse_location(h, prefix=""):
+        ort = parse_int_str(getattr(h, prefix + "ORT"))
+        if not ort:
+            return pd.NA
+
+        if "Berlin" in ort:
+            return "Berlin"
+
+        return ort

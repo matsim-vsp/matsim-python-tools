@@ -1,15 +1,15 @@
 """ This module contains dataclasses and methods for reading and processing survey data.
 """
 
-__all__ = ["read_all", "ParkingPosition", "HouseholdType", "EconomicStatus", "Gender", "Employment", "Availability", "Purpose",
+__all__ = ["read_all", "ParkingPosition", "HouseholdType", "EconomicStatus", "Gender", "Employment", "Availability",
+           "Purpose",
            "TripMode", "DistanceGroup", "DurationGroup", "SourceDestinationGroup",
            "Household", "Person", "Trip", "Activity"]
 
 import os
-from typing import List, Union, Tuple
-
 from dataclasses import dataclass
 from enum import Enum, auto
+from typing import List, Union, Tuple
 
 import numpy as np
 import pandas as pd
@@ -330,8 +330,10 @@ class Trip:
     purpose: Purpose
     sd_group: SourceDestinationGroup
     valid: bool
-    from_zone: str = None
-    to_zone: str = None
+    from_location: str = pd.NA
+    from_zone: str = pd.NA
+    to_location: str = pd.NA
+    to_zone: str = pd.NA
 
 
 @dataclass
