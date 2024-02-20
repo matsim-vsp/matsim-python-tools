@@ -29,7 +29,7 @@ def detect_dist_groups(s: pd.Series) -> Tuple[Sequence, Sequence]:
 
     bins = sorted(list(bins))
 
-    # Same function as in preparation.py, not importeed to avoid dependency
+    # Same function as in preparation.py, not imported to avoid dependency
     res = ["%.0f - %.0f" % (bins[i], bins[i + 1]) for i in range(len(bins) - 1)]
     if bins[-1] == np.inf:
         res[-1] = "%.0f+" % bins[-2]
