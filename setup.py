@@ -30,7 +30,7 @@ setup(
         "pandas >= 2.1.0",
     ],
     extras_require={
-        'calibration': ["optuna >= 3.3.0", "shapely >= 1.8.0", "geopandas >= 0.6.0"],
+        'calibration': ["optuna >= 3.5.0", "shapely >= 1.8.0", "geopandas >= 0.6.0"],
         # m2cgen has problems with newer xgb, see this issue
         # https://github.com/BayesWitnesses/m2cgen/issues/581
         'scenariogen': ["sumolib", "traci", "lxml", "optax", "requests", "tqdm", "scikit-learn", "xgboost==1.7.1", "lightgbm",

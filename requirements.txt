@@ -3,5 +3,5 @@ geopandas>=0.6.0
 shapely>=1.8.0
 xopen>=1.7.0
 protobuf>=3.20.0
-optuna>=3.3.0
+optuna>=3.5.0
 scipy>=1.2.0

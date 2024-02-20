@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """ Contains calibration related functions """
 
-__all__ = ["create_calibration", "study_as_df", "TerminationCondition",
+__all__ = ["create_calibration", "study_as_df", "TerminationCondition", "constraints",
            "ASCCalibrator", "ASCDistCalibrator", "ASCGroupCalibrator", "utils"]
 
 import glob
@@ -17,7 +17,7 @@ from typing import Union, Sequence, Callable, Tuple
 import optuna
 import yaml
 
-from . import utils
+from . import utils, constraints
 from .analysis import calc_mode_stats
 from .base import CalibratorBase, TerminationCondition, to_float
 from .calib_asc import ASCCalibrator
@@ -54,9 +54,7 @@ class CalibrationSampler(optuna.samplers.BaseSampler):
         completed = utils.completed_trials(study)
         if len(completed) == 0:
             initial = to_float(c.sample_initial(param))
-
-            if c.constraints is not None and mode in c.constraints:
-                initial = c.constraints[mode](mode, initial)
+            initial = c.apply_constraints(param, mode, initial)
 
             return initial
 
@@ -84,8 +82,7 @@ class CalibrationSampler(optuna.samplers.BaseSampler):
         last_param += rate * step
 
         # Call constraint if present
-        if c.constraints is not None and mode in c.constraints:
-            last_param = c.constraints[mode](mode, last_param)
+        last_param = c.apply_constraints(param, mode, last_param)
 
         return last_param
 

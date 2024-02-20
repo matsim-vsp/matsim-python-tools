@@ -9,6 +9,8 @@ from typing import Union, Sequence, Dict, Tuple, Callable
 import optuna
 import pandas as pd
 
+from .constraints import F
+
 # Type alias for input variables
 CalibrationInput = Union[str, os.PathLike, dict, pd.DataFrame]
 
@@ -43,14 +45,14 @@ class CalibratorBase(ABC):
                  initial: CalibrationInput,
                  target: CalibrationInput,
                  lr: Callable[[int, str, float, optuna.Trial, optuna.Study], float] = None,
-                 constraints: Dict[str, Callable[[str, float], float]] = None):
+                 constraints: Dict[str, F] = None):
         """Abstract constructors for all calibrations. Usually the same parameters should be made available subclasses.
 
         :param modes: list of all relevant modes
         :param initial: dict of initial asc values
         :param target: target shares as csv or dict
         :param lr: learning rate schedule, will be called with (trial number, mode, update, trial, study)
-        :param constraints: constraints for each mode, must return asc and will be called with original asc
+        :param constraints: constraints for each mode, must return a value and will be called with specific param name and original value
         """
         self.modes = modes
         self.initial = sanitize(self.convert_input(initial))
@@ -67,9 +69,18 @@ class CalibratorBase(ABC):
     def check_termination(self, target, observed):
         """ Check if calibration should be terminated. This will update the terminate attribute internally. """
         if self.terminate_cond is None:
-            self.terminate =  False
+            self.terminate = False
+
+        # TODO: not used yet
 
         self.terminate = False
+
+    def apply_constraints(self, param, mode, value):
+        """ Apply constraints to a parameter. """
+        if self.constraints is not None and mode in self.constraints:
+            return self.constraints[mode](param, value)
+
+        return value
 
     @property
     @abstractmethod
@@ -100,7 +111,8 @@ class CalibratorBase(ABC):
         raise NotImplemented
 
     @abstractmethod
-    def update_step(self, param: str, last_trial: optuna.Trial, trial: optuna.Trial, completed: Sequence[optuna.Trial]) -> float:
+    def update_step(self, param: str, last_trial: optuna.Trial, trial: optuna.Trial,
+                    completed: Sequence[optuna.Trial]) -> float:
         """ Return update step for param based on last trial / current trial """
         raise NotImplemented
 

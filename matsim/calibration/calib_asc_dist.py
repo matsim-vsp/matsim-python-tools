@@ -68,6 +68,7 @@ class ASCDistCalibrator(CalibratorBase):
                  initial: CalibrationInput,
                  target: CalibrationInput,
                  fixed_mode: str = "walk",
+# TODO                 fixed_mode_dist: str = "car",
                  lr: Callable[[int, str, float, optuna.Trial, optuna.Study], float] = None,
                  constraints: Dict[str, Callable[[str, float], float]] = None,
                  dist_update_weight: float = 1,
@@ -78,8 +79,9 @@ class ASCDistCalibrator(CalibratorBase):
         :param initial: dict of initial asc values
         :param target: target shares as csv or dict
         :param fixed_mode: the fixed mode with asc=0
+        :param fixed_mode_dist: the fixed mode with dist_util=0
         :param lr: learning rate schedule, will be called with (trial number, mode, update, trial, study)
-        :param constraints: constraints for each mode, must return asc and will be called with original asc
+        :param constraints: constraints for each param, must return the value and will be called with original value
         :param dist_update_weight: how strong to adjust the distance parameters in relation to asc
         :param adjust_dist: adjust the distance distributions so that reference and obtained match
         """
@@ -89,6 +91,7 @@ class ASCDistCalibrator(CalibratorBase):
             raise NotImplementedError("Adjusting distance distributions is not implemented yet")
 
         self.fixed_mode = fixed_mode
+        self.fixed_mode_dist = fixed_mode
         self.dist_update_weight = dist_update_weight
 
         self.target = self.target.rename(columns={"value": "share", "main_mode": "mode"}, errors="ignore")
@@ -209,10 +212,10 @@ class ASCDistCalibrator(CalibratorBase):
         dist_idx = self.dist_groups.index(dist_group)
         base_dist = self.dist_bins[dist_idx]
 
-        # Already accumalted asc distance in other groups
+        # Already accumulated asc distance in other groups
         y = self.calc_base_util(trial, dist_idx, mode) - self.calc_base_util(last_trial, dist_idx, mode)
 
-        # Offset the correctins in other groups
+        # Offset the corrections in other groups
         return (self.dist_update_weight/update_step) * (-y + self.calc_asc_update(self.target.loc[dist_group, mode].target,
                                     last_trial.user_attrs["%s-%s_share" % (dist_group, mode)],
                                     self.target.loc[dist_group, self.fixed_mode].target,
@@ -260,8 +263,11 @@ class ASCDistCalibrator(CalibratorBase):
             df = trips[trips.dist_group == dist_group]
 
             share = df.groupby("main_mode").count()["trip_number"] / len(df)
-            share = self.target.loc[dist_group, :].merge(share, left_index=True, right_index=True).rename(
+            share = self.target.loc[dist_group, :].merge(share, left_index=True, right_index=True, how="left").rename(
                 columns={"trip_number": "share"})
+
+            # Fill zero values, if this happens calibration will probably break
+            share.share.fillna(0, inplace=True)
 
             share["mae"] = np.abs(share.share - share.target)
 
