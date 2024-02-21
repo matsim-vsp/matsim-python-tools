@@ -267,7 +267,7 @@ class ASCDistCalibrator(CalibratorBase):
                 columns={"trip_number": "share"})
 
             # Fill zero values, if this happens calibration will probably break
-            share.share.fillna(0, inplace=True)
+            share["share"] = share["share"].fillna(0)
 
             share["mae"] = np.abs(share.share - share.target)
 
