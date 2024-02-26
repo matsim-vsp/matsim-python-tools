@@ -68,7 +68,7 @@ class ASCDistCalibrator(CalibratorBase):
                  initial: CalibrationInput,
                  target: CalibrationInput,
                  fixed_mode: str = "walk",
-# TODO                 fixed_mode_dist: str = "car",
+                 fixed_mode_dist: str = None,
                  lr: Callable[[int, str, float, optuna.Trial, optuna.Study], float] = None,
                  constraints: Dict[str, Callable[[str, float], float]] = None,
                  dist_update_weight: float = 1,
@@ -91,7 +91,7 @@ class ASCDistCalibrator(CalibratorBase):
             raise NotImplementedError("Adjusting distance distributions is not implemented yet")
 
         self.fixed_mode = fixed_mode
-        self.fixed_mode_dist = fixed_mode
+        self.fixed_mode_dist = fixed_mode_dist if fixed_mode_dist else fixed_mode
         self.dist_update_weight = dist_update_weight
 
         self.target = self.target.rename(columns={"value": "share", "main_mode": "mode"}, errors="ignore")
@@ -137,7 +137,7 @@ class ASCDistCalibrator(CalibratorBase):
 
             last_trial = last_completed_trial(study)
 
-            if mode == self.fixed_mode:
+            if mode == self.fixed_mode_dist:
                 continue
 
             # first group always starts at 0 for 0 meter
@@ -205,7 +205,7 @@ class ASCDistCalibrator(CalibratorBase):
         dist_group, _, mode = param.rpartition("-")
         dist_group = dist_group.strip("[]")
 
-        if mode == self.fixed_mode:
+        if mode == self.fixed_mode_dist:
             return 0
 
         median_dist = last_trial.user_attrs[dist_group + "_median_dist"]
@@ -218,8 +218,8 @@ class ASCDistCalibrator(CalibratorBase):
         # Offset the corrections in other groups
         return (self.dist_update_weight/update_step) * (-y + self.calc_asc_update(self.target.loc[dist_group, mode].target,
                                     last_trial.user_attrs["%s-%s_share" % (dist_group, mode)],
-                                    self.target.loc[dist_group, self.fixed_mode].target,
-                                    last_trial.user_attrs["%s-%s_share" % (dist_group, self.fixed_mode)])) / (median_dist - base_dist)
+                                    self.target.loc[dist_group, self.fixed_mode_dist].target,
+                                    last_trial.user_attrs["%s-%s_share" % (dist_group, self.fixed_mode_dist)])) / (median_dist - base_dist)
 
     def calc_base_util(self, trial, dist_idx, mode):
         """ Base utility for using certain mode in dist_group. Sums base asc and distance utilities."""
