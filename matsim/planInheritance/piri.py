@@ -10,6 +10,7 @@ import pandas as pd
 import plotly.express as px
 import dash_cytoscape as cyto # graph plotting
 import dash_bootstrap_components as dbc # column formatting and stuff
+import argparse
 import io
 
 # https://dash.plotly.com/cytoscape/layout
@@ -18,8 +19,13 @@ cyto.load_extra_layouts()
 # https://github.com/cytoscape/cytoscape.js-dagre
 # https://github.com/cytoscape/cytoscape.js-klay
 
+# Process command line arguments
+parser = argparse.ArgumentParser(prog="piri", description="Analyze the evolution of plans of a single agent or compare different agents side by side.")
+parser.add_argument("inputfile", help="Full path to the file containing the plan inheritance records, e.g. path/to/matsim/output/planInheritanceRecords.csv.gz")
+args = parser.parse_args()
+
 # Read and PreProcess data
-pir = pd.read_csv('path/to/matsim/output/with/planInheritanceRecords.csv.gz', sep='\t')
+pir = pd.read_csv(args.inputfile, sep='\t')
 pir['mutatedBy'] = pir['mutatedBy'].str.replace('_',' ')
 pir['iterationsSelected'] = pir['iterationsSelected'].str.replace('[','').str.replace(']','')
 defaultagentId = pir['agentId'].unique()[0]
