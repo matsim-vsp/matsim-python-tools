@@ -61,6 +61,8 @@ class CalibratorBase(ABC):
         self.constraints = constraints
         self.terminate_cond = None
         self.terminate = False
+        # Store update steps for each trial
+        self.current_step = {}
 
     def set_termination(self, terminate: TerminationCondition):
         """ Set termination condition for calibration """

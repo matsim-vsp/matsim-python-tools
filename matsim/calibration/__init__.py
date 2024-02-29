@@ -79,10 +79,14 @@ class CalibrationSampler(optuna.samplers.BaseSampler):
         study._storage.set_trial_user_attr(trial._trial_id, "%s_rate" % param_name, rate)
         study._storage.set_trial_user_attr(trial._trial_id, "%s_step" % param_name, step)
 
+        old_param = last_param
         last_param += rate * step
 
         # Call constraint if present
         last_param = c.apply_constraints(param, mode, last_param)
+
+        # Save updated step
+        c.current_step[param_name] = last_param - old_param
 
         return last_param
 

@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 
-import sys
-from typing import Sequence, Callable, Dict, Tuple
-
 import numpy as np
 import optuna
 import pandas as pd
+import sys
+from typing import Sequence, Callable, Dict, Tuple
 
 from .analysis import read_trips_and_persons
 from .base import CalibratorBase, CalibrationInput, to_float
@@ -42,21 +41,29 @@ def detect_dist_groups(s: pd.Series) -> Tuple[Sequence, Sequence]:
     return bins, res
 
 
-def get_dist_params(config, mode):
+def get_dist_params(config, subpopulation, mode):
     """ Return the distance parameters for a mode """
 
-    if "vspScoring" not in config:
-        config["vspScoring"] = {}
+    if "advancedScoring" not in config:
+        config["advancedScoring"] = {}
 
-    if "modeParams" not in config["vspScoring"]:
-        config["vspScoring"]["modeParams"] = []
+    if "scoringParameters" not in config["advancedScoring"]:
+        config["advancedScoring"]["scoringParameters"] = []
 
-    for m in config["vspScoring"]["modeParams"]:
-        if m["mode"] == mode:
+    ps = config["advancedScoring"]["scoringParameters"]
+
+    for p in ps:
+        if "modeParams" in p:
+            for m in p["modeParams"]:
+                if m["mode"] == mode:
+                    return m
+
+            m = {"mode": mode, "deltaPerDistGroup": []}
+            p["modeParams"].append(m)
             return m
 
-    m = {"mode": mode}
-    config["vspScoring"]["modeParams"].append(m)
+    m = {"mode": mode, "deltaPerDistGroup": []}
+    ps.append({"subpopulation": subpopulation, "modeParams": [m]})
     return m
 
 
@@ -69,6 +76,7 @@ class ASCDistCalibrator(CalibratorBase):
                  target: CalibrationInput,
                  fixed_mode: str = "walk",
                  fixed_mode_dist: str = None,
+                 subpopulation: str = "person",
                  lr: Callable[[int, str, float, optuna.Trial, optuna.Study], float] = None,
                  constraints: Dict[str, Callable[[str, float], float]] = None,
                  dist_update_weight: float = 1,
@@ -80,6 +88,7 @@ class ASCDistCalibrator(CalibratorBase):
         :param target: target shares as csv or dict
         :param fixed_mode: the fixed mode with asc=0
         :param fixed_mode_dist: the fixed mode with dist_util=0
+        :param subpopulation: subpopulation to calibrate, this is required for the advanced scoring config
         :param lr: learning rate schedule, will be called with (trial number, mode, update, trial, study)
         :param constraints: constraints for each param, must return the value and will be called with original value
         :param dist_update_weight: how strong to adjust the distance parameters in relation to asc
@@ -92,6 +101,7 @@ class ASCDistCalibrator(CalibratorBase):
 
         self.fixed_mode = fixed_mode
         self.fixed_mode_dist = fixed_mode_dist if fixed_mode_dist else fixed_mode
+        self.subpopulation = subpopulation
         self.dist_update_weight = dist_update_weight
 
         self.target = self.target.rename(columns={"value": "share", "main_mode": "mode"}, errors="ignore")
@@ -127,6 +137,8 @@ class ASCDistCalibrator(CalibratorBase):
 
     def update_config(self, study: optuna.Study, trial: optuna.Trial, prefix: str, config: dict):
 
+        dists = set()
+
         # Update constants
         for mode in self.modes:
             m = self.get_mode_params(config, mode)
@@ -140,10 +152,9 @@ class ASCDistCalibrator(CalibratorBase):
             if mode == self.fixed_mode_dist:
                 continue
 
-            # first group always starts at 0 for 0 meter
-            offset_util = 0
-            dist_param = get_dist_params(config, mode)
+            utils_dist = get_dist_params(config, self.subpopulation, mode)["deltaPerDistGroup"]
 
+            base = self.current_step.get(prefix + mode, 0)
             for i, dist_group in enumerate(self.dist_groups):
                 param = "[%s]-%s" % (dist_group, mode)
 
@@ -152,27 +163,25 @@ class ASCDistCalibrator(CalibratorBase):
                 # returns target at median dist
                 target_util = trial.suggest_float(prefix + param, sys.float_info.min, sys.float_info.max)
 
+                delta = target_util - base
+
                 if last_trial is None:
-                    # TODO: Initial util per meter is not the same as internal asc
-                    dist_param[dist] = 0
                     trial.set_user_attr("%s-%s_util" % (dist_group, mode), 0)
                     continue
 
                 median_dist = last_trial.user_attrs[dist_group + "_median_dist"]
 
-                # the target util is for the median_dist, here the required slope is calculated
-                util_m = (target_util * median_dist - offset_util) / (median_dist - dist)
+                # Store median dists
+                dists.add(int(median_dist))
+                utils_dist.append(delta)
 
-                dist_param[dist] = util_m
+                # Util for this dist group at median
+                trial.set_user_attr("%s-%s_util" % (dist_group, mode), target_util)
 
-                trial.set_user_attr("%s-%s_util" % (dist_group, mode), util_m)
+                base = self.current_step[prefix + param]
 
-                # Increase the offset until last group is reached
-                if i < len(self.dist_bins) - 1:
-                    offset_util += util_m * (self.dist_bins[i + 1] - dist)
-
-        # inf group is not written
-        config["vspScoring"]["distGroups"] = ",".join("%d" % x for x in self.dist_bins[:-1])
+        # write distance groups
+        config["advancedScoring"]["distGroups"] = ",".join("%d" % x for x in sorted(dists))
 
     def sample_initial(self, param: str) -> float:
         group, _, mode = param.rpartition("-")
@@ -187,7 +196,8 @@ class ASCDistCalibrator(CalibratorBase):
 
         return 0
 
-    def update_step(self, param: str, last_trial: optuna.Trial, trial: optuna.Trial, completed: Sequence[optuna.Trial]) -> float:
+    def update_step(self, param: str, last_trial: optuna.Trial, trial: optuna.Trial,
+                    completed: Sequence[optuna.Trial]) -> float:
 
         if param == self.fixed_mode:
             return 0
@@ -197,10 +207,10 @@ class ASCDistCalibrator(CalibratorBase):
 
         # Base mode shares
         if not param.startswith("["):
-            return (1/update_step) * self.calc_asc_update(self.base.loc[param].target,
-                                        last_trial.user_attrs["%s_share" % param],
-                                        self.base.loc[self.fixed_mode].target,
-                                        last_trial.user_attrs["%s_share" % self.fixed_mode])
+            return (1 / update_step) * self.calc_asc_update(self.base.loc[param].target,
+                                                            last_trial.user_attrs["%s_share" % param],
+                                                            self.base.loc[self.fixed_mode].target,
+                                                            last_trial.user_attrs["%s_share" % self.fixed_mode])
 
         dist_group, _, mode = param.rpartition("-")
         dist_group = dist_group.strip("[]")
@@ -208,32 +218,12 @@ class ASCDistCalibrator(CalibratorBase):
         if mode == self.fixed_mode_dist:
             return 0
 
-        median_dist = last_trial.user_attrs[dist_group + "_median_dist"]
-        dist_idx = self.dist_groups.index(dist_group)
-        base_dist = self.dist_bins[dist_idx]
-
-        # Already accumulated asc distance in other groups
-        y = self.calc_base_util(trial, dist_idx, mode) - self.calc_base_util(last_trial, dist_idx, mode)
-
         # Offset the corrections in other groups
-        return (self.dist_update_weight/update_step) * (-y + self.calc_asc_update(self.target.loc[dist_group, mode].target,
-                                    last_trial.user_attrs["%s-%s_share" % (dist_group, mode)],
-                                    self.target.loc[dist_group, self.fixed_mode_dist].target,
-                                    last_trial.user_attrs["%s-%s_share" % (dist_group, self.fixed_mode_dist)])) / (median_dist - base_dist)
-
-    def calc_base_util(self, trial, dist_idx, mode):
-        """ Base utility for using certain mode in dist_group. Sums base asc and distance utilities."""
-
-        util = trial.params["asc-%s" % mode]
-
-        dist = 0
-        for i in range(dist_idx):
-            dist_group = self.dist_groups[i]
-            util += trial.user_attrs["%s-%s_util" % (dist_group, mode)] * (self.dist_bins[i + 1] - dist)
-
-            dist = self.dist_bins[i + 1]
-
-        return util
+        return (self.dist_update_weight / update_step) * self.calc_asc_update(self.target.loc[dist_group, mode].target,
+                                              last_trial.user_attrs["%s-%s_share" % (dist_group, mode)],
+                                              self.target.loc[dist_group, self.fixed_mode_dist].target,
+                                              last_trial.user_attrs[
+                                                  "%s-%s_share" % (dist_group, self.fixed_mode_dist)])
 
     def calc_stats(self, trial: optuna.Trial, run_dir: str,
                    transform_persons: Callable = None,
