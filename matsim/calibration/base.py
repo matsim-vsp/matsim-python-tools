@@ -63,6 +63,7 @@ class CalibratorBase(ABC):
         self.terminate = False
         # Store update steps for each trial
         self.current_step = {}
+        self.current_params = {}
 
     def set_termination(self, terminate: TerminationCondition):
         """ Set termination condition for calibration """
@@ -76,6 +77,10 @@ class CalibratorBase(ABC):
         # TODO: not used yet
 
         self.terminate = False
+
+    def check_constraints(self, param, mode):
+        """ Wether the default constraints should be applied, if not the implementation must do it itself."""
+        return True
 
     def apply_constraints(self, param, mode, value):
         """ Apply constraints to a parameter. """

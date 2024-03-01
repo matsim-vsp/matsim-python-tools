@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 
+import sys
+from typing import Sequence, Callable, Dict, Tuple
+
 import numpy as np
 import optuna
 import pandas as pd
-import sys
-from typing import Sequence, Callable, Dict, Tuple
 
 from .analysis import read_trips_and_persons
 from .base import CalibratorBase, CalibrationInput, to_float
@@ -131,9 +132,15 @@ class ASCDistCalibrator(CalibratorBase):
         study.set_user_attr("modes", self.modes)
         study.set_user_attr("dist_groups", self.dist_groups)
         study.set_user_attr("fixed_mode", self.fixed_mode)
+        study.set_user_attr("fixed_mode_dist", self.fixed_mode_dist)
 
         print("Running study with dist groups:", self.dist_groups)
         print("Running study with target:", self.base)
+
+    def check_constraints(self, param, mode):
+        # only return true for the asc constants, not the dist!
+        # the dist constraints are handled separatly
+        return mode == param
 
     def update_config(self, study: optuna.Study, trial: optuna.Trial, prefix: str, config: dict):
 
@@ -163,11 +170,17 @@ class ASCDistCalibrator(CalibratorBase):
                 # returns target at median dist
                 target_util = trial.suggest_float(prefix + param, sys.float_info.min, sys.float_info.max)
 
-                delta = target_util - base
-
                 if last_trial is None:
                     trial.set_user_attr("%s-%s_util" % (dist_group, mode), 0)
                     continue
+
+                # Operate on the update steps, the actual target_util is not used here directly
+                step = self.current_step[prefix + param]
+
+                # Constraints operate on the delta to the constant asc
+                delta = self.apply_constraints(param, mode, step - base)
+
+                trial.set_user_attr("%s-%s_util" % (dist_group, mode), target_util)
 
                 median_dist = last_trial.user_attrs[dist_group + "_median_dist"]
 
@@ -175,10 +188,7 @@ class ASCDistCalibrator(CalibratorBase):
                 dists.add(int(median_dist))
                 utils_dist.append(delta)
 
-                # Util for this dist group at median
-                trial.set_user_attr("%s-%s_util" % (dist_group, mode), target_util)
-
-                base = self.current_step[prefix + param]
+                base = step
 
         # write distance groups
         config["advancedScoring"]["distGroups"] = ",".join("%d" % x for x in sorted(dists))
@@ -218,12 +228,14 @@ class ASCDistCalibrator(CalibratorBase):
         if mode == self.fixed_mode_dist:
             return 0
 
+        # TODO: already substract from the prev util here
+        # -> probably not but handle constraints up stream
+
         # Offset the corrections in other groups
         return (self.dist_update_weight / update_step) * self.calc_asc_update(self.target.loc[dist_group, mode].target,
-                                              last_trial.user_attrs["%s-%s_share" % (dist_group, mode)],
-                                              self.target.loc[dist_group, self.fixed_mode_dist].target,
-                                              last_trial.user_attrs[
-                                                  "%s-%s_share" % (dist_group, self.fixed_mode_dist)])
+                                                                              last_trial.user_attrs[ "%s-%s_share" % (dist_group, mode)],
+                                                                              self.target.loc[dist_group, self.fixed_mode_dist].target,
+                                                                              last_trial.user_attrs["%s-%s_share" % (dist_group, self.fixed_mode_dist)])
 
     def calc_stats(self, trial: optuna.Trial, run_dir: str,
                    transform_persons: Callable = None,

@@ -83,10 +83,12 @@ class CalibrationSampler(optuna.samplers.BaseSampler):
         last_param += rate * step
 
         # Call constraint if present
-        last_param = c.apply_constraints(param, mode, last_param)
+        if c.check_constraints(param, mode):
+            last_param = c.apply_constraints(param, mode, last_param)
 
         # Save updated step
         c.current_step[param_name] = last_param - old_param
+        c.current_params[param_name] = last_param
 
         return last_param
 
