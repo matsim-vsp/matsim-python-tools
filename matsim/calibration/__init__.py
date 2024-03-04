@@ -165,6 +165,9 @@ def create_calibration(name: str, calibrate: Union[CalibratorBase, Sequence[Cali
 
     # Start with base params if present
     if base_params is not None:
+        if not os.access(base_params, os.R_OK):
+            raise ValueError("Can not access base params file: %s" % base_params)
+
         base_params = yaml.read(base_params)
 
     def f(trial):
