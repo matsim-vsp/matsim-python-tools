@@ -142,7 +142,15 @@ class CalibratorBase(ABC):
             # Convert simple dict of modes and values
             return pd.DataFrame(index=arg.keys(), data=arg.values(), columns=["value"]).rename_axis(index="mode")
 
-        return pd.read_csv(arg)
+        if arg.endswith(".csv"):
+            return pd.read_csv(arg)
+
+        return cls.convert_input(arg)
+
+    @classmethod
+    def convert_input(cls, path) -> pd.DataFrame:
+        """ Convert any input file that has been passed as argument and needs to be converted. """
+        raise ValueError(f"Input file {path} not supported. Use csv or dataframes, or implement custom conversion method.")
 
     @staticmethod
     def get_mode_params(config: dict, mode: str):

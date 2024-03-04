@@ -102,6 +102,7 @@ def create_calibration(name: str, calibrate: Union[CalibratorBase, Sequence[Cali
                        termination: TerminationCondition = None,
                        storage: optuna.storages.RDBStorage = None,
                        custom_cli: Callable = None,
+                       base_params: Union[str, os.PathLike] = None,
                        debug: bool = False
                        ) -> Tuple[optuna.Study, Callable]:
     """ Create or load an existing study for mode share calibration using asc values.
@@ -121,6 +122,7 @@ def create_calibration(name: str, calibrate: Union[CalibratorBase, Sequence[Cali
     :param termination: termination condition for the study
     :param storage: custom storage object to overwrite default sqlite backend
     :param custom_cli: the scenario is not a matsim application and needs a different command line syntax
+    :param base_params: yaml file containing base parameters used each iteration
     :param debug: enable debug output
     :return: tuple of study and optimization objective.
     """
@@ -161,10 +163,14 @@ def create_calibration(name: str, calibrate: Union[CalibratorBase, Sequence[Cali
         c.init_study(study)
         c.set_termination(termination)
 
+    # Start with base params if present
+    if base_params is not None:
+        base_params = yaml.read(base_params)
+
     def f(trial):
 
         params_path = path.join("params", "run%d.yaml" % trial.number)
-        params = {}
+        params = base_params.copy() if base_params else {}
 
         for c in calibrate:
             prefix = c.name + "-"
