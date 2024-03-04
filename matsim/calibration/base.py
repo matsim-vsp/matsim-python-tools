@@ -55,8 +55,8 @@ class CalibratorBase(ABC):
         :param constraints: constraints for each mode, must return a value and will be called with specific param name and original value
         """
         self.modes = modes
-        self.initial = sanitize(self.convert_input(initial))
-        self.target = sanitize(self.convert_input(target))
+        self.initial = sanitize(self.convert(initial))
+        self.target = sanitize(self.convert(target))
         self.lr = lr
         self.constraints = constraints
         self.terminate_cond = None
@@ -134,7 +134,7 @@ class CalibratorBase(ABC):
         raise NotImplemented
 
     @classmethod
-    def convert_input(cls, arg) -> pd.DataFrame:
+    def convert(cls, arg) -> pd.DataFrame:
         """ Method call to create target values from input argument """
         if isinstance(arg, pd.DataFrame):
             return arg
