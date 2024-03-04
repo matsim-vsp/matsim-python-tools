@@ -138,10 +138,10 @@ def create_calibration(name: str, calibrate: Union[CalibratorBase, Sequence[Cali
                                                             "isolation_level": "AUTOCOMMIT"})
 
     if not os.access(jar, os.R_OK):
-        raise ValueError("Can not access JAR File: %s" % jar)
+        raise ValueError("Can not access JAR file: %s" % jar)
 
     if not os.access(config, os.R_OK):
-        raise ValueError("Can not access config File: %s" % config)
+        raise ValueError("Can not access config file: %s" % config)
 
     study = optuna.create_study(
         study_name=name,
@@ -168,7 +168,8 @@ def create_calibration(name: str, calibrate: Union[CalibratorBase, Sequence[Cali
         if not os.access(base_params, os.R_OK):
             raise ValueError("Can not access base params file: %s" % base_params)
 
-        base_params = yaml.read(base_params)
+        with open(base_params, "r") as f:
+            base_params = yaml.safe_load(f)
 
     def f(trial):
 
