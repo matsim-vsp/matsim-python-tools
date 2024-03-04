@@ -150,7 +150,7 @@ class CalibratorBase(ABC):
     @classmethod
     def convert_input(cls, path) -> pd.DataFrame:
         """ Convert any input file that has been passed as argument and needs to be converted. """
-        raise ValueError(f"Input file {path} not supported. Use csv or dataframes, or implement custom conversion method.")
+        raise ValueError(f"Input {path} of {type(path)} is not supported. Use csv or dataframes, or implement custom conversion method.")
 
     @staticmethod
     def get_mode_params(config: dict, mode: str):
