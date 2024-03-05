@@ -38,14 +38,14 @@ def convert(data: tuple, regio=None):
         hh_id = str(int(h.H_ID_Lok))
         hhs.append(Household(hh_id, h.H_GEW, int(h.hhgr_gr2), int(h.anzauto_gr3), int(h.pedrad), int(h.motmop),
                              ParkingPosition.NA,
-                             Mid2017.economic_status(h), Mid2017.household_type(h), 0, "", Mid2017.geom(h)))
+                             Mid2017.economic_status(h), Mid2017.household_type(h), 0, "",
+                             geom=Mid2017.geom(h)))
 
     ps = []
     for p in pp.itertuples():
         p_id = str(int(p.HP_ID_Lok))
         hh_id = str(int(p.H_ID_Lok))
 
-        # exlucde business trips
         ps.append(Person(
             p_id, p.P_GEW, hh_id, Mid2017.age(p), Mid2017.gender(p), Mid2017.employment(p), None,
             Mid2017.driving_license(p), Mid2017.car_avail(p), Mid2017.bike_avail(p), Mid2017.pt_abo_avail(p),
@@ -229,18 +229,17 @@ class Mid2017:
         x = int(p.mobil)
         if x == 0:
             return False
-        elif x == 1:
-            return True
-        return None
+
+        # potential null values are ignored, and true returned
+        return True
 
     @staticmethod
     def present_on_day(p):
         x = int(p.P_STUM)
-        if x == 3:
-            return True
-        elif x == 1 or x == 2:
+        if x == 1 or x == 2:
             return False
-        return None
+
+        return True
 
     @staticmethod
     def parse_time(x):

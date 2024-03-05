@@ -1,15 +1,15 @@
 """ This module contains dataclasses and methods for reading and processing survey data.
 """
 
-__all__ = ["read_all", "ParkingPosition", "HouseholdType", "EconomicStatus", "Gender", "Employment", "Availability", "Purpose",
+__all__ = ["read_all", "ParkingPosition", "HouseholdType", "EconomicStatus", "Gender", "Employment", "Availability",
+           "Purpose",
            "TripMode", "DistanceGroup", "DurationGroup", "SourceDestinationGroup",
            "Household", "Person", "Trip", "Activity"]
 
 import os
-from typing import List, Union, Tuple
-
 from dataclasses import dataclass
 from enum import Enum, auto
+from typing import List, Union, Tuple
 
 import numpy as np
 import pandas as pd
@@ -27,7 +27,7 @@ def _batch(iterable: list, max_batch_size: int):
         yield batch
 
 
-def read_all(dirs: Union[str, List[str]], regio=None) -> Tuple[pd.DataFrame]:
+def read_all(dirs: Union[str, List[str]], regio=None) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """ Scan directories and read everything into one dataframe """
 
     from .formats import srv, mid
@@ -60,7 +60,7 @@ def read_all(dirs: Union[str, List[str]], regio=None) -> Tuple[pd.DataFrame]:
                 raise ValueError("File structure is wrong. Need exactly %d files per region." % format.INPUT_FILES)
 
             for input_files in _batch(files, format.INPUT_FILES):
-                print("Reading", *input_files)
+                print("Reading", format.__name__, *input_files)
 
                 data = format.read_raw(*input_files)
                 df = format.convert(data, regio)
@@ -288,6 +288,9 @@ class Household:
     type: HouseholdType
     region_type: int
     location: str
+    zone: str = None
+    """ A detailed zone, which can be more accurate than location. """
+    income: float = None
     geom: object = None
 
 
@@ -327,6 +330,10 @@ class Trip:
     purpose: Purpose
     sd_group: SourceDestinationGroup
     valid: bool
+    from_location: str = pd.NA
+    from_zone: str = pd.NA
+    to_location: str = pd.NA
+    to_zone: str = pd.NA
 
 
 @dataclass

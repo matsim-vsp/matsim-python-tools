@@ -153,7 +153,7 @@ class PopulationWriter(XmlWriter):
         self._write_line('</plan>')
 
     def add_activity(self, type: str, x: float, y: float, facility_id: str = None,
-                     start_time: int = None, end_time: int = None, attributes: dict = None):
+                     start_time: int = None, end_time: int = None, max_dur: int = None, attributes: dict = None):
         self._require_scope(self.PLAN_SCOPE)
         self._write_indent()
         self._write('<activity ')
@@ -162,6 +162,7 @@ class PopulationWriter(XmlWriter):
         if facility_id is not None: self._write(f'facility="{facility_id}" ')
         if start_time is not None: self._write(f'start_time="{self.time(start_time)}" ')
         if end_time is not None: self._write(f'end_time="{self.time(end_time)}" ')
+        if max_dur is not None: self._write(f'max_dur="{self.time(max_dur)}" ')
         if attributes:
             self._write('>\n')
             self.indent += 1
