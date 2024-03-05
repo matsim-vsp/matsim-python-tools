@@ -128,6 +128,12 @@ class ASCDistCalibrator(CalibratorBase):
     def num_targets(self):
         return len(self.base)
 
+    @classmethod
+    def convert_input(cls, arg) -> pd.DataFrame:
+        """ Load previous parameters from yaml file """
+        # TODO: need to implement this
+        raise NotImplementedError("Not implemented yet")
+
     def init_study(self, study: optuna.Trial):
         study.set_user_attr("modes", self.modes)
         study.set_user_attr("dist_groups", self.dist_groups)
@@ -228,10 +234,6 @@ class ASCDistCalibrator(CalibratorBase):
         if mode == self.fixed_mode_dist:
             return 0
 
-        # TODO: already substract from the prev util here
-        # -> probably not but handle constraints up stream
-
-        # Offset the corrections in other groups
         return (self.dist_update_weight / update_step) * self.calc_asc_update(self.target.loc[dist_group, mode].target,
                                                                               last_trial.user_attrs[ "%s-%s_share" % (dist_group, mode)],
                                                                               self.target.loc[dist_group, self.fixed_mode_dist].target,
