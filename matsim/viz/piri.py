@@ -12,6 +12,7 @@ import dash_cytoscape as cyto # graph plotting
 import dash_bootstrap_components as dbc # column formatting and stuff
 import argparse
 import io
+import sys
 
 # https://dash.plotly.com/cytoscape/layout
 # Load extra layouts - time consuming
@@ -21,15 +22,22 @@ cyto.load_extra_layouts()
 
 # Process command line arguments
 parser = argparse.ArgumentParser(prog="piri", description="Analyze the evolution of plans of a single agent or compare different agents side by side.")
+
+if "piri" in sys.argv:
+    parser.add_argument("cmd", help="Hidden argument to consume the 'piri' subcommand")
+
 parser.add_argument("inputfile", help="Full path to the file containing the plan inheritance records, e.g. path/to/matsim/output/planInheritanceRecords.csv.gz")
 args = parser.parse_args()
 
 # Read and PreProcess data
 pir = pd.read_csv(args.inputfile, sep='\t')
-pir['mutatedBy'] = pir['mutatedBy'].str.replace('_',' ')
-pir['iterationsSelected'] = pir['iterationsSelected'].str.replace('[','').str.replace(']','')
+pir['mutatedBy'] = pir['mutatedBy'].str.replace('_', ' ', regex=False)
+pir['iterationsSelected'] = pir['iterationsSelected'].str.replace('[', '', regex=False).str.replace(']', '',
+                                                                                                    regex=False)
 defaultagentId = pir['agentId'].unique()[0]
-pir['nodeClasses'] = pir.apply(lambda row: "initial" if row['ancestorId'] == "NONE" else "final" if row['iterationRemoved'] == -1 else "regular", axis=1)
+pir['nodeClasses'] = pir.apply(
+    lambda row: "initial" if row['ancestorId'] == "NONE" else "final" if row['iterationRemoved'] == -1 else "regular",
+    axis=1)
 
 # Initialize the app
 app = Dash(__name__,
