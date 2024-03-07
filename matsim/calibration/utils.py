@@ -69,6 +69,17 @@ def linear_scheduler(start=0.6, end=1, interval=3):
     return _fn
 
 
+def linear_dist_scheduler(start_rate, end_rate, end_km):
+    """ Creates a schedule for distance calibration, that will linear interpolate from 0 to given max distance in km."""
+
+    diff = (end_rate - start_rate) / end_km
+
+    def _fn(n, dist, *args, **kwargs):
+        return min(start_rate + dist * diff, end_rate)
+
+    return _fn
+
+
 def completed_trials(study):
     """ Returns all completed trials sorted by number """
     completed = filter(lambda s: s.state == TrialState.COMPLETE, study.trials)

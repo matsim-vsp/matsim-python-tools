@@ -66,7 +66,7 @@ class CalibrationSampler(optuna.samplers.BaseSampler):
         rate = 1.0
         if c.lr is not None:
 
-            rate = c.lr(float(len(completed) + 1), param_name, step, trial, study)
+            rate = c.lr(len(completed) + 1, param_name, step, trial, study)
 
             # rate of None or 0 would be invalid
             if not rate:

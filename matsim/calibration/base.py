@@ -14,6 +14,9 @@ from .constraints import F
 # Type alias for input variables
 CalibrationInput = Union[str, os.PathLike, dict, pd.DataFrame]
 
+# Type alias for learning rate schedule, returns the learning rate for a given trial
+LR = Callable[[int, str, float, optuna.Trial, optuna.Study], float]
+
 
 def to_float(x):
     return float(x.iloc[0]) if isinstance(x, pd.Series) else float(x)
@@ -44,7 +47,7 @@ class CalibratorBase(ABC):
                  modes: Sequence[str],
                  initial: CalibrationInput,
                  target: CalibrationInput,
-                 lr: Callable[[int, str, float, optuna.Trial, optuna.Study], float] = None,
+                 lr: LR = None,
                  constraints: Dict[str, F] = None):
         """Abstract constructors for all calibrations. Usually the same parameters should be made available subclasses.
 
@@ -79,7 +82,7 @@ class CalibratorBase(ABC):
         self.terminate = False
 
     def check_constraints(self, param, mode):
-        """ Wether the default constraints should be applied, if not the implementation must do it itself."""
+        """ Whether the default constraints should be applied, if not the implementation must do it itself."""
         return True
 
     def apply_constraints(self, param, mode, value):

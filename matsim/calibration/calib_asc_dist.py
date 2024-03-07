@@ -8,7 +8,7 @@ import optuna
 import pandas as pd
 
 from .analysis import read_trips_and_persons
-from .base import CalibratorBase, CalibrationInput, to_float
+from .base import CalibratorBase, CalibrationInput, LR, to_float
 from .utils import last_completed_trial
 
 
@@ -40,6 +40,11 @@ def detect_dist_groups(s: pd.Series) -> Tuple[Sequence, Sequence]:
             raise ValueError("Missing dist group %s" % r)
 
     return bins, res
+
+
+# Type alias for distance learning rate schedule
+# Args: runs, median_dist, mode, trial
+DistLR = Callable[[int, float, str, optuna.Trial], float]
 
 
 def get_dist_params(config, subpopulation, mode):
@@ -78,9 +83,9 @@ class ASCDistCalibrator(CalibratorBase):
                  fixed_mode: str = "walk",
                  fixed_mode_dist: str = None,
                  subpopulation: str = "person",
-                 lr: Callable[[int, str, float, optuna.Trial, optuna.Study], float] = None,
+                 lr: LR = None,
                  constraints: Dict[str, Callable[[str, float], float]] = None,
-                 dist_update_weight: float = 1,
+                 dist_lr: DistLR = None,
                  adjust_dist: bool = False):
         """Constructor
 
@@ -92,7 +97,7 @@ class ASCDistCalibrator(CalibratorBase):
         :param subpopulation: subpopulation to calibrate, this is required for the advanced scoring config
         :param lr: learning rate schedule, will be called with (trial number, mode, update, trial, study)
         :param constraints: constraints for each param, must return the value and will be called with original value
-        :param dist_update_weight: how strong to adjust the distance parameters in relation to asc
+        :param dist_lr: callable
         :param adjust_dist: adjust the distance distributions so that reference and obtained match
         """
         super().__init__(modes, initial, target, lr, constraints)
@@ -103,7 +108,7 @@ class ASCDistCalibrator(CalibratorBase):
         self.fixed_mode = fixed_mode
         self.fixed_mode_dist = fixed_mode_dist if fixed_mode_dist else fixed_mode
         self.subpopulation = subpopulation
-        self.dist_update_weight = dist_update_weight
+        self.dist_lr = dist_lr
 
         self.target = self.target.rename(columns={"value": "share", "main_mode": "mode"}, errors="ignore")
 
@@ -218,15 +223,12 @@ class ASCDistCalibrator(CalibratorBase):
         if param == self.fixed_mode:
             return 0
 
-        # Both update steps sum to 1
-        update_step = 1 + self.dist_update_weight
-
         # Base mode shares
         if not param.startswith("["):
-            return (1 / update_step) * self.calc_asc_update(self.base.loc[param].target,
-                                                            last_trial.user_attrs["%s_share" % param],
-                                                            self.base.loc[self.fixed_mode].target,
-                                                            last_trial.user_attrs["%s_share" % self.fixed_mode])
+            return self.calc_asc_update(self.base.loc[param].target,
+                                        last_trial.user_attrs["%s_share" % param],
+                                        self.base.loc[self.fixed_mode].target,
+                                        last_trial.user_attrs["%s_share" % self.fixed_mode])
 
         dist_group, _, mode = param.rpartition("-")
         dist_group = dist_group.strip("[]")
@@ -234,10 +236,13 @@ class ASCDistCalibrator(CalibratorBase):
         if mode == self.fixed_mode_dist:
             return 0
 
-        return (self.dist_update_weight / update_step) * self.calc_asc_update(self.target.loc[dist_group, mode].target,
-                                                                              last_trial.user_attrs[ "%s-%s_share" % (dist_group, mode)],
-                                                                              self.target.loc[dist_group, self.fixed_mode_dist].target,
-                                                                              last_trial.user_attrs["%s-%s_share" % (dist_group, self.fixed_mode_dist)])
+        median_dist = last_trial.user_attrs[dist_group + "_median_dist"]
+        lr = 1 if not self.dist_lr else self.dist_lr(len(completed) + 1, median_dist / 1000, mode, trial)
+
+        return lr * self.calc_asc_update(self.target.loc[dist_group, mode].target,
+                                         last_trial.user_attrs["%s-%s_share" % (dist_group, mode)],
+                                         self.target.loc[dist_group, self.fixed_mode_dist].target,
+                                         last_trial.user_attrs["%s-%s_share" % (dist_group, self.fixed_mode_dist)])
 
     def calc_stats(self, trial: optuna.Trial, run_dir: str,
                    transform_persons: Callable = None,
