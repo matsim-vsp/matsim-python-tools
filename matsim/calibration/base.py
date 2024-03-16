@@ -4,6 +4,7 @@ import math
 import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from functools import reduce
 from typing import Union, Sequence, Dict, Tuple, Callable
 
 import optuna
@@ -64,6 +65,8 @@ class CalibratorBase(ABC):
         self.constraints = constraints
         self.terminate_cond = None
         self.terminate = False
+        self.groups = []
+        self.multi_groups = set()
         # Store update steps for each trial
         self.current_step = {}
         self.current_params = {}
@@ -91,6 +94,28 @@ class CalibratorBase(ABC):
             return self.constraints[mode](param, value)
 
         return value
+
+    def get_group(self, df, groups: dict = None, use_multi=False):
+        """ Get all row for one group"""
+        # return result for empty groups
+        if groups is None:
+            idx = reduce(lambda x, y: x & y, [pd.isna(df[g]) for g in self.groups])
+            return df[idx]
+
+        if use_multi:
+            idx = []
+            for g, v in groups.items():
+                if g in self.multi_groups:
+                    vs = v.split(",")
+                    idx.append(df[g].isin(vs))
+                else:
+                    idx.append(df[g] == v)
+
+            idx = reduce(lambda x, y: x & y, idx)
+        else:
+            idx = reduce(lambda x, y: x & y, [df[g] == v for g, v in groups.items()])
+
+        return df[idx]
 
     @property
     @abstractmethod

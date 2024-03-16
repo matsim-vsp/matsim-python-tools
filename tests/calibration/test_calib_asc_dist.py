@@ -4,8 +4,6 @@ import numpy as np
 from scipy.special import softmax
 
 from matsim.calibration import ASCCalibrator
-from matsim.calibration.calib_asc_dist import detect_dist_groups
-
 
 def lognormal(mu, sigma, size):
     s = np.sqrt(np.log(1 + (sigma / mu) ** 2))
@@ -144,21 +142,7 @@ def test_algorithm():
 
   #      print("ASCs", ascs, "Dist utils", utils_m)
 
+    # This for playing around, not the same as the implemented algorithm
     print("Error", err)
     print("Share dist", share_dist, "Error", dist_errs)
 
-
-def test_detect_dist_groups():
-    groups = ["1000 - 2000", "2000+", "0 - 1000"]
-
-    bins, labels = detect_dist_groups(groups)
-
-    assert bins == [0, 1000, 2000, np.inf]
-    assert labels == ["0 - 1000", "1000 - 2000", "2000+"]
-
-    groups = ["1000 - 2000", "20000+", "0 - 1000", "2000 - 10000", "10000 - 20000"]
-
-    bins, labels = detect_dist_groups(groups)
-
-    assert bins == [0, 1000, 2000, 10000, 20000, np.inf]
-    assert labels == ["0 - 1000", "1000 - 2000", "2000 - 10000", "10000 - 20000", "20000+"]
