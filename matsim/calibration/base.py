@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
 
 import math
+import optuna
 import os
+import pandas as pd
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from functools import reduce
 from typing import Union, Sequence, Dict, Tuple, Callable
-
-import optuna
-import pandas as pd
 
 from .constraints import F
 
@@ -23,7 +22,18 @@ def to_float(x):
     return float(x.iloc[0]) if isinstance(x, pd.Series) else float(x)
 
 
+def get_or_default(x: pd.DataFrame, key, default):
+    """ Get value from dataframe or return default """
+    try:
+        return to_float(x.loc[key])
+    except KeyError:
+        return default
+
+
 def sanitize(x):
+    if not isinstance(x, pd.DataFrame):
+        return x
+
     if 'main_mode' in x.columns and 'mode' not in x.columns:
         x.rename(columns={'main_mode': 'mode'}, inplace=True)
 
@@ -59,7 +69,7 @@ class CalibratorBase(ABC):
         :param constraints: constraints for each mode, must return a value and will be called with specific param name and original value
         """
         self.modes = modes
-        self.initial = sanitize(self.convert(initial))
+        self.initial = sanitize(self.read_initial(initial))
         self.target = sanitize(self.convert(target))
         self.lr = lr
         self.constraints = constraints
@@ -162,6 +172,11 @@ class CalibratorBase(ABC):
         raise NotImplemented
 
     @classmethod
+    def read_initial(cls, arg):
+        """ Read initial state from given argument. This method can be freely overwritten by subclasses. """
+        return cls.convert(arg)
+
+    @classmethod
     def convert(cls, arg) -> pd.DataFrame:
         """ Method call to create target values from input argument """
         if isinstance(arg, pd.DataFrame):
@@ -173,11 +188,6 @@ class CalibratorBase(ABC):
         if arg.endswith(".csv"):
             return pd.read_csv(arg)
 
-        return cls.convert_input(arg)
-
-    @classmethod
-    def convert_input(cls, path) -> pd.DataFrame:
-        """ Convert any input file that has been passed as argument and needs to be converted. """
         raise ValueError(f"Input {path} of {type(path)} is not supported. Use csv or dataframes, or implement custom conversion method.")
 
     @staticmethod

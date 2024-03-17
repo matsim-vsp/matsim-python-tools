@@ -54,7 +54,8 @@ class CalibrationSampler(optuna.samplers.BaseSampler):
         completed = utils.completed_trials(study)
         if len(completed) == 0:
             initial = to_float(c.sample_initial(param))
-            initial = c.apply_constraints(param, mode, initial)
+            if c.check_constraints(param, mode):
+                initial = c.apply_constraints(param, mode, initial)
 
             return initial
 

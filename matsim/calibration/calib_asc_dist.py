@@ -1,14 +1,17 @@
 # -*- coding: utf-8 -*-
 
 import sys
+import yaml
+from collections import namedtuple
 from typing import Sequence, Callable, Dict
+
 
 import numpy as np
 import optuna
 import pandas as pd
 
 from .analysis import read_trips_and_persons
-from .base import CalibratorBase, CalibrationInput, LR, to_float
+from .base import CalibratorBase, CalibrationInput, LR, to_float, get_or_default, sanitize
 from .group import Group, parse_group, detect_binned_groups
 from .utils import last_completed_trial
 
@@ -16,6 +19,7 @@ from .utils import last_completed_trial
 # Args: runs, median_dist, mode, trial
 DistLR = Callable[[int, float, str, optuna.Trial], float]
 
+InitialState = namedtuple("InitialState", ["constant", "distGroups", "deltaPerDistGroup"])
 
 def get_dist_params(config, subpopulation, mode):
     """ Return the distance parameters for a mode """
@@ -170,10 +174,44 @@ class ASCDistCalibrator(CalibratorBase):
         return len(self.base)
 
     @classmethod
-    def convert_input(cls, arg) -> pd.DataFrame:
+    def read_initial(cls, arg) -> InitialState:
         """ Load previous parameters from yaml file """
-        # TODO: need to implement this
-        raise NotImplementedError("Not implemented yet")
+
+        # if no yaml file is given, only asc are used initially
+        if not isinstance(arg, str) or (not arg.endswith(".yaml") and not arg.endswith(".yml")):
+            return InitialState(sanitize(cls.convert(arg)), None, None)
+
+        with open(arg, "r") as f:
+            data = yaml.safe_load(f)
+
+        constants = None
+        if "scoring" in data:
+            # Always use first modeParams
+            modeParams = data["scoring"]["scoringParameters"][0]["modeParams"]
+            constants = sanitize(pd.DataFrame(modeParams)).set_index("mode")
+        else:
+            raise ValueError("No initial mode constants found in the yaml file")
+
+        distGroups = None
+        distParams = {}
+        if "advancedScoring" in data:
+
+            distGroups = data["advancedScoring"]["distGroups"]
+            # TODO: find mode params that have subpopulation / deltaPerDistGeop
+            modeParams = data["advancedScoring"]["scoringParameters"][0]["modeParams"]
+
+            for m in modeParams:
+                utils = []
+                base = get_or_default(constants, m["mode"], 0)
+
+                # The utils have been written as differences, this operation is reverted here
+                for x in m["deltaPerDistGroup"]:
+                    utils.append(base + x)
+                    base += x
+
+                distParams[m["mode"]] = utils
+
+        return InitialState(constants, distGroups, distParams)
 
     def init_study(self, study: optuna.Trial):
         study.set_user_attr("modes", self.modes)
@@ -214,32 +252,36 @@ class ASCDistCalibrator(CalibratorBase):
             utils_dist = get_dist_params(config, self.subpopulation, mode)["deltaPerDistGroup"]
 
             # Update dist deltas
-            base = self.current_step.get(prefix + mode, 0)
+            base = constant
             for i, dist_group in enumerate(self.dist_groups):
                 param = "{%s}-%s" % (dist_group, mode)
 
                 # returns target at median dist
                 target_util = trial.suggest_float(prefix + param, sys.float_info.min, sys.float_info.max)
 
+                # No initial state result in no dist group for first run
                 if last_trial is None:
+                    # TODO: not compatible wih initial logic yet
                     trial.set_user_attr("%s-%s_util" % (dist_group, mode), 0)
                     continue
 
                 # Operate on the update steps, the actual target_util is not used here directly
-                step = self.current_step[prefix + param]
+                #step = self.current_step[prefix + param]
 
                 # Constraints operate on the delta to the constant asc
-                delta = self.apply_constraints(param, mode, step - base)
+                delta = self.apply_constraints(param, mode, target_util - base)
 
                 trial.set_user_attr("%s-%s_util" % (dist_group, mode), target_util)
 
+                # TODO: not available with new initial logic
                 median_dist = last_trial.user_attrs[dist_group + "_median_dist"]
 
                 # Store median dists
                 dists.add(int(median_dist))
                 utils_dist.append(delta)
 
-                base = step
+                # TODO: might correct target util agsinst contrained detla
+                base = target_util
 
             # Update group deltas
             for g in self.groups:
@@ -268,14 +310,18 @@ class ASCDistCalibrator(CalibratorBase):
     def sample_initial(self, param: str) -> float:
         group, _, mode = param.rpartition("-")
 
-        # Initial value for distance asc is 0
-        # TODO: load these as well
         if group and group.startswith("{"):
+            if self.initial.deltaPerDistGroup is not None and mode in self.initial.deltaPerDistGroup:
+                group = group.strip("{}")
+                idx = self.dist_groups.index(group)
+                return self.initial.deltaPerDistGroup[mode][idx]
+
             return 0
 
         # Grouped and base asc have the same initial value
-        if mode in self.initial.index:
-            return self.initial.loc[mode]
+        # TODO: support initial grouped values
+        if mode in self.initial.constant.index:
+            return self.initial.constant.loc[mode]
 
         return 0
 
