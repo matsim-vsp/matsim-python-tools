@@ -77,6 +77,8 @@ def read_network(filename, skip_attributes=False):
     attr_label = 'node_id'
     current_id = None
 
+    starting_with_network_attributes = True
+
     for xml_event, elem in tree:
         # the nodes element CLOSES at the end of the nodes, followed by links:
         if elem.tag == 'links' and xml_event == 'start':
@@ -84,6 +86,7 @@ def read_network(filename, skip_attributes=False):
             attr_label = 'link_id'
 
         elif elem.tag == 'node' and xml_event == 'start':
+            starting_with_network_attributes = False  # done with top-level attributes
             atts = elem.attrib
             current_id = atts['id']
 
@@ -106,6 +109,7 @@ def read_network(filename, skip_attributes=False):
             atts['freespeed'] = float(atts['freespeed'])
             atts['capacity'] = float(atts['capacity'])
             atts['permlanes'] = float(atts['permlanes'])
+            atts['oneway'] = int(atts['oneway'])
 
             if 'volume' in atts: atts['volume'] = float(atts['volume'])
 
@@ -113,17 +117,20 @@ def read_network(filename, skip_attributes=False):
 
 
         elif elem.tag == 'attribute' and xml_event == 'end':
-            if elem.attrib['name'] == Network._crsTag:
-                network_attrs[Network._crsTag] = elem.text
+            if starting_with_network_attributes:
+                value  = elem.text
+                network_attrs[elem.attrib['name']] = value
 
             elif not skip_attributes:
                 atts = {}
                 atts[attr_label] = current_id
                 atts['name'] = elem.attrib['name']
                 atts['value'] = elem.text
+                atts['type'] = 'string'
 
                 # TODO: pandas will make the value column "object" since we're mixing types
                 if 'class' in elem.attrib:
+                    atts['type'] = elem.attrib['class']
                     if elem.attrib['class'] == 'java.lang.Long':
                         atts['value'] = int(elem.text)
                     if elem.attrib['class'] == 'java.lang.Double':
@@ -138,8 +145,8 @@ def read_network(filename, skip_attributes=False):
             elem.clear()
 
     nodes = pd.DataFrame.from_records(nodes)
-    links = pd.DataFrame.from_records(links)
     node_attrs = pd.DataFrame.from_records(node_attrs)
+    links = pd.DataFrame.from_records(links)
     link_attrs = pd.DataFrame.from_records(link_attrs)
 
     return Network(nodes, links, node_attrs, link_attrs, network_attrs)
