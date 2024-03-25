@@ -82,6 +82,10 @@ def grouped_share(df, groups, normalize=True):
             sub = aggr.loc[group, :]
             sub.share /= sub.share.sum()
 
+    # Sort groups that use enum
+    if aggr.index.dtypes[0] == 'object' and hasattr(aggr.index[0][0], "sort_idx"):
+        aggr.sort_index(level=0, key=aggr.index[0][0].sort_idx, inplace=True)
+
     return aggr
 
 

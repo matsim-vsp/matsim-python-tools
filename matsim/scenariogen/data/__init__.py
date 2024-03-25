@@ -9,7 +9,7 @@ __all__ = ["read_all", "ParkingPosition", "HouseholdType", "EconomicStatus", "Ge
 import os
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import List, Union, Tuple
+from typing import List, Union, Tuple, get_type_hints
 
 import numpy as np
 import pandas as pd
@@ -71,16 +71,25 @@ def read_all(dirs: Union[str, List[str]], regio=None) -> Tuple[pd.DataFrame, pd.
 
     hh = pd.concat(hh, axis=0)
     hh = hh[~hh.index.duplicated(keep='first')]
+    hh = hh.dropna(axis=1, how='all')
+    # _df_to_categorical(hh, Household)
+
     print("Households: ", len(hh))
 
     pp = pd.concat(pp, axis=0)
     pp = pp[~pp.index.duplicated(keep='first')]
+    pp = pp.dropna(axis=1, how='all')
     pp.sort_index(inplace=True)
+    # _df_to_categorical(pp, Person)
+
     print("Persons: ", len(pp))
 
     tt = pd.concat(tt, axis=0)
     tt = tt[~tt.index.duplicated(keep='first')]
+    tt = tt.dropna(axis=1, how='all')
     tt.sort_values(["p_id", "n"], inplace=True)
+    # _df_to_categorical(tt, Trip)
+
     print("Trips: ", len(tt))
 
     return hh, pp, tt
@@ -98,7 +107,26 @@ class AutoNameLower(StrEnum):
 
 
 class AutoNameLowerStrEnum(AutoNameLower):
-    pass
+
+    @classmethod
+    def dtype(cls):
+        """Returns a pandas CategoricalDtype with the enum values as categories."""
+        return pd.api.types.CategoricalDtype(categories=list(cls), ordered=True)
+
+    @classmethod
+    def sort_idx(cls, series):
+        """ Return index needed for sorting"""
+        v = list(cls)
+        return series.map(v.index)
+
+def _df_to_categorical(df, clazz):
+    """ Convert columns to categorical types """
+
+    for k, v in get_type_hints(clazz).items():
+        if hasattr(v, "dtype") and k in df.columns:
+            df[k] = df[k].astype(v.dtype())
+
+    return df
 
 
 class ParkingPosition(AutoNameLowerStrEnum):

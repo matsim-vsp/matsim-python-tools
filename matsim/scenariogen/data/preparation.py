@@ -121,13 +121,13 @@ def prepare_trips(pp, trips, core_weekday=True):
     return df[df.columns[::-1]]
 
 
-def fill(df, col, val=None):
+def fill(df, col, val=None, random_state=0):
     """ Fill null values with dist of the rest (or replace val)"""
     if val is not None:
         df.loc[df[col] == val, col] = None
 
     isnull = df[col].isnull()
-    sample = df[col].dropna().sample(isnull.sum(), replace=True).values
+    sample = df[col].dropna().sample(isnull.sum(), random_state=random_state, replace=True).values
     df.loc[isnull, col] = sample
 
 
