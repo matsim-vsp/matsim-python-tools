@@ -238,7 +238,7 @@ def model_to_java(name, package, model, scaler, df):
 
     code, params = replace_params(code)
 
-    imp = """import org.matsim.application.prepare.network.opt.FeatureRegressor;
+    imp = """import org.matsim.application.prepare.network.params.FeatureRegressor;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
     
 /**
