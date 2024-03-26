@@ -446,7 +446,7 @@ class SrV2018:
         ob = parse_int_str(getattr(h, prefix + "OBERBEZIRK"))
 
         zone = pd.NA
-        if ob:
+        if ob and hasattr(h, prefix + "UNTERBEZIRK"):
             zone = ob
             ub = parse_int_str(getattr(h, prefix + "UNTERBEZIRK"))
             if ub:
