@@ -4,7 +4,7 @@
 __all__ = ["read_all", "ParkingPosition", "HouseholdType", "EconomicStatus", "Gender", "Employment", "Availability",
            "Purpose",
            "TripMode", "DistanceGroup", "DurationGroup", "SourceDestinationGroup",
-           "Household", "Person", "Trip", "Activity"]
+           "Household", "Person", "Trip", "Activity", "Visitations"]
 
 import os
 from dataclasses import dataclass
@@ -118,6 +118,7 @@ class AutoNameLowerStrEnum(AutoNameLower):
         """ Return index needed for sorting"""
         v = list(cls)
         return series.map(v.index)
+
 
 def _df_to_categorical(df, clazz):
     """ Convert columns to categorical types """
@@ -375,3 +376,12 @@ class Activity:
     leg_dist: float
     leg_duration: float
     leg_mode: TripMode
+
+
+@dataclass
+class Visitations:
+    """ Aggregated visitation information """
+    location: str
+    n: int
+    purpose: Purpose = pd.NA
+    time: pd.Timestamp = pd.NA
