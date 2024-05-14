@@ -113,7 +113,7 @@ def read_intersections(folder):
 
         # there could be exclusive lanes and the capacity to two edges completely additive
         # however if the capacity is shared one direction could use way more than physical possible
-        aggr = df.groupby("fromEdgeId").agg(capacity=("flow", "max")).reset_index()
+        aggr = df.groupby("fromEdgeId").agg(capacityMax=("flow", "max"), capacityMean=("flow", "mean")).reset_index()
         aggr.rename(columns={"fromEdgeId": "edgeId"})
 
         data.append(aggr)
