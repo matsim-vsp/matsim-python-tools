@@ -25,7 +25,7 @@ def setup(parser: ArgumentParser):
     parser.add_argument("--input-intersections", type=str, nargs="+", help="Path to file with intersection results",
                         required=True)
     parser.add_argument("--input-routes", type=str, nargs="+", help="Path to file with route results.", required=True)
-    parser.add_argument("--model-type", help="Type of model (features to use)", choices=["default", "extended"],
+    parser.add_argument("--model-type", help="Type of model (features to use)", choices=["default", "extended", "intersection"],
                         default="default")
 
 
@@ -49,8 +49,10 @@ def main(args):
         df = get(None, t)[0]
 
         norm = ["length", "speed", "num_lanes"]
-        if args.model_type == "full":
+        if args.model_type == "extended":
             norm += ["num_foes", "junction_inc_lanes"]
+        elif args.model_type == "intersection":
+            norm += []
 
         scaler[t] = sklearn.compose.ColumnTransformer([
             ("scale", _scaler, [df.columns.get_loc(x) for x in norm])  # column indices

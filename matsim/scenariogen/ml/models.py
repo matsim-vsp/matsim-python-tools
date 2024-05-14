@@ -227,7 +227,7 @@ def sympy_to_c(model):
     return c_code
 
 
-def model_to_java(name, package, model_and_error: tuple, scaler, df):
+def model_to_java(name, package, model_and_error: tuple, scaler, bounds, df):
     """ Convert to java source file """
     import m2cgen as m2c
 
@@ -270,6 +270,8 @@ public final class""" % model_and_error
     for ft in features:
         pre += "\t\t" + ft
 
+    ret = "score(data, params)" if bounds is None else "Math.min(Math.max(score(data, params), %f), %f)" % bounds
+
     pre += """
         return data;
     }
@@ -281,9 +283,9 @@ public final class""" % model_and_error
         for (int i = 0; i < data.length; i++)
             if (Double.isNaN(data[i])) throw new IllegalArgumentException("Invalid data at index: " + i);
     
-        return score(data, params);
+        return %s;
     }
-    """
+    """ % ret
 
     code = code.replace("score(double[] input)", "score(double[] input, double[] params)")
 

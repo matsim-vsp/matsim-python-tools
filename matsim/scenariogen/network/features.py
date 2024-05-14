@@ -26,7 +26,8 @@ def build_datasets(network, inter, routes, model_type):
     aggr = df_i.groupby(["junction_type"])
     df_i["norm_cap"] = df_i.capacity / df_i.num_lanes
     for g in aggr.groups:
-        result["capacity_" + str(g)] = prepare_dataframe(aggr.get_group(g), model_type, target="norm_cap")
+        # Use total capacity and not normed per lane
+        result["capacity_" + str(g)] = prepare_dataframe(aggr.get_group(g), model_type, target="capacity")
 
     return result
 
@@ -64,6 +65,10 @@ def prepare_dataframe(df, model_type, target):
         df = df[["target", "length", "speed", "change_speed", "num_lanes", "change_num_lanes", "num_to_links",
                  "junction_inc_lanes", "priority_lower", "priority_equal", "priority_higher",
                  "is_secondary_or_higher", "is_primary_or_higher", "is_motorway", "is_link"]]
+
+    elif model_type == "intersection":
+        df = df[["target", "speed", "num_lanes", "junction_inc_lanes", "num_conns", "num_response", "num_foes",
+                 "is_secondary_or_higher", "num_left", "num_right", "num_straight", "dir_exclusive"]]
 
     else:
         raise ValueError("Illegal model type:" + model_type)

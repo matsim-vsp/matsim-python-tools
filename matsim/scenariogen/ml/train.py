@@ -42,9 +42,10 @@ classifier = {
 class MLRegressor:
     """ General class for machine learning regression models """
 
-    def __init__(self, n_trials=100, error="mae", fold=None):
+    def __init__(self, n_trials=100, error="mae", fold=None, bounds=None):
         self.n_trials = n_trials
         self.fold = fold if fold else KFold(n_splits=5, shuffle=False)
+        self.bounds = bounds
         self.error = mean_absolute_error
         self.models = {}
         self.df = None
@@ -176,7 +177,7 @@ class MLRegressor:
         makedirs(output, exist_ok=True)
 
         with open(join(output, class_name + ".java"), "w") as f:
-            code = model_to_java(class_name, package_name, self.best, self.scaler, self.get(None)[0])
+            code = model_to_java(class_name, package_name, self.best, self.scaler, self.bounds, self.get(None)[0])
             f.write(code)
 
     def write_python(self, folder, name):
@@ -191,6 +192,9 @@ class MLRegressor:
             f.write("")
 
         with open(join(folder, name + ".py"), "w") as f:
+
+            # TODO: bounds not implemented
+
             code = model_to_py(t, self.best, self.scaler, self.get(None)[0])
             f.write("# -*- coding: utf-8 -*-\n")
             f.write("\"\"\"%s\nError: %f\"\"\"\n" % self.best)
