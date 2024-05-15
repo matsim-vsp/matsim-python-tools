@@ -72,7 +72,7 @@ def prepare_dataframe(df, model_type, target):
 
     elif model_type == "intersection":
         df = df[["target", "speed", "num_lanes", "num_to_links", "junction_inc_lanes", "num_conns", "num_response", "num_foes",
-                 "is_secondary_or_higher", "num_left", "num_right", "num_straight", "dir_exclusive"]]
+                 "is_primary_or_higher", "is_secondary_or_higher", "num_left", "num_right", "num_straight"]]
 
     else:
         raise ValueError("Illegal model type:" + model_type)
