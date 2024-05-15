@@ -238,16 +238,19 @@ def model_to_java(name, package, model, scaler, df):
 
     code, params = replace_params(code)
 
-    imp = """import org.matsim.application.prepare.network.params.FeatureRegressor;
+    imp = """import org.matsim.application.prepare.Predictor;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
+import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
+
     
 /**
 * Generated model, do not modify.
+* Model: %s
 */
-public final class"""
+public final class""" % model
 
     code = code.replace("public class", imp)
-    code = code.replace(name, name + " implements FeatureRegressor")
+    code = code.replace(name, name + " implements Predictor")
 
     features = [f"data[{i}] = {s};\n" for i, s in enumerate(model_features(scaler, df))]
 
@@ -258,12 +261,12 @@ public final class"""
     public static final double[] DEFAULT_PARAMS = %s;
 
     @Override
-    public double predict(Object2DoubleMap<String> ft) {
-        return predict(ft, DEFAULT_PARAMS);
+    public double predict(Object2DoubleMap<String> features, Object2ObjectMap<String, String> categories) {
+        return predict(features, categories, DEFAULT_PARAMS);
     }
     
     @Override
-    public double[] getData(Object2DoubleMap<String> ft) {
+    public double[] getData(Object2DoubleMap<String> features, Object2ObjectMap<String, String> categories) {
         double[] data = new double[%d];
 """ % (name, name, str(params).replace("[", "{").replace("]", "}"), len(features))
 
@@ -275,9 +278,9 @@ public final class"""
     }
     
     @Override
-    public double predict(Object2DoubleMap<String> ft, double[] params) {
+    public double predict(Object2DoubleMap<String> features, Object2ObjectMap<String, String> categories, double[] params) {
 
-        double[] data = getData(ft);
+        double[] data = getData(features, categories);
         for (int i = 0; i < data.length; i++)
             if (Double.isNaN(data[i])) throw new IllegalArgumentException("Invalid data at index: " + i);
     
@@ -357,12 +360,12 @@ def model_features(scaler, df):
                 with_mean = t.get_params()["with_mean"]
 
                 if with_mean:
-                    yield f"(ft.getDouble(\"{c}\") - {t.mean_[i]}) / {t.scale_[i]}"
+                    yield f"(features.getDouble(\"{c}\") - {t.mean_[i]}) / {t.scale_[i]}"
                 else:
-                    yield f"ft.getDouble(\"{c}\") / {t.scale_[i]}"
+                    yield f"features.getDouble(\"{c}\") / {t.scale_[i]}"
 
             elif t == "passthrough":
-                yield f"ft.getDouble(\"{c}\")"
+                yield f"features.getDouble(\"{c}\")"
 
             elif t == "drop":
                 continue

@@ -11,19 +11,25 @@ def build_datasets(network, inter, routes, model_type):
     ft = pd.concat([pd.read_csv(n) for n in network])
 
     df_i = pd.concat([pd.merge(pd.read_csv(i), ft, left_on="fromEdgeId", right_on="linkId") for i in inter])
-    df_r = pd.concat(
-        [pd.merge(pd.read_csv(r).drop(columns=["speed"]), ft, left_on="edgeId", right_on="linkId") for r in routes])
 
     result = {}
 
-    aggr = df_r.groupby(["junction_type"])
-    for g in aggr.groups:
-        if str(g) == "dead_end":
-            continue
+    if routes:
+        df_r = pd.concat(
+            [pd.merge(pd.read_csv(r).drop(columns=["speed"]), ft, left_on="edgeId", right_on="linkId") for r in routes])
 
-        result["speedRelative_" + str(g)] = prepare_dataframe(aggr.get_group(g), model_type, target="speedRelative")
+        aggr = df_r.groupby(["junction_type"])
+        for g in aggr.groups:
+            if str(g) == "dead_end":
+                continue
+
+            result["speedRelative_" + str(g)] = prepare_dataframe(aggr.get_group(g), model_type, target="speedRelative")
 
     aggr = df_i.groupby(["junction_type"])
+
+    # Use a mix of max and mean capacities
+    df_i["capacity"] = (df_i.capacityMax + df_i.capacityMean) / 2
+
     df_i["norm_cap"] = df_i.capacity / df_i.num_lanes
     for g in aggr.groups:
         # Use total capacity and not normed per lane
@@ -67,7 +73,7 @@ def prepare_dataframe(df, model_type, target):
                  "is_secondary_or_higher", "is_primary_or_higher", "is_motorway", "is_link"]]
 
     elif model_type == "intersection":
-        df = df[["target", "speed", "num_lanes", "junction_inc_lanes", "num_conns", "num_response", "num_foes",
+        df = df[["target", "speed", "num_lanes", "num_to_links", "junction_inc_lanes", "num_conns", "num_response", "num_foes",
                  "is_secondary_or_higher", "num_left", "num_right", "num_straight", "dir_exclusive"]]
 
     else:
