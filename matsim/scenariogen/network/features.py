@@ -28,12 +28,10 @@ def build_datasets(network, inter, routes, model_type):
     aggr = df_i.groupby(["junction_type"])
 
     # Use a mix of max and mean capacities
-    df_i["capacity"] = (df_i.capacityMax + df_i.capacityMean) / 2
-
+    df_i["capacity"] = df_i.capacityMax
     df_i["norm_cap"] = df_i.capacity / df_i.num_lanes
     for g in aggr.groups:
-        # Use total capacity and not normed per lane
-        result["capacity_" + str(g)] = prepare_dataframe(aggr.get_group(g), model_type, target="capacity")
+        result["capacity_" + str(g)] = prepare_dataframe(aggr.get_group(g), model_type, target="norm_cap")
 
     return result
 
