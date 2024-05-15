@@ -111,11 +111,18 @@ def read_intersections(folder):
             print("Empty csv", f)
             continue
 
-        # there could be exclusive lanes and the capacity to two edges completely additive
-        # however if the capacity is shared one direction could use way more than physical possible
-        aggr = df.groupby("fromEdgeId").agg(capacityMax=("flow", "max"), capacityMean=("flow", "mean")).reset_index()
+        # Filter flows that are not relevant
+        df = df[df.flow > 50]
+
+        # Capacities per lane
+        aggr = df.groupby(["fromEdgeId", "lane"]).agg(capacityMax=("flow", "max"), capacityMean=("flow", "mean")).reset_index()
+
+        # Sum lane capacities
+        aggr = df.groupby("fromEdgeId").agg(capacityMax=("capacityMax", "sum"), capacityMean=("capacityMean", "sum")).reset_index()
         aggr.rename(columns={"fromEdgeId": "edgeId"})
 
+        # There will be two capacities, one for the max which would assume that all vehicles takes the turn with the highest capacity
+        # Mean capacity is the average capacity of all possible turn directions per lane
         data.append(aggr)
 
     return pd.concat(data)
