@@ -75,6 +75,7 @@ def writeDetectorFile(f_name, output, lanes):
 def read_result(folder, junctionId, fromEdgeId, toEdgeId):
 
     res = []
+    lane = 0
 
     for f in os.listdir(folder):
         if not f.endswith(".xml"):
@@ -82,7 +83,6 @@ def read_result(folder, junctionId, fromEdgeId, toEdgeId):
 
         total = 0
         end = 0
-        lane = 0
 
         for _, elem in ET.iterparse(join(folder, f), events=("end",),
                                     tag=('interval',),
@@ -93,10 +93,9 @@ def read_result(folder, junctionId, fromEdgeId, toEdgeId):
             if begin < 60:
                 continue
 
-            total = float(elem.attrib["nVehContrib"])
+            total += float(elem.attrib["nVehContrib"])
 
         flow = total * (3600 / (end - 60))
-
         res.append({
             "junctionId": junctionId,
             "fromEdgeId": fromEdgeId,
