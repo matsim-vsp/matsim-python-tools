@@ -366,8 +366,9 @@ class Trip:
 
 @dataclass
 class Activity:
-    """ Activity information (including leg) """
+    """ Activity information (including some leg information as well) """
     a_id: str
+    a_weight: float
     p_id: str
     n: int
     type: Purpose
@@ -375,3 +376,5 @@ class Activity:
     leg_dist: float
     leg_duration: float
     leg_mode: TripMode
+    location: str = pd.NA
+    zone: str = pd.NA
