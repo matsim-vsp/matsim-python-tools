@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+import traceback
 
 METADATA = "create-csv", "Create plots and csv from calibration study."
 

@@ -50,6 +50,9 @@ def run(jar: Union[str, os.PathLike],
     if not os.access(config, os.R_OK):
         raise ValueError("Can not access config File: %s" % config)
 
+    if worker_id >= workers:
+        raise ValueError("Worker ID must be smaller than number of workers (starts at 0).")
+
     if not os.path.exists("eval-runs"):
         makedirs("eval-runs")
 
@@ -63,11 +66,11 @@ def run(jar: Union[str, os.PathLike],
             print("Run %s already exists, skipping." % run_dir)
             continue
 
-        run_args = args(completed) if callable(args) else args
+        run_args = args(i) if callable(args) else args
 
-        # Same custom cli interface as calibration
+        # Similar custom cli interface as calibration
         if custom_cli:
-            cmd = custom_cli(jvm_args, jar, config, params_path, run_dir, trial.number, run_args)
+            cmd = custom_cli(jvm_args, jar, config, run_dir, i, seed + i, run_args)
         else:
             cmd = "java %s -jar %s run --config %s --output %s --runId %03d --config:global.randomSeed=%d %s" \
                   % (jvm_args, jar, config, run_dir, i, seed + i, run_args)
