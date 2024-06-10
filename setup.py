@@ -42,6 +42,7 @@ setup(
         'console_scripts': [
             'matsim-tools=matsim.cli.main:main',
             'matsim-scenariogen=matsim.scenariogen:main',
+            'matsim-calibration=matsim.calibration:main',
             'matsim-viz=matsim.viz:main',
         ]
     },
