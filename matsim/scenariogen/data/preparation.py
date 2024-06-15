@@ -95,12 +95,28 @@ def augment_persons(pp, factor=1, permute_age=0.5):
     """
     pp = pp.reset_index()
 
-    duplicated = pp.loc[pp.index.repeat(np.maximum(1, np.rint(pp.p_weight * factor)))]
+    repeats = np.maximum(1, np.rint(pp.p_weight * factor)).to_numpy(int)
+    duplicated = pp.loc[pp.index.repeat(repeats)]
+
+    # Each sample has a unique sequence number
+    seq = np.zeros(len(duplicated), dtype=int)
+
+    i = 0
+    for r in repeats:
+        for s in range(r):
+            seq[i] = s
+            i += 1
+
+    duplicated["seq"] = seq
 
     if permute_age > 0:
         np.random.seed(0)
 
         age_permute = np.rint(np.random.normal(0, permute_age, len(duplicated))).astype(np.int32)
+
+        # Non duplicated person is not permuted
+        age_permute[seq == 0] = 0
+
         duplicated.age += age_permute
 
         # 0 age is minimum
@@ -264,11 +280,11 @@ def create_activities(all_persons: pd.DataFrame, tt: pd.DataFrame, core_weekday=
                 return "%s_%d" % (p.Index, t_i)
 
             if len(trips) == 0:
-                acts.append(Activity(a_id(0), p.Index, 0, Purpose.HOME, 1440, 0, 0, TripMode.OTHER))
+                acts.append(Activity(a_id(0), p.p_weight, p.Index, 0, Purpose.HOME, 1440, 0, 0, TripMode.OTHER))
             else:
-                acts.append(
-                    Activity(a_id(0), p.Index, 0, trips.iloc[0].sd_group.source(), trips.iloc[0].departure, 0, 0,
-                             TripMode.OTHER))
+                trip_0 = trips.iloc[0]
+                acts.append(Activity(a_id(0), p.p_weight, p.Index, 0, trip_0.sd_group.source(), trip_0.departure, 0, 0,
+                             TripMode.OTHER, trip_0.from_location, trip_0.from_zone))
 
             for i in range(len(trips) - 1):
                 t0 = trips.iloc[i]
@@ -279,8 +295,8 @@ def create_activities(all_persons: pd.DataFrame, tt: pd.DataFrame, core_weekday=
                 if duration < 0 or t0.gis_length < 0:
                     valid = False
 
-                acts.append(Activity(a_id(i + 1), p.Index, i + 1, t0.purpose,
-                                     duration, t0.gis_length, t0.duration, t0.main_mode))
+                acts.append(Activity(a_id(i + 1), p.p_weight, p.Index, i + 1, t0.purpose,duration, t0.gis_length,
+                                     t0.duration, t0.main_mode, t0.to_location, t0.to_zone))
 
             if len(trips) > 1:
                 i += 1
@@ -291,8 +307,8 @@ def create_activities(all_persons: pd.DataFrame, tt: pd.DataFrame, core_weekday=
                     valid = False
 
                 # Duration is set to rest of day
-                acts.append(
-                    Activity(a_id(i + 1), p.Index, i + 1, tl.purpose, 1440, tl.gis_length, tl.duration, tl.main_mode))
+                acts.append(Activity(a_id(i + 1), p.p_weight, p.Index, i + 1, tl.purpose, 1440, tl.gis_length, tl.duration, tl.main_mode,
+                                     tl.to_location, tl.to_zone))
 
             if valid:
                 res.extend(acts)
