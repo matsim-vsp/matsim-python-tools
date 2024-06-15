@@ -295,7 +295,7 @@ public final class""" % model_and_error
 def model_to_py(name, model_and_error, scaler, df):
     import m2cgen as m2c
 
-    code = m2c.export_to_python(model[0], function_name="score")
+    code = m2c.export_to_python(model_and_error[0], function_name="score")
 
     code, params = replace_params(code)
 

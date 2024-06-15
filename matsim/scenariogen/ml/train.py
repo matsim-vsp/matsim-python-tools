@@ -195,7 +195,7 @@ class MLRegressor:
 
             # TODO: bounds not implemented
 
-            code = model_to_py(t, self.best, self.scaler, self.get(None)[0])
+            code = model_to_py(name, self.best, self.scaler, self.get(None)[0])
             f.write("# -*- coding: utf-8 -*-\n")
             f.write("\"\"\"%s\nError: %f\"\"\"\n" % self.best)
             f.write(code)
