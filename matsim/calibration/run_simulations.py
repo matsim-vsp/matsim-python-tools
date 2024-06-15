@@ -17,7 +17,7 @@ METADATA = "run-simulations", "Utility to run multiple simulations at once."
 
 def process_results(runs):
     """Process results of multiple simulations"""
-    from sklearn.metrics import log_loss
+    from sklearn.metrics import log_loss, accuracy_score
     from sklearn.preprocessing import LabelEncoder
 
     print("Processing results in %s" % runs)
@@ -26,7 +26,6 @@ def process_results(runs):
     for run in os.listdir(runs):
         if not os.path.isdir(os.path.join(runs, run)):
             continue
-        print("Processing run %s" % run)
 
         df = pd.read_csv(os.path.join(runs, run, "analysis", "population", "mode_choices.csv"))
         if dfs is None:
@@ -54,11 +53,16 @@ def process_results(runs):
 
             y_pred[p.Index, j] = c / len(pred_cols)
 
+    accs = [accuracy_score(dfs.true_mode, dfs[col], sample_weight=dfs.weight) for col in pred_cols]
+    accs_d = [accuracy_score(dfs.true_mode, dfs[col], sample_weight=dfs.weight * dists) for col in pred_cols]
+
     result = [
         ("Log likelihood", -log_loss(y_true, y_pred, sample_weight=dfs.weight, normalize=False), -log_loss(y_true, y_pred, sample_weight=dfs.weight * dists, normalize=False)),
         ("Log likelihood (normalized)", -log_loss(y_true, y_pred, sample_weight=dfs.weight, normalize=True), -log_loss(y_true, y_pred, sample_weight=dfs.weight * dists, normalize=True)),
+        ("Mean Accuracy", np.mean(accs), np.mean(accs_d)),
         ("Log likelihood (null)", -log_loss(y_true, y_null, sample_weight=dfs.weight, normalize=False), -log_loss(y_true, y_null, sample_weight=dfs.weight * dists, normalize=False)),
         ("Samples", len(dfs), sum(dists)),
+        ("Runs", len(pred_cols), len(pred_cols))
     ]
 
     df = pd.DataFrame(result, columns=["Metric", "Value", "Distance weighted"]).set_index("Metric")
