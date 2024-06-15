@@ -9,10 +9,19 @@ from os import makedirs
 from time import sleep
 from typing import Union, Callable
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 METADATA = "run-simulations", "Utility to run multiple simulations at once."
+
+
+def likelihood_ratio(ll, ll_null):
+    return (2 * (max(ll, ll_null) - ll_null))
+
+
+def likelihood_ratio_test(ll, ll_null, dof=1):
+    from scipy.stats.distributions import chi2
+    return chi2.sf(likelihood_ratio(ll, ll_null), dof)
 
 
 def process_results(runs):
@@ -31,7 +40,8 @@ def process_results(runs):
         if dfs is None:
             dfs = df
         else:
-            dfs= dfs.merge(df, left_on=["person", "n", "true_mode"], right_on=["person", "n", "true_mode"], suffixes=("", "_%s" % run))
+            dfs = dfs.merge(df, left_on=["person", "n", "true_mode"], right_on=["person", "n", "true_mode"],
+                            suffixes=("", "_%s" % run))
 
     shares = dfs.groupby("true_mode").size() / len(dfs)
     modes = shares.index
@@ -48,8 +58,8 @@ def process_results(runs):
         for j, m in enumerate(modes):
             c = 0
             for col in pred_cols:
-               if getattr(p, col) == m:
-                     c += 1
+                if getattr(p, col) == m:
+                    c += 1
 
             y_pred[p.Index, j] = c / len(pred_cols)
 
@@ -57,13 +67,22 @@ def process_results(runs):
     accs_d = [accuracy_score(dfs.true_mode, dfs[col], sample_weight=dfs.weight * dists) for col in pred_cols]
 
     result = [
-        ("Log likelihood", -log_loss(y_true, y_pred, sample_weight=dfs.weight, normalize=False), -log_loss(y_true, y_pred, sample_weight=dfs.weight * dists, normalize=False)),
-        ("Log likelihood (normalized)", -log_loss(y_true, y_pred, sample_weight=dfs.weight, normalize=True), -log_loss(y_true, y_pred, sample_weight=dfs.weight * dists, normalize=True)),
+        ("Log likelihood", -log_loss(y_true, y_pred, sample_weight=dfs.weight, normalize=False),
+         -log_loss(y_true, y_pred, sample_weight=dfs.weight * dists, normalize=False)),
+        ("Log likelihood (normalized)", -log_loss(y_true, y_pred, sample_weight=dfs.weight, normalize=True),
+         -log_loss(y_true, y_pred, sample_weight=dfs.weight * dists, normalize=True)),
+        ("Log likelihood (null)", -log_loss(y_true, y_null, sample_weight=dfs.weight, normalize=False),
+         -log_loss(y_true, y_null, sample_weight=dfs.weight * dists, normalize=False)),
         ("Mean Accuracy", np.mean(accs), np.mean(accs_d)),
-        ("Log likelihood (null)", -log_loss(y_true, y_null, sample_weight=dfs.weight, normalize=False), -log_loss(y_true, y_null, sample_weight=dfs.weight * dists, normalize=False)),
         ("Samples", len(dfs), sum(dists)),
         ("Runs", len(pred_cols), len(pred_cols))
     ]
+
+    result.insert(4, ("McFadden R2", 1 - (result[0][1] / result[2][1]), 1 - (result[0][2] / result[2][2])))
+    result.insert(5, ("LL ratio", likelihood_ratio(result[0][1], result[2][1]),
+                      likelihood_ratio(result[0][2], result[2][2])))
+    result.insert(6, ("LL ratio test", likelihood_ratio_test(result[0][1], result[2][1]),
+                      likelihood_ratio_test(result[0][2], result[2][2])))
 
     df = pd.DataFrame(result, columns=["Metric", "Value", "Distance weighted"]).set_index("Metric")
     print(df)
