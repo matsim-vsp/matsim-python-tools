@@ -16,7 +16,7 @@ METADATA = "run-simulations", "Utility to run multiple simulations at once."
 
 
 def likelihood_ratio(ll, ll_null):
-    return (2 * (max(ll, ll_null) - ll_null))
+    return (2 * (ll - ll_null))
 
 
 def likelihood_ratio_test(ll, ll_null, dof=1):
@@ -81,7 +81,7 @@ def process_results(runs):
     result.insert(4, ("McFadden R2", 1 - (result[0][1] / result[2][1]), 1 - (result[0][2] / result[2][2])))
     result.insert(5, ("LL ratio", likelihood_ratio(result[0][1], result[2][1]),
                       likelihood_ratio(result[0][2], result[2][2])))
-    result.insert(6, ("LL ratio test", likelihood_ratio_test(result[0][1], result[2][1]),
+    result.insert(6, ("LL ratio test (dof=1)", likelihood_ratio_test(result[0][1], result[2][1]),
                       likelihood_ratio_test(result[0][2], result[2][2])))
 
     df = pd.DataFrame(result, columns=["Metric", "Value", "Distance weighted"]).set_index("Metric")
