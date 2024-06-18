@@ -11,19 +11,24 @@ def build_datasets(network, inter, routes, model_type):
     ft = pd.concat([pd.read_csv(n) for n in network])
 
     df_i = pd.concat([pd.merge(pd.read_csv(i), ft, left_on="fromEdgeId", right_on="linkId") for i in inter])
-    df_r = pd.concat(
-        [pd.merge(pd.read_csv(r).drop(columns=["speed"]), ft, left_on="edgeId", right_on="linkId") for r in routes])
 
     result = {}
 
-    aggr = df_r.groupby(["junction_type"])
-    for g in aggr.groups:
-        if str(g) == "dead_end":
-            continue
+    if routes:
+        df_r = pd.concat(
+            [pd.merge(pd.read_csv(r).drop(columns=["speed"]), ft, left_on="edgeId", right_on="linkId") for r in routes])
 
-        result["speedRelative_" + str(g)] = prepare_dataframe(aggr.get_group(g), model_type, target="speedRelative")
+        aggr = df_r.groupby(["junction_type"])
+        for g in aggr.groups:
+            if str(g) == "dead_end":
+                continue
+
+            result["speedRelative_" + str(g)] = prepare_dataframe(aggr.get_group(g), model_type, target="speedRelative")
 
     aggr = df_i.groupby(["junction_type"])
+
+    # Use a mix of max and mean capacities
+    df_i["capacity"] = df_i.capacityMax
     df_i["norm_cap"] = df_i.capacity / df_i.num_lanes
     for g in aggr.groups:
         result["capacity_" + str(g)] = prepare_dataframe(aggr.get_group(g), model_type, target="norm_cap")
@@ -64,6 +69,10 @@ def prepare_dataframe(df, model_type, target):
         df = df[["target", "length", "speed", "change_speed", "num_lanes", "change_num_lanes", "num_to_links",
                  "junction_inc_lanes", "priority_lower", "priority_equal", "priority_higher",
                  "is_secondary_or_higher", "is_primary_or_higher", "is_motorway", "is_link"]]
+
+    elif model_type == "intersection":
+        df = df[["target", "speed", "num_lanes", "num_to_links", "junction_inc_lanes", "num_conns", "num_response", "num_foes",
+                 "is_primary_or_higher", "is_secondary_or_higher", "num_left", "num_right", "num_straight"]]
 
     else:
         raise ValueError("Illegal model type:" + model_type)
@@ -106,11 +115,18 @@ def read_intersections(folder):
             print("Empty csv", f)
             continue
 
-        # there could be exclusive lanes and the capacity to two edges completely additive
-        # however if the capacity is shared one direction could use way more than physical possible
-        aggr = df.groupby("fromEdgeId").agg(capacity=("flow", "max")).reset_index()
+        # Filter flows that are not relevant
+        df = df[df.flow > 50]
+
+        # Capacities per lane
+        aggr = df.groupby(["fromEdgeId", "lane"]).agg(capacityMax=("flow", "max"), capacityMean=("flow", "mean")).reset_index()
+
+        # Sum lane capacities
+        aggr = df.groupby("fromEdgeId").agg(capacityMax=("capacityMax", "sum"), capacityMean=("capacityMean", "sum")).reset_index()
         aggr.rename(columns={"fromEdgeId": "edgeId"})
 
+        # There will be two capacities, one for the max which would assume that all vehicles takes the turn with the highest capacity
+        # Mean capacity is the average capacity of all possible turn directions per lane
         data.append(aggr)
 
     return pd.concat(data)

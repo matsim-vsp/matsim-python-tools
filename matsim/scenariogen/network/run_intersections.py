@@ -72,8 +72,10 @@ def writeDetectorFile(f_name, output, lanes):
         f.write(text)
 
 
-def read_result(folder, **kwargs):
-    flow = 0
+def read_result(folder, junctionId, fromEdgeId, toEdgeId):
+
+    res = []
+    lane = 0
 
     for f in os.listdir(folder):
         if not f.endswith(".xml"):
@@ -93,10 +95,18 @@ def read_result(folder, **kwargs):
 
             total += float(elem.attrib["nVehContrib"])
 
-        flow += total * (3600 / (end - 60))
+        flow = total * (3600 / (end - 60))
+        res.append({
+            "junctionId": junctionId,
+            "fromEdgeId": fromEdgeId,
+            "toEdgeId": toEdgeId,
+            "lane": lane,
+            "flow": flow
+        })
 
-    kwargs["flow"] = flow
-    return kwargs
+        lane += 1
+
+    return res
 
 
 def run(args, nodes):
@@ -170,7 +180,7 @@ def run(args, nodes):
             go(p_scenario, args)
 
             # Read output
-            res.append(read_result(folder,
+            res.extend(read_result(folder,
                                    junctionId=node._id,
                                    fromEdgeId=fromEdge._id,
                                    toEdgeId=toEdge._id))
