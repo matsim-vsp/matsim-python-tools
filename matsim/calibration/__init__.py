@@ -233,6 +233,7 @@ def create_calibration(name: str, calibrate: Union[CalibratorBase, Sequence[Cali
 
         if os.name != 'nt':
             cmd = cmd.split(" ")
+            cmd = [c for c in cmd if c != ""]
 
         p = subprocess.Popen(cmd,
                              stdout=sys.stdout if debug else subprocess.DEVNULL,

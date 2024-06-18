@@ -10,13 +10,11 @@ import sklearn.ensemble
 import sklearn.linear_model
 import sklearn.svm
 
-
 try:
     import lightning.regression
     import lightning.classification
 except ValueError as e:
     print("Error during lightning import", e)
-
 
 import xgboost as xgb
 import lightgbm as lgb
@@ -27,7 +25,6 @@ from sympy.utilities.codegen import codegen
 def powerset(iterable):
     s = list(iterable)
     return itertools.chain.from_iterable(itertools.combinations(s, r) for r in range(len(s) + 1))
-
 
 
 def create_regressor(trial, classifier_name, random_state):
@@ -230,24 +227,24 @@ def sympy_to_c(model):
     return c_code
 
 
-def model_to_java(name, package, model, scaler, df):
+def model_to_java(name, package, model_and_error: tuple, scaler, bounds, df):
     """ Convert to java source file """
     import m2cgen as m2c
 
-    code = m2c.export_to_java(model, package, name)
+    code = m2c.export_to_java(model_and_error[0], package, name)
 
     code, params = replace_params(code)
 
     imp = """import org.matsim.application.prepare.Predictor;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
-
     
 /**
 * Generated model, do not modify.
 * Model: %s
+* Error: %f
 */
-public final class""" % model
+public final class""" % model_and_error
 
     code = code.replace("public class", imp)
     code = code.replace(name, name + " implements Predictor")
@@ -273,6 +270,8 @@ public final class""" % model
     for ft in features:
         pre += "\t\t" + ft
 
+    ret = "score(data, params)" if bounds is None else "Math.min(Math.max(score(data, params), %f), %f)" % bounds
+
     pre += """
         return data;
     }
@@ -284,19 +283,19 @@ public final class""" % model
         for (int i = 0; i < data.length; i++)
             if (Double.isNaN(data[i])) throw new IllegalArgumentException("Invalid data at index: " + i);
     
-        return score(data, params);
+        return %s;
     }
-    """
+    """ % ret
 
     code = code.replace("score(double[] input)", "score(double[] input, double[] params)")
 
     return f"{code[:idx]}{pre}{code[idx:]}"
 
 
-def model_to_py(name, model, scaler, df):
+def model_to_py(name, model_and_error, scaler, df):
     import m2cgen as m2c
 
-    code = m2c.export_to_python(model, function_name="score")
+    code = m2c.export_to_python(model_and_error[0], function_name="score")
 
     code, params = replace_params(code)
 

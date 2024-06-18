@@ -15,6 +15,15 @@ def prepare_persons(hh, pp, tt, augment=5, max_hh_size=5, core_weekday=False, re
     """ Cleans common data errors and fill missing values """
     df = pp.join(hh, on="hh_id", lsuffix="hh_")
 
+    # Replace unknown income group
+    fill(df, "income", -1)
+
+    # Replace unknown economic status
+    df["economic_status"] = df.apply(
+        lambda x: income_to_economic_status(x.income, df[df.hh_id == x.hh_id])
+        if x.economic_status == EconomicStatus.UNKNOWN else x.economic_status, axis=1
+    )
+
     # Augment data using p_weight
     if augment > 1:
         df = augment_persons(df, augment)
@@ -30,9 +39,6 @@ def prepare_persons(hh, pp, tt, augment=5, max_hh_size=5, core_weekday=False, re
     # small children don't have pt abo
     df.loc[df.age < 6, "pt_abo_avail"] = Availability.NO
     fill(df, "pt_abo_avail", Availability.UNKNOWN)
-
-    # Replace unknown income group
-    fill(df, "economic_status", EconomicStatus.UNKNOWN)
 
     # Large households are underrepresented and capped
     df.n_persons = np.minimum(df.n_persons, max_hh_size)
@@ -64,18 +70,21 @@ def prepare_persons(hh, pp, tt, augment=5, max_hh_size=5, core_weekday=False, re
 
     return df
 
+
 def bins_to_labels(bins):
     """ Convert bins to labels """
-    res =  ["%.0f - %.0f" % (bins[i], bins[i + 1]) for i in range(len(bins) - 1)]
+    res = ["%.0f - %.0f" % (bins[i], bins[i + 1]) for i in range(len(bins) - 1)]
 
     if bins[-1] == np.inf:
         res[-1] = "%.0f+" % bins[-2]
 
     return res
 
+
 def cut(x, bins):
     """ Cut x into bind and return labels """
     return pd.cut(x, bins, labels=bins_to_labels(bins), right=False)
+
 
 def augment_persons(pp, factor=1, permute_age=0.5):
     """ Augment persons using p weight
@@ -86,12 +95,28 @@ def augment_persons(pp, factor=1, permute_age=0.5):
     """
     pp = pp.reset_index()
 
-    duplicated = pp.loc[pp.index.repeat(np.maximum(1, np.rint(pp.p_weight * factor)))]
+    repeats = np.maximum(1, np.rint(pp.p_weight * factor)).to_numpy(int)
+    duplicated = pp.loc[pp.index.repeat(repeats)]
+
+    # Each sample has a unique sequence number
+    seq = np.zeros(len(duplicated), dtype=int)
+
+    i = 0
+    for r in repeats:
+        for s in range(r):
+            seq[i] = s
+            i += 1
+
+    duplicated["seq"] = seq
 
     if permute_age > 0:
         np.random.seed(0)
 
         age_permute = np.rint(np.random.normal(0, permute_age, len(duplicated))).astype(np.int32)
+
+        # Non duplicated person is not permuted
+        age_permute[seq == 0] = 0
+
         duplicated.age += age_permute
 
         # 0 age is minimum
@@ -99,6 +124,88 @@ def augment_persons(pp, factor=1, permute_age=0.5):
 
     # Filter invalid options
     return duplicated[check_age_employment(None, duplicated)]
+
+
+def income_to_economic_status(income, persons):
+    """ Convert income to economic status
+
+     :param income: income in Euro
+     :param persons: persons table
+     """
+
+    if income < 0:
+        return EconomicStatus.UNKNOWN
+
+    # Calculated according to Srv 2018
+    # https://tu-dresden.de/bu/verkehr/ivs/srv/ressourcen/dateien/SrV2018_Tabellenbericht_Oberzentren_500TEW-_flach.pdf?lang=de
+
+    children = (persons.age < 14).sum()
+    rest = len(persons) - children - 1
+
+    w = 0.3 * children + 1 + 0.5 * rest
+
+    if income < 1500:
+        if w < 1.3:
+            return EconomicStatus.LOW
+
+        return EconomicStatus.VERY_LOW
+
+    elif income < 2000:
+        if w < 1.3:
+            return EconomicStatus.MEDIUM
+        elif w < 1.6:
+            return EconomicStatus.LOW
+
+        return EconomicStatus.VERY_LOW
+
+    elif income < 2600:
+        if w < 1.6:
+            return EconomicStatus.MEDIUM
+        elif w < 2.3:
+            return EconomicStatus.LOW
+
+        return EconomicStatus.VERY_LOW
+
+    elif income < 3000:
+        if w < 1.3:
+            return EconomicStatus.HIGH
+        elif w < 2.3:
+            return EconomicStatus.MEDIUM
+        elif w < 3.0:
+            return EconomicStatus.LOW
+
+        return EconomicStatus.VERY_LOW
+
+    elif income < 3600:
+        if w < 1.6:
+            return EconomicStatus.HIGH
+        elif w < 2.3:
+            return EconomicStatus.MEDIUM
+        elif w < 3.5:
+            return EconomicStatus.LOW
+
+        return EconomicStatus.VERY_LOW
+
+    elif income < 4600:
+        if w < 2.1:
+            return EconomicStatus.HIGH
+        elif w < 3.0:
+            return EconomicStatus.MEDIUM
+
+        return EconomicStatus.LOW
+
+    elif income < 5600:
+        if w < 1.3:
+            return EconomicStatus.VERY_HIGH
+        if w < 2.8:
+            return EconomicStatus.HIGH
+        return EconomicStatus.MEDIUM
+
+    else:
+        if w < 2.5:
+            return EconomicStatus.VERY_HIGH
+
+        return EconomicStatus.HIGH
 
 
 def prepare_trips(pp, trips, core_weekday=True):
@@ -121,13 +228,13 @@ def prepare_trips(pp, trips, core_weekday=True):
     return df[df.columns[::-1]]
 
 
-def fill(df, col, val=None):
+def fill(df, col, val=None, random_state=0):
     """ Fill null values with dist of the rest (or replace val)"""
     if val is not None:
         df.loc[df[col] == val, col] = None
 
     isnull = df[col].isnull()
-    sample = df[col].dropna().sample(isnull.sum(), replace=True).values
+    sample = df[col].dropna().sample(isnull.sum(), random_state=random_state, replace=True).values
     df.loc[isnull, col] = sample
 
 
@@ -173,11 +280,11 @@ def create_activities(all_persons: pd.DataFrame, tt: pd.DataFrame, core_weekday=
                 return "%s_%d" % (p.Index, t_i)
 
             if len(trips) == 0:
-                acts.append(Activity(a_id(0), p.Index, 0, Purpose.HOME, 1440, 0, 0, TripMode.OTHER))
+                acts.append(Activity(a_id(0), p.p_weight, p.Index, 0, Purpose.HOME, 1440, 0, 0, TripMode.OTHER))
             else:
-                acts.append(
-                    Activity(a_id(0), p.Index, 0, trips.iloc[0].sd_group.source(), trips.iloc[0].departure, 0, 0,
-                             TripMode.OTHER))
+                trip_0 = trips.iloc[0]
+                acts.append(Activity(a_id(0), p.p_weight, p.Index, 0, trip_0.sd_group.source(), trip_0.departure, 0, 0,
+                             TripMode.OTHER, trip_0.from_location, trip_0.from_zone))
 
             for i in range(len(trips) - 1):
                 t0 = trips.iloc[i]
@@ -188,8 +295,8 @@ def create_activities(all_persons: pd.DataFrame, tt: pd.DataFrame, core_weekday=
                 if duration < 0 or t0.gis_length < 0:
                     valid = False
 
-                acts.append(Activity(a_id(i + 1), p.Index, i + 1, t0.purpose,
-                                     duration, t0.gis_length, t0.duration, t0.main_mode))
+                acts.append(Activity(a_id(i + 1), p.p_weight, p.Index, i + 1, t0.purpose,duration, t0.gis_length,
+                                     t0.duration, t0.main_mode, t0.to_location, t0.to_zone))
 
             if len(trips) > 1:
                 i += 1
@@ -200,8 +307,8 @@ def create_activities(all_persons: pd.DataFrame, tt: pd.DataFrame, core_weekday=
                     valid = False
 
                 # Duration is set to rest of day
-                acts.append(
-                    Activity(a_id(i + 1), p.Index, i + 1, tl.purpose, 1440, tl.gis_length, tl.duration, tl.main_mode))
+                acts.append(Activity(a_id(i + 1), p.p_weight, p.Index, i + 1, tl.purpose, 1440, tl.gis_length, tl.duration, tl.main_mode,
+                                     tl.to_location, tl.to_zone))
 
             if valid:
                 res.extend(acts)
@@ -286,7 +393,8 @@ def calc_commute(pp, tt):
         edu.groupby("p_id").agg(commute_dist=("gis_length", "mean"), weight=("t_weight", "max"))
 
 
-def calc_needed_short_distance_trips(ref_trips: pd.DataFrame, sim_trips: pd.DataFrame, max_dist=1000) -> Tuple[float, int]:
+def calc_needed_short_distance_trips(ref_trips: pd.DataFrame, sim_trips: pd.DataFrame, max_dist=1000) -> Tuple[
+    float, int]:
     """ Calculate number of short distance trips needed to add to match required share """
 
     target_share = float(ref_trips[ref_trips.gis_length < (max_dist / 1000)].t_weight.sum() / ref_trips.t_weight.sum())

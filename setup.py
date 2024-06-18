@@ -30,17 +30,20 @@ setup(
         "pandas >= 2.1.0",
     ],
     extras_require={
-        'calibration': ["optuna >= 3.5.0", "shapely >= 1.8.0", "geopandas >= 0.6.0"],
+        'calibration': ["optuna >= 3.5.0", "shapely >= 1.8.0", "geopandas >= 0.6.0", "scikit-learn"],
         # m2cgen has problems with newer xgb, see this issue
         # https://github.com/BayesWitnesses/m2cgen/issues/581
         'scenariogen': ["sumolib", "traci", "lxml", "optax", "requests", "tqdm", "scikit-learn", "xgboost==1.7.1", "lightgbm",
-                        "sklearn-contrib-lightning", "numpy", "sympy", "m2cgen", "shapely", "optuna"]
+                        "sklearn-contrib-lightning", "numpy", "sympy", "m2cgen", "shapely", "optuna"],
+        'viz': ["dash", "plotly.express", "dash_cytoscape", "dash_bootstrap_components"]
     },
     tests_require=["assertpy", "pytest", "scipy"],
     entry_points={
         'console_scripts': [
             'matsim-tools=matsim.cli.main:main',
-            'matsim-scenariogen=matsim.scenariogen:main'
+            'matsim-scenariogen=matsim.scenariogen:main',
+            'matsim-calibration=matsim.calibration:main',
+            'matsim-viz=matsim.viz:main',
         ]
     },
     long_description=README,

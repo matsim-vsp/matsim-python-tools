@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 
+from collections import Counter
+
 import os
 import pandas as pd
 import pyproj
 import re
-from collections import Counter
 from shapely.geometry import box
 from shapely.ops import transform
 
@@ -30,24 +31,51 @@ def read_raw(household_file, person_file, trip_file):
     return hh, p, t
 
 
+def get_int_id(series, name):
+    """ Helper function to get integer id from dataframe. """
+
+    # Sometimes the data set uses the _Lok suffix
+    if name not in series._fields:
+        return str(int(getattr(series, name + "_Lok")))
+
+    return str(int(getattr(series, name)))
+
+def get(series, *names):
+    """ Get value from series. Trying possible values until one exists."""
+    for name in names:
+        if name in series._fields:
+            return getattr(series, name)
+
+    raise Exception("No value found for %s" % names)
+
+
 def convert(data: tuple, regio=None):
     hh, pp, tt = data
 
     hhs = []
     for h in hh.itertuples():
-        hh_id = str(int(h.H_ID_Lok))
-        hhs.append(Household(hh_id, h.H_GEW, int(h.hhgr_gr2), int(h.anzauto_gr3), int(h.pedrad), int(h.motmop),
-                             ParkingPosition.NA,
-                             Mid2017.economic_status(h), Mid2017.household_type(h), 0, "",
+        hh_id = get_int_id(h, "H_ID")
+        hhs.append(Household(hh_id, get(h, "H_GEW", "gew_hh"),
+                             int(get(h, "hhgr_gr", "hhgr_gr2")),
+                             int(get(h, "anzauto_gr3", "anzauto_gr1")),
+                             int(h.pedrad),
+                             int(get(h, "motmop", "H_ANZMOTMOP")),
+                             ParkingPosition.NA, Mid2017.economic_status(h), Mid2017.household_type(h), 0, "",
                              geom=Mid2017.geom(h)))
 
     ps = []
     for p in pp.itertuples():
-        p_id = str(int(p.HP_ID_Lok))
-        hh_id = str(int(p.H_ID_Lok))
+        p_id = get_int_id(p, "HP_ID")
+
+        if "H_ID" in p._fields:
+            hh_id = get_int_id(p, "H_ID")
+        else:
+            # Remove last character from person id
+            hh_id = p_id[:-1] + "0"
 
         ps.append(Person(
-            p_id, p.P_GEW, hh_id, Mid2017.age(p), Mid2017.gender(p), Mid2017.employment(p), None,
+            p_id, get(p, "P_GEW", "gew_pers"),
+            hh_id, Mid2017.age(p), Mid2017.gender(p), Mid2017.employment(p), None,
             Mid2017.driving_license(p), Mid2017.car_avail(p), Mid2017.bike_avail(p), Mid2017.pt_abo_avail(p),
             Mid2017.mobile(p), Mid2017.present_on_day(p), int(p.ST_WOTAG), int(p.anzwege1)
         ))
@@ -63,8 +91,8 @@ def convert(data: tuple, regio=None):
             continue
 
         # Person might have multiple days
-        p_id = str(int(t.HP_ID_Lok))
-        t_id = p_id + "%d%d" % (t.ST_WOCHE, t.ST_WOTAG)
+        p_id = get_int_id(t, "HP_ID")
+        t_id = p_id + "%d%d" % (get(t, "ST_WOCHE", "ST_MONAT"), t.ST_WOTAG)
 
         n = counts[t_id]
         counts[t_id] += 1
@@ -73,10 +101,10 @@ def convert(data: tuple, regio=None):
 
         trip = Trip(
             t_id + "_" + str(n),
-            t.W_GEW, p_id, str(int(t.H_ID_Lok)),
-            n, int(t.ST_WOTAG),depature, int(t.wegmin), float(t.wegkm),
+            get(t, "W_GEW", "gew_wege"), p_id, get(t, "H_ID"),
+            n, int(t.ST_WOTAG), depature, int(t.wegmin), float(t.wegkm),
             Mid2017.main_mode(t), Mid2017.purpose(t), None,
-            float(t.wegkm) < 1000 and int(t.wegmin) < 1000 and depature is not None
+            float(t.wegkm) < 9994 and int(t.wegmin) < 9994 and depature is not None
         )
 
         if trip.purpose == Purpose.WAYBACK:
@@ -90,9 +118,11 @@ def convert(data: tuple, regio=None):
 
     return pd.DataFrame(hhs).set_index("hh_id"), pd.DataFrame(ps).set_index("p_id"), pd.DataFrame(ts).set_index("t_id")
 
+
 def flip(x, y):
     """Flips the x and y coordinate values"""
     return y, x
+
 
 class Mid2017:
     """ Converter for 2017 MID format """
@@ -115,49 +145,94 @@ class Mid2017:
 
     @staticmethod
     def geom(h):
-        if h.GITTER_500m.strip():
+        if "GITTER_500m" in h._fields and h.GITTER_500m.strip():
             return Mid2017.coordinate(h.GITTER_500m, 500, 100)
-        elif h.GITTER_1km.strip():
+        elif "GITTER_1km" in h._fields and h.GITTER_1km.strip():
             return Mid2017.coordinate(h.GITTER_1km, 1000, 1000)
-        elif h.GITTER_5km.strip():
+        elif "GITTER_5km" in h._fields and h.GITTER_5km.strip():
             return Mid2017.coordinate(h.GITTER_5km, 5000, 1000)
 
-        return None
+        return pd.NA
 
     @staticmethod
     def economic_status(h):
         return list(EconomicStatus)[int(h.oek_status) - 1]
 
     @staticmethod
+    def hh_size(h):
+        return int(get(h, "hhgr_gr", "hhgr_gr2"))
+
+    @staticmethod
     def household_type(h):
-        x = int(h.hhtyp2)
+        x = int(get(h, "hhtyp2", "hhtyp"))
 
         if x == 2:
             return HouseholdType.MULTI_W_CHILDREN
         elif x == 3:
             return HouseholdType.MULTI_WO_CHILDREN
 
-        return HouseholdType.SINGLE if int(h.hhgr_gr2) == 1 else HouseholdType.MULTI_WO_CHILDREN
+        return HouseholdType.SINGLE if Mid2017.hh_size(h) == 1 else HouseholdType.MULTI_WO_CHILDREN
+
+    @staticmethod
+    def hh_size(h):
+        if "hhgr_gr" in h._fields:
+            return int(h.hhgr_gr)
+
+        return int(h.hhgr_gr2)
+
+    @staticmethod
+    def n_cars(h):
+        # Most detailed group
+        if "anzauto_gr3" in h._fields:
+            return int(h.anzauto_gr3)
+
+        # Anzahl Autos im HH in Gruppen (0 bis 4+)
+        return int(h.anzauto_gr1)
 
     @staticmethod
     def age(p):
-        x = int(p.alter_gr)
-        if x == 1:
-            return 0
-        elif x == 2:
-            return 18
-        elif x == 3:
-            return 30
-        elif x == 4:
-            return 40
-        elif x == 5:
-            return 50
-        elif x == 6:
-            return 60
-        elif x == 7:
-            return 70
-        elif x == 8:
-            return 80
+        if "HP_ALTER" in p._fields:
+            return int(p.HP_ALTER)
+
+        if "alter_gr1" in p._fields:
+            x = int(p.alter_gr1)
+            if x == 1:
+                return 0
+            elif x == 2:
+                return 6
+            elif x == 3:
+                return 10
+            elif x == 4:
+                return 14
+            elif x == 5:
+                return 18
+            elif x == 6:
+                return 25
+            elif x == 7:
+                return 45
+            elif x == 8:
+                return 60
+            elif x == 9:
+                return 65
+
+        else:
+            x = int(p.alter_gr)
+            if x == 1:
+                return 0
+            elif x == 2:
+                return 18
+            elif x == 3:
+                return 30
+            elif x == 4:
+                return 40
+            elif x == 5:
+                return 50
+            elif x == 6:
+                return 60
+            elif x == 7:
+                return 70
+            elif x == 8:
+                return 80
 
         return -1
 
@@ -172,7 +247,7 @@ class Mid2017:
 
     @staticmethod
     def employment(p):
-        x = int(p.taet)
+        x = int(get(p, "taet", "HP_TAET"))
         if x == 1:
             return Employment.JOB_FULL_TIME
         elif x == 2:
@@ -267,7 +342,7 @@ class Mid2017:
 
     @staticmethod
     def purpose(t):
-        x = int (t.zweck)
+        x = int(get(t, "zweck", "W_ZWECK"))
         if x == 1:
             return Purpose.WORK
         elif x == 2:
@@ -284,7 +359,7 @@ class Mid2017:
             return Purpose.LEISURE
         elif x == 8:
             return Purpose.HOME
-        elif x == 9: # trip back to previous
+        elif x == 9:  # trip back to previous
             return Purpose.WAYBACK
 
         return Purpose.OTHER
