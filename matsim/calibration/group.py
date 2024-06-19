@@ -20,7 +20,7 @@ def detect_binned_groups(s: Iterable[str]) -> Tuple[Sequence, Sequence]:
         elif "+" in label:
             a = int(label[:-1])
             bins.add(a)
-            bins.add(np.Inf)
+            bins.add(np.inf)
 
     bins = sorted(list(bins))
 
