@@ -188,7 +188,7 @@ class CalibratorBase(ABC):
         if arg.endswith(".csv"):
             return pd.read_csv(arg)
 
-        raise ValueError(f"Input {path} of {type(path)} is not supported. Use csv or dataframes, or implement custom conversion method.")
+        raise ValueError(f"Input {arg} of type {type(arg)} is not supported. Use csv or dataframes, or implement custom conversion method.")
 
     @staticmethod
     def get_mode_params(config: dict, mode: str):
