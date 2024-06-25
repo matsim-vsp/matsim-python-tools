@@ -36,7 +36,12 @@ def process_results(runs):
         if not os.path.isdir(os.path.join(runs, run)):
             continue
 
-        df = pd.read_csv(os.path.join(runs, run, "analysis", "population", "mode_choices.csv"))
+        out_path = os.path.join(runs, run, "analysis", "population", "mode_choices.csv")
+        if not os.path.exists(out_path):
+            print("Skipping %s, no mode_choices.csv found. Run probably not finished yet." % run)
+            continue
+
+        df = pd.read_csv(out_path)
         if dfs is None:
             dfs = df
         else:
