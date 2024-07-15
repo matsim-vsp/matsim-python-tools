@@ -42,8 +42,7 @@ def sample_y_null(shares: np.array, num_persons: int, num_samples: int):
 
 def process_results(runs):
     """Process results of multiple simulations"""
-    from .utils import log_loss
-    from sklearn.metrics import accuracy_score
+    from sklearn.metrics import log_loss, accuracy_score
     from sklearn.preprocessing import LabelEncoder
 
     print("Processing results in %s" % runs)
@@ -99,14 +98,15 @@ def process_results(runs):
 
     # Compute likelihood with eps as 0.01%
     eps = 0.0001
+    y_pred = np.clip(y_pred, eps, 1 - eps)
 
     result = [
-        ("Log likelihood", -log_loss(y_true, y_pred, sample_weight=dfs.weight, eps=eps, normalize=False),
-         -log_loss(y_true, y_pred, sample_weight=dfs.weight * dists, eps=eps, normalize=False)),
-        ("Log likelihood (normalized)", -log_loss(y_true, y_pred, sample_weight=dfs.weight, eps=eps, normalize=True),
-         -log_loss(y_true, y_pred, sample_weight=dfs.weight * dists, eps=eps, normalize=True)),
-        ("Log likelihood (null)", -log_loss(y_true, y_null, sample_weight=dfs.weight, eps=eps, normalize=False),
-         -log_loss(y_true, y_null, sample_weight=dfs.weight * dists, eps=eps, normalize=False)),
+        ("Log likelihood", -log_loss(y_true, y_pred, sample_weight=dfs.weight, normalize=False),
+         -log_loss(y_true, y_pred, sample_weight=dfs.weight * dists, normalize=False)),
+        ("Log likelihood (normalized)", -log_loss(y_true, y_pred, sample_weight=dfs.weight, normalize=True),
+         -log_loss(y_true, y_pred, sample_weight=dfs.weight * dists, normalize=True)),
+        ("Log likelihood (null)", -log_loss(y_true, y_null, sample_weight=dfs.weight, normalize=False),
+         -log_loss(y_true, y_null, sample_weight=dfs.weight * dists, normalize=False)),
         ("Mean Accuracy", np.mean(accs), np.mean(accs_d)),
         ("Samples", len(dfs), sum(dists)),
         ("Runs", len(pred_cols), len(pred_cols))
