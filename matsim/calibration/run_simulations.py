@@ -90,6 +90,7 @@ def process_results(runs):
     choices = pd.DataFrame(data=y_pred, columns=modes)
     choices.insert(0, "person", dfs.person)
     choices.insert(1, "n", dfs.n)
+    choices.insert(2, "true_mode", dfs.true_mode)
 
     choices.to_csv(os.path.join(runs, "choices.csv"), index=False)
 
