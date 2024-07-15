@@ -101,7 +101,7 @@ def convert(data: tuple, regio=None):
 
         trip = Trip(
             t_id + "_" + str(n),
-            get(t, "W_GEW", "gew_wege"), p_id, get(t, "H_ID"),
+            get(t, "W_GEW", "gew_wege"), p_id, str(get_int_id(t, "H_ID")),
             n, int(t.ST_WOTAG), depature, int(t.wegmin), float(t.wegkm),
             Mid2017.main_mode(t), Mid2017.purpose(t), None,
             float(t.wegkm) < 9994 and int(t.wegmin) < 9994 and depature is not None

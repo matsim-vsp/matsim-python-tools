@@ -24,6 +24,23 @@ def likelihood_ratio_test(ll, ll_null, dof=1):
     return chi2.sf(likelihood_ratio(ll, ll_null), dof)
 
 
+def sample_y_null(shares: np.array, num_persons: int, num_samples: int):
+    """ Replicates a discrete sampling of the null model. For each person, the same number of modes are drawn from the original distribution.
+    This is done to make the discrete sampling of the simulation comparable to the continous probabilities of the given mode shares.
+    """
+    rng = np.random.default_rng(seed=4711)
+
+    samples = rng.choice(len(shares), (num_persons, num_samples), p=shares)
+    y_null = np.zeros((num_persons, len(shares)))
+
+    for i, s in enumerate(samples):
+        for j in range(len(shares)):
+            c = np.sum(s == j)
+            y_null[i, j] = c / num_samples
+
+    return y_null
+
+
 def process_results(runs):
     """Process results of multiple simulations"""
     from sklearn.metrics import log_loss, accuracy_score
@@ -53,11 +70,13 @@ def process_results(runs):
 
     labels = LabelEncoder().fit(modes)
     y_true = labels.transform(dfs["true_mode"])
-    y_null = np.tile(shares.to_numpy(), reps=(len(y_true), 1))
-    y_pred = np.zeros((len(y_true), len(modes)))
-    dists = dfs.euclidean_distance.to_numpy() / 1000
 
+    dists = dfs.euclidean_distance.to_numpy() / 1000
     pred_cols = [c for c in dfs.columns if c.startswith("pred_mode")]
+
+    y_pred = np.zeros((len(y_true), len(modes)))
+    y_null = sample_y_null(shares.to_numpy(), len(dfs), len(pred_cols))
+
     for p in dfs[pred_cols].itertuples():
 
         for j, m in enumerate(modes):
@@ -67,6 +86,13 @@ def process_results(runs):
                     c += 1
 
             y_pred[p.Index, j] = c / len(pred_cols)
+
+    choices = pd.DataFrame(data=y_pred, columns=modes)
+    choices.insert(0, "person", dfs.person)
+    choices.insert(1, "n", dfs.n)
+    choices.insert(2, "true_mode", dfs.true_mode)
+
+    choices.to_csv(os.path.join(runs, "choices.csv"), index=False)
 
     accs = [accuracy_score(dfs.true_mode, dfs[col], sample_weight=dfs.weight) for col in pred_cols]
     accs_d = [accuracy_score(dfs.true_mode, dfs[col], sample_weight=dfs.weight * dists) for col in pred_cols]
