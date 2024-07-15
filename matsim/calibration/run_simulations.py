@@ -14,7 +14,6 @@ import pandas as pd
 
 METADATA = "run-simulations", "Utility to run multiple simulations at once."
 
-
 def likelihood_ratio(ll, ll_null):
     return (2 * (ll - ll_null))
 
@@ -43,7 +42,8 @@ def sample_y_null(shares: np.array, num_persons: int, num_samples: int):
 
 def process_results(runs):
     """Process results of multiple simulations"""
-    from sklearn.metrics import log_loss, accuracy_score
+    from .utils import log_loss
+    from sklearn.metrics import accuracy_score
     from sklearn.preprocessing import LabelEncoder
 
     print("Processing results in %s" % runs)
