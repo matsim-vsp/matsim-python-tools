@@ -97,13 +97,16 @@ def process_results(runs):
     accs = [accuracy_score(dfs.true_mode, dfs[col], sample_weight=dfs.weight) for col in pred_cols]
     accs_d = [accuracy_score(dfs.true_mode, dfs[col], sample_weight=dfs.weight * dists) for col in pred_cols]
 
+    # Compute likelihood with eps as 0.01%
+    eps = 0.0001
+
     result = [
-        ("Log likelihood", -log_loss(y_true, y_pred, sample_weight=dfs.weight, normalize=False),
-         -log_loss(y_true, y_pred, sample_weight=dfs.weight * dists, normalize=False)),
-        ("Log likelihood (normalized)", -log_loss(y_true, y_pred, sample_weight=dfs.weight, normalize=True),
-         -log_loss(y_true, y_pred, sample_weight=dfs.weight * dists, normalize=True)),
-        ("Log likelihood (null)", -log_loss(y_true, y_null, sample_weight=dfs.weight, normalize=False),
-         -log_loss(y_true, y_null, sample_weight=dfs.weight * dists, normalize=False)),
+        ("Log likelihood", -log_loss(y_true, y_pred, sample_weight=dfs.weight, eps=eps, normalize=False),
+         -log_loss(y_true, y_pred, sample_weight=dfs.weight * dists, eps=eps, normalize=False)),
+        ("Log likelihood (normalized)", -log_loss(y_true, y_pred, sample_weight=dfs.weight, eps=eps, normalize=True),
+         -log_loss(y_true, y_pred, sample_weight=dfs.weight * dists, eps=eps, normalize=True)),
+        ("Log likelihood (null)", -log_loss(y_true, y_null, sample_weight=dfs.weight, eps=eps, normalize=False),
+         -log_loss(y_true, y_null, sample_weight=dfs.weight * dists, eps=eps, normalize=False)),
         ("Mean Accuracy", np.mean(accs), np.mean(accs_d)),
         ("Samples", len(dfs), sum(dists)),
         ("Runs", len(pred_cols), len(pred_cols))
