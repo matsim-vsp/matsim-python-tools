@@ -3,7 +3,6 @@
 import numpy as np
 import pandas as pd
 
-from scipy.special import xlogy
 from sklearn.preprocessing import LabelBinarizer, LabelEncoder
 
 from optuna.trial import TrialState
