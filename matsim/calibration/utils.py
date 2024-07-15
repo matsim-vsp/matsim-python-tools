@@ -170,12 +170,8 @@ def log_loss(y_true, y_pred, *, eps="auto", normalize=True, sample_weight=None, 
     # Renormalize
     y_pred_sum = y_pred.sum(axis=1)
     if not np.isclose(y_pred_sum, 1, rtol=1e-15, atol=5 * eps).all():
-        warnings.warn(
-            (
-                "The y_pred values do not sum to one. Starting from 1.5 this"
-                "will result in an error."
-            ),
-            UserWarning,
+        raise ValueError(
+            "y_pred contains values not summing to 1."
         )
     y_pred = y_pred / y_pred_sum[:, np.newaxis]
     loss = -xlogy(transformed_labels, y_pred).sum(axis=1)
