@@ -159,8 +159,7 @@ def run(jar: Union[str, os.PathLike],
     if worker_id >= workers:
         raise ValueError("Worker ID must be smaller than number of workers (starts at 0).")
 
-    if not os.path.exists("eval-runs"):
-        makedirs("eval-runs")
+    makedirs("eval-runs", exist_ok=True)
 
     for i in range(runs):
         if i % workers != worker_id:
