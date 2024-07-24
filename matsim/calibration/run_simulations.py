@@ -99,6 +99,7 @@ def process_results(runs):
     # Compute likelihood with eps as 0.01%
     eps = 0.0001
     y_pred = np.clip(y_pred, eps, 1 - eps)
+    y_null = np.clip(y_null, eps, 1 - eps)
 
     result = [
         ("Log likelihood", -log_loss(y_true, y_pred, sample_weight=dfs.weight, normalize=False),
