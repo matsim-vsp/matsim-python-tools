@@ -107,6 +107,32 @@ def summarize_mode_usage(x, trips):
     return pd.DataFrame(data={"main_mode": data.keys(), "user": data.values()}).set_index("main_mode")
 
 
+def mode_share_distance_distribution(trips, dist_groups):
+    """ Created smoothed distribution of mode share """
+    from statsmodels.nonparametric.smoothers_lowess import lowess
+
+    end = dist_groups[-3] + dist_groups[-2]
+
+    x = np.arange(0, end, step=100)
+
+    data = {}
+
+    for m in set(trips.main_mode):
+        df = trips[trips.main_mode == m]
+        hist, bins = np.histogram(df.gis_length * 1000, bins=x)
+
+        yout = lowess(hist, x[:-1], frac=0.05, is_sorted=True, return_sorted=False, it=0)
+        data[m] = np.maximum(0, yout)
+
+    data["dist"] = x[:-1]
+
+    df = pd.DataFrame(data=data).set_index("dist")
+    s = df.sum(axis=1)
+    df = df.apply(lambda d: d / s, axis=0)
+
+    return df
+
+
 def setup(parser: argparse.ArgumentParser):
     parser.add_argument("dirs", nargs="+", help="Directories with survey data")
 
@@ -182,6 +208,8 @@ def create(survey_dirs, transform_persons, transform_trips,
 
     aggr = summarize_mode_usage(persons, trips)
     aggr.to_csv(output_prefix + "mode_users_ref.csv")
+
+    mode_share_distance_distribution(trips, dist_groups).to_csv(output_prefix + "mode_share_distance_distribution.csv")
 
     groups = None
     if ref_groups:
