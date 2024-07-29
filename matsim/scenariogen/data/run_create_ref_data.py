@@ -119,7 +119,7 @@ def mode_share_distance_distribution(trips, dist_groups):
 
     for m in set(trips.main_mode):
         df = trips[trips.main_mode == m]
-        hist, bins = np.histogram(df.gis_length * 1000, bins=x)
+        hist, bins = np.histogram(df.gis_length * 1000, bins=x, weights=df.t_weight)
 
         yout = lowess(hist, x[:-1], frac=0.05, is_sorted=True, return_sorted=False, it=0)
         data[m] = np.maximum(0, yout)
