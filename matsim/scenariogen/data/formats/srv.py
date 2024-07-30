@@ -178,6 +178,18 @@ class SrV2018:
         'Leipzig': 1
     }
 
+    # Aggregated locations needed to remap
+    LOCATIONS = [
+        "Blankenfelde-Mahlow/Rangsdorf",
+        "Dallgow/Falkensee/Wustermark",
+        "Eichwalde/Zeuthen",
+        "Hennigsdorf/Velten",
+        "Kleinmachnow/Stahnsdorf/Teltow",
+        "Lübben/Lübbenau",
+        "Werder (Havel)/Schwielowsee",
+        "Fürstenwalde"
+    ]
+
     @staticmethod
     def parking_position(x):
 
@@ -463,7 +475,32 @@ class SrV2018:
         if not ort:
             return pd.NA
 
+        # Truncate ortsteil, this is redundant and not consistent with zone naming scheme
+        ot = ort.find("OT")
+        if ot > 0:
+            ort = ort[:ot]
+
+        # some kind of ortsteils as well
+        gt = ort.find("GT")
+        if gt > 0:
+            ort = ort[:gt]
+
+        ort = ort.strip()
+
         if "Berlin" in ort:
             return "Berlin"
 
-        return ort
+        if "Lübben (Spreewald)" in ort:
+            ort = "Lübben"
+
+        if "Schwielowsee" in ort:
+            ort = "Schwielowsee"
+
+        if "Brandenburg" in ort and "Havel" in ort:
+            ort = "Brandenburg (Havel)"
+
+        for loc in SrV2018.LOCATIONS:
+            if ort in loc:
+                return loc
+
+        return ort if ort else pd.NA
