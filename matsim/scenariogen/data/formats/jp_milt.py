@@ -55,6 +55,10 @@ def convert(data: tuple, regio=None):
 
         n_trips = p.trip_end_no
 
+        # Some columns were not present in our dataset, even though they are mentioned in the documentation
+        # e.g. employment, address_code,person_cnt
+        # Currently missing information might be added later if the full dataset is available
+
         ps.append(
             Person(
                 str(p.household_person_no),

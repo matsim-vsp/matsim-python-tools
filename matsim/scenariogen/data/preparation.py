@@ -338,8 +338,6 @@ def create_activities(all_persons: pd.DataFrame, tt: pd.DataFrame, core_weekday=
 
         return res
 
-    all_persons = all_persons.head(n=1000)
-
     if cores == 1:
         result = convert(all_persons)
     else:
