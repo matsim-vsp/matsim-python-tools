@@ -56,7 +56,7 @@ def convert(data: tuple, regio=None):
         n_trips = p.trip_end_no
 
         # Some columns were not present in our dataset, even though they are mentioned in the documentation
-        # e.g. employment, address_code,person_cnt
+        # e.g. employment, address_code, person_cnt
         # Currently missing information might be added later if the full dataset is available
 
         ps.append(
@@ -118,31 +118,37 @@ def convert(data: tuple, regio=None):
         elif purpose == Purpose.EDU:
             prev_purpose = Purpose.EDU
 
-        ts.append(
-            Trip(
-                person_number + "_" + str(int(t.trip_no)),
-                weights[person_number],
-                person_number,
-                household_number,
-                int(t.trip_no),
-                # Weekday is not present in the trip, only for person
-                weekdays.get(person_number, pd.NA),
-                t.dep_hour * 60 + t.dep_minute,
-                t.arr_hour * 60 + t.arr_minute - (t.dep_hour * 60 + t.dep_minute),
-                # Only approximate distance between zones, in km
-                # Original entry are in 100m
-                float(t.move_dist) * 0.1,
-                Milt2010.trip_mode(t.original_transport, t.driver),
-                purpose,
-                Milt2010.sd_group(purpose, prev_purpose, t.dep_pre_code, t.arr_pre_code),
-                # Trip is valid if length and duration are present
-                t.move_dist > 0 and not np.isnan(t.dep_hour) and not np.isnan(t.arr_hour),
-                from_location=str(t.dep_cities_code),
-                from_zone=str(t.dep_zone_code),
-                to_location=str(t.arr_cities_code),
-                to_zone=str(t.arr_zone_code),
-            )
+        trip = Trip(
+            person_number + "_" + str(int(t.trip_no)),
+            weights[person_number],
+            person_number,
+            household_number,
+            int(t.trip_no),
+            # Weekday is not present in the trip, only for person
+            weekdays.get(person_number, pd.NA),
+            t.dep_hour * 60 + t.dep_minute,
+            t.arr_hour * 60 + t.arr_minute - (t.dep_hour * 60 + t.dep_minute),
+            # Only approximate distance between zones, in km
+            # Original entry are in 100m
+            float(t.move_dist) * 0.1,
+            Milt2010.trip_mode(t.original_transport, t.driver),
+            purpose,
+            Milt2010.sd_group(purpose, prev_purpose, t.dep_pre_code, t.arr_pre_code),
+            # Trip is valid if length and duration are present
+            t.move_dist > 0 and not np.isnan(t.dep_hour) and not np.isnan(t.arr_hour),
+            from_location=str(t.dep_cities_code),
+            from_zone=str(t.dep_zone_code),
+            to_location=str(t.arr_cities_code),
+            to_zone=str(t.arr_zone_code),
         )
+
+        ts.append(trip)
+
+        # Store the zone of the household
+        if trip.sd_group.source() == Purpose.HOME:
+            hhs[household_number].zone = trip.from_zone
+        elif trip.sd_group.destination() == Purpose.HOME:
+            hhs[household_number].zone = trip.to_zone
 
         prev = t
 

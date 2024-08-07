@@ -322,6 +322,14 @@ class SourceDestinationGroup(AutoNameLowerStrEnum):
 
         return Purpose.OTHER
 
+    def destination(self):
+        if self.name.endswith("HOME"):
+            return Purpose.HOME
+        elif self.name.endswith("WORK"):
+            return Purpose.WORK
+
+        return Purpose.OTHER
+
     @staticmethod
     def parse(source, destination):
         for sd in SourceDestinationGroup:
