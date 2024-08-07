@@ -33,6 +33,11 @@ class AggregationResult:
     trips: pd.DataFrame
     share: pd.DataFrame
 
+    # These are the original read dataframes
+    all_hh: pd.DataFrame
+    all_persons: pd.DataFrame
+    all_trips: pd.DataFrame
+
     groups: pd.DataFrame = None
 
 
@@ -240,7 +245,8 @@ def create(survey_dirs, transform_persons, transform_trips,
         dist = dist[ref_groups + ["dist_group", "main_mode", "share"]]
         dist.to_csv(output_prefix + "mode_share_per_group_dist_ref.csv", index=False)
 
-    return AggregationResult(persons, trips, share.groupby("main_mode").sum(), groups=groups)
+    return AggregationResult(persons, trips, share.groupby("main_mode").sum(),
+                             all_hh, all_persons, all_trips, groups=groups)
 
 
 def main(args):
