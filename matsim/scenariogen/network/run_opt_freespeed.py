@@ -61,7 +61,8 @@ def setup(parser: argparse.ArgumentParser):
     parser.add_argument("--resume", help="File with parameters to to resume", default=None)
     parser.add_argument("--port", type=int, nargs="+", help="Port to connect on", default=[9090])
     parser.add_argument("--ref-model", required=False, default=None,
-                        help="Use an integrated model instead of importing", choices=["tree", "germany"])
+                        help="Use an integrated model instead of importing", choices=["tree", "individual", "germany"])
+    parser.add_argument("--ref-size", type=int, help="Number of links (needed for individual model)", default=0)
     parser.add_argument("--learning-rate", type=float, help="Start learning rate", default=1e-4)
     parser.add_argument("--batch-size", type=int, help="Batch size", default=128)
     parser.add_argument("--output", help="Output folder for params", default="output-params")
@@ -77,6 +78,15 @@ def main(args):
     if args.ref_model == "tree":
         from .ref_model import tree as p
         rbl = tl = p
+    elif args.ref_model == "individual":
+        # Enables non relative import as well
+        try:
+            from .ref_model import individual as p
+            rbl = tl = p
+        except ImportError:
+            from ref_model import individual as p
+            rbl = tl = p
+
     elif args.ref_model == "germany":
         from .ref_model.germany import speedRelative_priority as p
         from .ref_model.germany import speedRelative_right_before_left as rbl
@@ -100,8 +110,13 @@ def main(args):
             staircase=False
         )
 
+        # Need to load default params statically
+        if module.params is None:
+            params = jnp.array(resume[name]) if name in resume else jnp.ones(args.ref_size) * 0.85
+        else:
+            params = jnp.array(resume[name] if name in resume else module.params)
+
         optimizer = optax.adam(schedule)
-        params = jnp.array(resume[name] if name in resume else module.params)
         opt_state = optimizer.init(params)
 
         models[name] = Model(
