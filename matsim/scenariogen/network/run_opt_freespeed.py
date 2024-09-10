@@ -65,7 +65,7 @@ def setup(parser: argparse.ArgumentParser):
     parser.add_argument("--ref-size", type=int, help="Number of links (needed for individual model)", default=0)
     parser.add_argument("--learning-rate", type=float, help="Start learning rate", default=1e-4)
     parser.add_argument("--batch-size", type=int, help="Batch size", default=128)
-    parse.add_argument("--sample-unique", help="Every batch element is a different element", action="store_true", default=False)
+    parser.add_argument("--sample-unique", help="Every batch element is a different element", action="store_true", default=False)
     parser.add_argument("--output", help="Output folder for params", default="output-params")
 
 
