@@ -156,7 +156,7 @@ def main(args):
                 for j in range(batches):
                     key = random.PRNGKey(r.getrandbits(31))
 
-                    idx = random.choice(key, jnp.arange(0, xs.shape[0]), shape=(batch_size,))
+                    idx = random.choice(key, jnp.arange(0, xs.shape[0]), replace=False, shape=(batch_size,))
 
                     grads = m.loss(m.params, xs[idx], ys[idx])
 
