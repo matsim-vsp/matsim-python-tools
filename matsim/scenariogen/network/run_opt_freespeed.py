@@ -65,6 +65,7 @@ def setup(parser: argparse.ArgumentParser):
     parser.add_argument("--ref-size", type=int, help="Number of links (needed for individual model)", default=0)
     parser.add_argument("--learning-rate", type=float, help="Start learning rate", default=1e-4)
     parser.add_argument("--batch-size", type=int, help="Batch size", default=128)
+    parse.add_argument("--sample-unique", help="Every batch element is a different element", action="store_true", default=False)
     parser.add_argument("--output", help="Output folder for params", default="output-params")
 
 
@@ -156,7 +157,7 @@ def main(args):
                 for j in range(batches):
                     key = random.PRNGKey(r.getrandbits(31))
 
-                    idx = random.choice(key, jnp.arange(0, xs.shape[0]), replace=False, shape=(batch_size,))
+                    idx = random.choice(key, jnp.arange(0, xs.shape[0]), replace=not args.sample_unique, shape=(batch_size,))
 
                     grads = m.loss(m.params, xs[idx], ys[idx])
 
