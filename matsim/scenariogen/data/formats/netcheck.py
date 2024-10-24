@@ -7,8 +7,11 @@ import pandas as pd
 from .. import *
 
 
-def read_visitations(folder):
-    """ Read all visits from folder """
+def read_visitations(folder, min_duration=0):
+    """ Read all visits from folder
+
+    :min_duration: Minimum of duration in seconds to be considered a visit.
+    """
 
     visits = []
 
@@ -37,6 +40,9 @@ def read_visitations(folder):
         t["purpose"] = Purpose.OTHER
         t.loc[t.home == 0, "purpose"] = Purpose.HOME
         t.loc[t.work == 0, "purpose"] = Purpose.WORK
+
+        t["duration"] = t.end - t.start
+        t = t[t.duration.dt.total_seconds() >= min_duration]
 
         visits.append(t)
 
