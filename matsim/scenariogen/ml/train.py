@@ -13,7 +13,7 @@ from tqdm.auto import tqdm
 
 from .models import create_regressor, model_to_java, model_to_py
 
-classifier = {
+CLASSIFIER = {
     'mean',
     'XGBRFRegressor',
     'XGBRegressor',
@@ -42,11 +42,12 @@ classifier = {
 class MLRegressor:
     """ General class for machine learning regression models """
 
-    def __init__(self, n_trials=100, error="mae", fold=None, bounds=None):
+    def __init__(self, n_trials=100, error="mae", fold=None, bounds=None, classifier=None):
         self.n_trials = n_trials
         self.fold = fold if fold else KFold(n_splits=5, shuffle=False)
         self.bounds = bounds
         self.error = mean_absolute_error
+        self.classifier = classifier if classifier else CLASSIFIER
         self.models = {}
         self.df = None
         self.exclude = None
@@ -152,8 +153,8 @@ class MLRegressor:
 
         optuna.logging.set_verbosity(optuna.logging.WARNING)
 
-        with tqdm(total=len(classifier), position=0, leave=True) as pbar:
-            for m in classifier:
+        with tqdm(total=len(self.classifier), position=0, leave=True) as pbar:
+            for m in self.classifier:
                 pbar.set_description(f"Training model {m}")
 
                 with tqdm(total=self.n_trials, desc="Iteration", position=1, leave=True) as self.pb:
