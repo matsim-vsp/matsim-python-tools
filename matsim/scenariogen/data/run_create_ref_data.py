@@ -214,6 +214,9 @@ def create(survey_dirs, transform_persons, transform_trips,
     aggr = summarize_mode_usage(persons, trips)
     aggr.to_csv(output_prefix + "mode_users_ref.csv")
 
+    aggr = grouped_share(trips, ["purpose", "main_mode"])
+    aggr.to_csv(output_prefix + "mode_share_per_purpose_ref.csv")
+
     mode_share_distance_distribution(trips, dist_groups).to_csv(output_prefix + "mode_share_distance_distribution.csv")
 
     groups = None
