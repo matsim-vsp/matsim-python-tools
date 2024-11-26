@@ -2,17 +2,16 @@
 """
 
 __all__ = ["read_all", "ParkingPosition", "HouseholdType", "EconomicStatus", "Gender", "Employment", "Availability",
-           "Purpose",
+           "Purpose", "_check_header",
            "TripMode", "DistanceGroup", "DurationGroup", "SourceDestinationGroup",
            "Household", "Person", "Trip", "Activity", "Visitations"]
 
+import numpy as np
 import os
+import pandas as pd
 from dataclasses import dataclass
 from enum import Enum, auto
 from typing import List, Union, Tuple, get_type_hints
-
-import numpy as np
-import pandas as pd
 
 
 def _batch(iterable: list, max_batch_size: int):
@@ -27,10 +26,25 @@ def _batch(iterable: list, max_batch_size: int):
         yield batch
 
 
+def _check_header(path: os.PathLike, keywords: List[str]) -> bool:
+    """ Check if the first line of a file contains certain keywords.
+        :param path: Path to file
+        :param keywords: List of keywords that should be present in the first line
+    """
+    valid = True
+    with open(path, "r", errors='replace') as f:
+        line = f.readline()
+        for k in keywords:
+            if k not in line:
+                valid = False
+
+    return valid
+
+
 def read_all(dirs: Union[str, List[str]], regio=None) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """ Scan directories and read everything into one dataframe """
 
-    from .formats import srv, mid
+    from .formats import srv, mid, jp_milt
 
     hh = []
     pp = []
@@ -40,9 +54,10 @@ def read_all(dirs: Union[str, List[str]], regio=None) -> Tuple[pd.DataFrame, pd.
     if type(dirs) == str:
         dirs = [dirs]
 
+    found = False
     for d in dirs:
 
-        for format in (srv, mid):
+        for format in (srv, mid, jp_milt):
 
             files = []
 
@@ -68,6 +83,11 @@ def read_all(dirs: Union[str, List[str]], regio=None) -> Tuple[pd.DataFrame, pd.
                 hh.append(df[0])
                 pp.append(df[1])
                 tt.append(df[2])
+
+                found = True
+
+    if not found:
+        raise ValueError("No valid survey data found in directories: " + str(dirs))
 
     hh = pd.concat(hh, axis=0)
     hh = hh[~hh.index.duplicated(keep='first')]
@@ -302,6 +322,22 @@ class SourceDestinationGroup(AutoNameLowerStrEnum):
 
         return Purpose.OTHER
 
+    def destination(self):
+        if self.name.endswith("HOME"):
+            return Purpose.HOME
+        elif self.name.endswith("WORK"):
+            return Purpose.WORK
+
+        return Purpose.OTHER
+
+    @staticmethod
+    def parse(source, destination):
+        for sd in SourceDestinationGroup:
+            if sd.name.startswith(source.upper()) and sd.name.endswith(destination.upper()):
+                return sd
+
+        return SourceDestinationGroup.UNKNOWN
+
 
 @dataclass
 class Household:
@@ -317,10 +353,10 @@ class Household:
     type: HouseholdType
     region_type: int
     location: str
-    zone: str = None
+    zone: str = pd.NA
     """ A detailed zone, which can be more accurate than location. """
-    income: float = None
-    geom: object = None
+    income: float = pd.NA
+    geom: object = pd.NA
 
 
 @dataclass
@@ -339,7 +375,10 @@ class Person:
     pt_abo_avail: Availability
     mobile_on_day: bool
     present_on_day: bool
+
     reporting_day: int
+
+    """ Reporting day of the week between 1-7. 1 is Monday. """
     n_trips: int
 
 
@@ -351,7 +390,10 @@ class Trip:
     p_id: str
     hh_id: str
     n: int
+
     day_of_week: int
+    """ Day of the week between 1-7. 1 is Monday. """
+
     departure: int
     duration: int
     gis_length: float
