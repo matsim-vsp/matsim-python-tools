@@ -32,7 +32,7 @@ class ASCCalibrator(CalibratorBase):
 
         self.fixed_mode = fixed_mode
 
-        self.target = self.target.rename(columns={"value": "share"}, errors="ignore")
+        self.target = self.target.rename(columns={"value": "share", "main_mode": "mode"}, errors="ignore")
         self.target = self.target.groupby("mode").agg(share=("share", "sum"))
 
     @property
@@ -58,7 +58,7 @@ class ASCCalibrator(CalibratorBase):
 
         return 0
 
-    def update_step(self, param: str, last_trial: optuna.Trial, completed: Sequence[optuna.Trial]) -> float:
+    def update_step(self, param: str, last_trial: optuna.Trial, trial: optuna.Trial, completed: Sequence[optuna.Trial]) -> float:
 
         if param == self.fixed_mode:
             return 0
