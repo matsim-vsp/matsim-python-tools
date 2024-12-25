@@ -91,6 +91,9 @@ def read_trips_and_persons(run, transform_persons=None, transform_trips=None) ->
     if transform_trips is not None:
         df = transform_trips(df)
 
+    if len(df) == 0:
+        raise ValueError("No trips obtained after filtering. Check if your custom filters and attributes are correct (e.g subpopulation): %s" % trips)
+
     return df, gdf
 
 def read_leg_stats(run : str, transform_persons=None, transform_legs=None):
