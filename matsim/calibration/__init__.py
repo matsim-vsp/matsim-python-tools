@@ -19,6 +19,7 @@ import yaml
 
 from . import utils, constraints
 from .analysis import calc_mode_stats
+from .analysis import calc_mode_stats
 from .base import CalibratorBase, TerminationCondition, to_float
 from .calib_asc import ASCCalibrator
 from .calib_asc_dist import ASCDistCalibrator
@@ -102,6 +103,7 @@ def create_calibration(name: str, calibrate: Union[CalibratorBase, Sequence[Cali
                        chain_runs: Union[bool, int, Callable] = False,
                        termination: TerminationCondition = None,
                        storage: optuna.storages.RDBStorage = None,
+                       clean_iters: bool = True,
                        custom_cli: Callable = None,
                        base_params: Union[str, os.PathLike] = None,
                        debug: bool = False
@@ -122,6 +124,7 @@ def create_calibration(name: str, calibrate: Union[CalibratorBase, Sequence[Cali
     :param chain_runs: automatically use the output plans of each run as input for the next, either True or number of iterations or callable
     :param termination: termination condition for the study
     :param storage: custom storage object to overwrite default sqlite backend
+    :param clean_iters: remove the iteration directories after calibration
     :param custom_cli: the scenario is not a matsim application and needs a different command line syntax
     :param base_params: yaml file containing base parameters used each iteration
     :param debug: enable debug output
@@ -246,9 +249,17 @@ def create_calibration(name: str, calibrate: Union[CalibratorBase, Sequence[Cali
                 print("The scenario could not be run properly and returned with an error code.", file=sys.stderr)
                 if not debug:
                     print("Set debug=True and check the output for any errors.", file=sys.stderr)
-                    print("Alternatively run the cmd from the log above manually and check for errors.", file=sys.stderr)
+                    print("Alternatively run the cmd from the log above manually and check for errors.",
+                          file=sys.stderr)
 
                 raise Exception("Process returned with error code: %s." % p.returncode)
+
+            try:
+                if clean_iters:
+                    shutil.rmtree(os.path.join(run_dir, "ITERS"))
+            except Exception as e:
+                print("Could not remove ITERS directory: %s" % e, file=sys.stderr)
+
         finally:
             p.terminate()
 

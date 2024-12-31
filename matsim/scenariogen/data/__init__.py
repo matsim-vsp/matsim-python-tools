@@ -355,6 +355,12 @@ class Household:
     location: str
     zone: str = pd.NA
     """ A detailed zone, which can be more accurate than location. """
+    equivalent_size: float = pd.NA
+    """ Weighted household size, considering the number of persons > 14 years. 
+    May be used to calculate equivalized income for each person.
+
+    See https://de.wikipedia.org/wiki/%C3%84quivalenzeinkommen      
+     """
     income: float = pd.NA
     geom: object = pd.NA
 

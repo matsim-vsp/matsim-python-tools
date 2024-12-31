@@ -16,15 +16,6 @@ def prepare_persons(hh, pp, tt, augment=5, max_hh_size=5, core_weekday=False, re
     """
     df = pp.join(hh, on="hh_id", lsuffix="hh_")
 
-    # Replace unknown income group
-    fill(df, "income", -1)
-
-    # Replace unknown economic status
-    df["economic_status"] = df.apply(
-        lambda x: income_to_economic_status(x.income, df[df.hh_id == x.hh_id])
-        if x.economic_status == EconomicStatus.UNKNOWN else x.economic_status, axis=1
-    )
-
     # Augment data using p_weight
     if augment > 1:
         df = augment_persons(df, augment)
@@ -143,12 +134,35 @@ def augment_persons(pp, factor=1, permute_age=0.5):
     # Filter invalid options
     return duplicated[check_age_employment(None, duplicated)]
 
+def equivalent_household_size(persons):
+    """ Calculate equivalent household size, see https://stat.fi/meta/kas/ekvivalentti_tu_en.html
 
-def income_to_economic_status(income, persons):
+    :param persons: persons of one household
+    """
+    children = (persons.age < 14).sum()
+    rest = len(persons) - children - 1
+
+    w = 0.3 * children + 1 + 0.5 * rest
+
+    return w
+
+def compute_economic_status(df):
+    """ Compute missing economic status value.
+
+    :param df: joined table of persons and households
+    """
+
+    # Replace unknown economic status
+    df["economic_status"] = df.apply(
+        lambda x: income_to_economic_status(x.income, x.equivalent_size)
+        if x.economic_status == EconomicStatus.UNKNOWN else x.economic_status, axis=1
+    )
+
+def income_to_economic_status(income, w):
     """ Convert income to economic status
 
      :param income: income in Euro
-     :param persons: persons table
+     :param w: equivalent_size
      """
 
     if income < 0:
@@ -156,11 +170,6 @@ def income_to_economic_status(income, persons):
 
     # Calculated according to Srv 2018
     # https://tu-dresden.de/bu/verkehr/ivs/srv/ressourcen/dateien/SrV2018_Tabellenbericht_Oberzentren_500TEW-_flach.pdf?lang=de
-
-    children = (persons.age < 14).sum()
-    rest = len(persons) - children - 1
-
-    w = 0.3 * children + 1 + 0.5 * rest
 
     if income < 1500:
         if w < 1.3:
