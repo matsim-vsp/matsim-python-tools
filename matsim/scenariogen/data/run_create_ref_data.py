@@ -236,7 +236,7 @@ def create(survey_dirs, transform_persons, transform_trips,
             aggr = grouped_share(trips, [g, "main_mode"])
             groups.append(aggr.reset_index())
 
-            aggr = grouped_share(trips, [g, "dist_group", "main_mode"])
+            aggr = grouped_share(trips, [g, "dist_group", "main_mode"], normalize=False)
             dist.append(aggr.reset_index())
 
         groups = pd.concat(groups, sort=False)
