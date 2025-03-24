@@ -133,6 +133,7 @@ def run(jar: Union[str, os.PathLike],
         worker_id: int = 0,
         workers: int = 1,
         seed: int = 4711,
+        clean_iters: bool = True,
         overwrite: bool = False,
         custom_cli: Callable = None,
         debug: bool = False):
@@ -147,6 +148,7 @@ def run(jar: Union[str, os.PathLike],
     :param worker_id: id of this process
     :param workers: total number of processes
     :param seed: starting seed
+    :param clean_iters: delete iterations directory
     :param overwrite: overwrite existing output directory
     :param custom_cli: use custom command line interface
     :param debug: if true, output will be printed to console
@@ -206,6 +208,13 @@ def run(jar: Union[str, os.PathLike],
                           file=sys.stderr)
 
                 raise Exception("Process returned with error code: %s." % p.returncode)
+
+            try:
+                if clean_iters:
+                    shutil.rmtree(os.path.join(run_dir, "ITERS"))
+            except Exception as e:
+                print("Could not remove ITERS directory: %s" % e, file=sys.stderr)
+
         finally:
             p.terminate()
 
@@ -221,10 +230,11 @@ def setup(parser: argparse.ArgumentParser):
     parser.add_argument("--worker-id", type=int, default=0, help="ID of this worker")
     parser.add_argument("--workers", type=int, default=1, help="Total number of workers")
     parser.add_argument("--seed", type=int, default=4711, help="Starting seed")
+    parser.add_argument("--clean-iters", action="store_true", help="Delete iterations directory")
     parser.add_argument("--overwrite", action="store_true", help="Overwrite existing output directories")
     parser.add_argument("--debug", action="store_true", help="Print output to console")
 
 
 def main(args):
     run(args.jar, args.config, args.args, args.jvm_args, args.runs, args.worker_id, args.workers, args.seed,
-        args.overwrite, debug=args.debug)
+        args.clean_iters, args.overwrite, debug=args.debug)
