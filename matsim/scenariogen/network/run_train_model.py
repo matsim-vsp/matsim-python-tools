@@ -109,7 +109,6 @@ def main(args):
     }
 
     def objective(classifier_name, target):
-        global model
 
         def _fn(trial):
             global model
@@ -152,7 +151,6 @@ def main(args):
 
     def callback(study, trial):
         global best
-        global model
         if study.best_trial == trial:
             best = model
 
