@@ -26,7 +26,7 @@ def event_reader(filepath, types=None):
     if types is None:
         keep = None
     elif isinstance(types, str):
-        keep = set(types.split(','))
+        set([string.strip() for string in types.split(',')])
     elif isinstance(types, Iterable):
         keep = set(types)
     else:
