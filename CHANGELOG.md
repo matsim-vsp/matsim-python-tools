@@ -29,6 +29,7 @@ All notable changes to this project will be documented in this file. See [standa
 
 - Fix reading attributes from network.xml
 - warning: collections.abc deprecation ([26060eb](https://github.com/matsim-vsp/matsim-python-tools/commit/26060eb798b82285bfaca4b60465e7128fa2c59e))
+- altered event_reader definition to remove leading and trailing whitespaces from string declaring the event types
 
 ### 0.0.10 (2020-08-25)
 
