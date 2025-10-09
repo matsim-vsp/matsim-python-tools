@@ -19,7 +19,7 @@ def is_format(f: os.DirEntry):
     if "MiD" in f.name:
         return False
 
-    return "_HH" in fp or "_P" in fp or "_W" in fp or "H2018" in fp or "P2018" in fp or "W2018" in fp
+    return "_HH" in fp or "_P" in fp or "_W" in fp or "H2018" in fp or "P2018" in fp or "W2018" in fp or "_H" in fp
 
 
 def read_raw(household_file, person_file, trip_file):
@@ -179,7 +179,8 @@ class SrV2018:
         'Eberswalde': 3,
         'Lübben/Lübbenau': 6,
         'Ludwigsfelde': 3,
-        'Leipzig': 1
+        'Leipzig': 1,
+        'Dresden': 1
     }
 
     @staticmethod
