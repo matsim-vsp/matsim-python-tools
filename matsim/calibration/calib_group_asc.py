@@ -2,7 +2,6 @@
 
 import sys
 from typing import Sequence, Callable, Dict, Literal
-from functools import reduce
 from collections import defaultdict
 
 import numpy as np
@@ -11,6 +10,7 @@ import pandas as pd
 
 from .base import CalibratorBase, CalibrationInput
 from .analysis import read_trips_and_persons
+from .group import parse_group
 
 
 def get_sbb_params(config, group, value, mode):
@@ -50,12 +50,6 @@ def get_sbb_params(config, group, value, mode):
                    "personGroupAttributeValues":
                        [{"attributeValues": value, "absoluteModeCorrections": [m]}]})
     return m
-
-
-def parse_group(p):
-    p = p.strip("[]")
-    return {x.split("=")[0]: x.split("=")[1] for x in p.split(",")}
-
 
 class ASCGroupCalibrator(CalibratorBase):
     """ Calibrates the alternative specific for specific subpopulations """
@@ -117,28 +111,6 @@ class ASCGroupCalibrator(CalibratorBase):
         else:
             self.base = None
             self.alternate_base = False
-
-    def get_group(self, df, groups: dict = None, use_multi=False):
-        """ Get data of one group"""
-        # return result for empty groups
-        if groups is None:
-            idx = reduce(lambda x, y: x & y, [pd.isna(df[g]) for g in self.groups])
-            return df[idx]
-
-        if use_multi:
-            idx = []
-            for g, v in groups.items():
-                if g in self.multi_groups:
-                    vs = v.split(",")
-                    idx.append(df[g].isin(vs))
-                else:
-                    idx.append(df[g] == v)
-
-            idx = reduce(lambda x, y: x & y, idx)
-        else:
-            idx = reduce(lambda x, y: x & y, [df[g] == v for g, v in groups.items()])
-
-        return df[idx]
 
     @property
     def name(self):
@@ -207,7 +179,7 @@ class ASCGroupCalibrator(CalibratorBase):
 
         return 0
 
-    def update_step(self, param: str, last_trial: optuna.Trial, completed: Sequence[optuna.Trial]) -> float:
+    def update_step(self, param: str, last_trial: optuna.Trial, trial: optuna.Trial, completed: Sequence[optuna.Trial]) -> float:
 
         if param == self.fixed_mode:
             return 0
@@ -233,8 +205,6 @@ class ASCGroupCalibrator(CalibratorBase):
                 return 0
 
             t = self.get_group(self.target, parse_group(p)).set_index("mode")
-
-            # TODO: the previous applied correction might be considered here as well
 
             return self.calc_asc_update(t.loc[mode].share, last_trial.user_attrs["%s_share" % param],
                                         t.loc[self.fixed_mode].share,

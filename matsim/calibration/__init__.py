@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 """ Contains calibration related functions """
 
-__all__ = ["create_calibration", "study_as_df", "ASCCalibrator", "ASCGroupCalibrator", "utils"]
+__all__ = ["create_calibration", "study_as_df", "TerminationCondition", "constraints",
+           "ASCCalibrator", "ASCDistCalibrator", "ASCGroupCalibrator", "utils"]
 
 import glob
 import os
@@ -16,10 +17,12 @@ from typing import Union, Sequence, Callable, Tuple
 import optuna
 import yaml
 
-from . import utils
+from . import utils, constraints
 from .analysis import calc_mode_stats
-from .base import CalibratorBase, to_float
+from .analysis import calc_mode_stats
+from .base import CalibratorBase, TerminationCondition, to_float
 from .calib_asc import ASCCalibrator
+from .calib_asc_dist import ASCDistCalibrator
 from .calib_group_asc import ASCGroupCalibrator
 from .utils import study_as_df
 
@@ -52,21 +55,20 @@ class CalibrationSampler(optuna.samplers.BaseSampler):
         completed = utils.completed_trials(study)
         if len(completed) == 0:
             initial = to_float(c.sample_initial(param))
-
-            if c.constraints is not None and mode in c.constraints:
-                initial = c.constraints[mode](mode, initial)
+            if c.check_constraints(param, mode):
+                initial = c.apply_constraints(param, mode, initial)
 
             return initial
 
         last = completed[-1]
         last_param = last.params[param_name]
 
-        step = to_float(c.update_step(param, last, completed))
+        step = to_float(c.update_step(param, last, trial, completed))
 
         rate = 1.0
         if c.lr is not None:
 
-            rate = c.lr(float(len(completed) + 1), param_name, step, trial, study)
+            rate = c.lr(len(completed) + 1, param_name, step, trial, study)
 
             # rate of None or 0 would be invalid
             if not rate:
@@ -79,11 +81,16 @@ class CalibrationSampler(optuna.samplers.BaseSampler):
         study._storage.set_trial_user_attr(trial._trial_id, "%s_rate" % param_name, rate)
         study._storage.set_trial_user_attr(trial._trial_id, "%s_step" % param_name, step)
 
+        old_param = last_param
         last_param += rate * step
 
         # Call constraint if present
-        if c.constraints is not None and mode in c.constraints:
-            last_param = c.constraints[mode](mode, last_param)
+        if c.check_constraints(param, mode):
+            last_param = c.apply_constraints(param, mode, last_param)
+
+        # Save updated step
+        c.current_step[param_name] = last_param - old_param
+        c.current_params[param_name] = last_param
 
         return last_param
 
@@ -94,9 +101,11 @@ def create_calibration(name: str, calibrate: Union[CalibratorBase, Sequence[Cali
                        transform_persons: Callable = None,
                        transform_trips: Callable = None,
                        chain_runs: Union[bool, int, Callable] = False,
+                       termination: TerminationCondition = None,
                        storage: optuna.storages.RDBStorage = None,
                        clean_iters: bool = True,
                        custom_cli: Callable = None,
+                       base_params: Union[str, os.PathLike] = None,
                        debug: bool = False
                        ) -> Tuple[optuna.Study, Callable]:
     """ Create or load an existing study for mode share calibration using asc values.
@@ -113,14 +122,16 @@ def create_calibration(name: str, calibrate: Union[CalibratorBase, Sequence[Cali
     :param transform_persons: callable to filter persons included in mode share
     :param transform_trips: callable to modify trips included in mode share
     :param chain_runs: automatically use the output plans of each run as input for the next, either True or number of iterations or callable
+    :param termination: termination condition for the study
     :param storage: custom storage object to overwrite default sqlite backend
     :param clean_iters: remove the iteration directories after calibration
     :param custom_cli: the scenario is not a matsim application and needs a different command line syntax
+    :param base_params: yaml file containing base parameters used each iteration
     :param debug: enable debug output
     :return: tuple of study and optimization objective.
     """
 
-    # Init with 0
+    # Convert to list if single instance
     if isinstance(calibrate, CalibratorBase):
         calibrate = [calibrate]
 
@@ -131,10 +142,10 @@ def create_calibration(name: str, calibrate: Union[CalibratorBase, Sequence[Cali
                                                             "isolation_level": "AUTOCOMMIT"})
 
     if not os.access(jar, os.R_OK):
-        raise ValueError("Can not access JAR File: %s" % jar)
+        raise ValueError("Can not access JAR file: %s" % jar)
 
     if not os.access(config, os.R_OK):
-        raise ValueError("Can not access config File: %s" % config)
+        raise ValueError("Can not access config file: %s" % config)
 
     study = optuna.create_study(
         study_name=name,
@@ -151,13 +162,23 @@ def create_calibration(name: str, calibrate: Union[CalibratorBase, Sequence[Cali
         makedirs("runs")
 
     study.set_user_attr("calib", [c.name for c in calibrate])
+
     for c in calibrate:
         c.init_study(study)
+        c.set_termination(termination)
+
+    # Start with base params if present
+    if base_params is not None:
+        if not os.access(base_params, os.R_OK):
+            raise ValueError("Can not access base params file: %s" % base_params)
+
+        with open(base_params, "r") as f:
+            base_params = yaml.safe_load(f)
 
     def f(trial):
 
         params_path = path.join("params", "run%d.yaml" % trial.number)
-        params = {}
+        params = base_params.copy() if base_params else {}
 
         for c in calibrate:
             prefix = c.name + "-"
