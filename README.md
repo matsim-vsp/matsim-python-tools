@@ -176,7 +176,7 @@ Each plan is returned as a tuple with its owning person (for now)
 # -------------------------------------------------------------------
 # 3. PLANS: Stream through a MATSim plans file.
 
-plans = matsim.plan_reader('output_plans.xml.gz', selectedPlansOnly = True)
+plans = matsim.plan_reader('output_plans.xml.gz', selected_plans_only = True)
 
 # Each plan is returned as a tuple with its owning person (for now, is this ok?)
 # - The name of the element is in its .tag (e.g. 'plan', 'leg', 'route', 'attributes')
