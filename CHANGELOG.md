@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.0.21](https://github.com/matsim-vsp/matsim-python-tools/compare/v0.0.20...v0.0.21) (2026-01-30)
+
+### [0.0.20](https://github.com/matsim-vsp/matsim-python-tools/compare/v0.0.19...v0.0.20) (2026-01-30)
+
 ### [0.0.19](https://github.com/matsim-vsp/matsim-python-tools/compare/v0.0.18...v0.0.19) (2024-06-18)
 
 ### [0.0.18](https://github.com/matsim-vsp/matsim-python-tools/compare/v0.0.16...v0.0.18) (2024-02-26)
@@ -29,6 +33,7 @@ All notable changes to this project will be documented in this file. See [standa
 
 - Fix reading attributes from network.xml
 - warning: collections.abc deprecation ([26060eb](https://github.com/matsim-vsp/matsim-python-tools/commit/26060eb798b82285bfaca4b60465e7128fa2c59e))
+- altered event_reader definition to remove leading and trailing whitespaces from string declaring the event types
 
 ### 0.0.10 (2020-08-25)
 
