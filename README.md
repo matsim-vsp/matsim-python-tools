@@ -231,7 +231,13 @@ with open("plans.xml", 'wb+') as f_write:
 
 ## Calibration
 
-Scenarios created with the `matsim-application` contrib provide an interface that can be used with the automatic calibration module:
+The package provides functionality for automatic ASC calibration to match simulated and observed mode shares.
+Mathematical background and experiments are provided in the thesis below (cf. Chapter 3). Please cite the following if you use the calibration methods in your project:
+
+> Rakow, C. (2026). *From Data to Simulation: Advanced Methods for Agent-based Transport Modeling and Mode Choice Calibration*. PhD thesis, Technische Universität Berlin. https://doi.org/10.14279/depositonce-25155
+
+Calibrations are performed using a separate script, which sets up the calibrator and executes the scenario.
+Please note, that the scenario must be a standalone executable jar file with a main class created using the  `matsim-application` contrib.
 
 ```python
 # -------------------------------------------------------------------
@@ -239,13 +245,26 @@ Scenarios created with the `matsim-application` contrib provide an interface tha
 
 from matsim.calibration import create_calibration, ASCCalibrator, utils, study_as_df
 
-modes = ["walk", "car", "pt", "bike"]
+# Modes to calibrate
+modes = ["walk", "car", "pt", "bike", "ride"]
+# Reference mode with ASC=0
 fixed_mode = "walk"
+
+# The initial ASCs
+initial = {
+    "bike": -1.208608,
+    "pt": -1.118097,
+    "car": -1.857432,
+    "ride": -5.1
+}
+
+# Target mode shares
 target = {
-    "walk": 0.277,
-    "bike": 0.175,
-    "pt": 0.19,
-    "car": 0.359
+    "walk": 0.296769,
+    "bike": 0.177878,
+    "pt": 0.265073,
+    "car": 0.200673,
+    "ride": 0.059607
 }
 
 def filter_persons(df):
@@ -264,6 +283,8 @@ study, obj = create_calibration("calib", ASCCalibrator(modes, initial, target, f
                                 transform_trips=filter_modes,
                                 chain_runs=utils.default_chain_scheduler, debug=False)
 
+# Run 10 simulations, one after another and adjust the ASCs inbetween
+# Note that the script always continues from the last iteration run
 study.optimize(obj, 10)
 
 df = study_as_df(study)
