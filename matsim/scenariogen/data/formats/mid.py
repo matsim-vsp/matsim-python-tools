@@ -13,10 +13,10 @@ from .. import *
 
 INPUT_FILES = 3
 
-
-def is_format(f: os.DirEntry):
-    return f.name.startswith("MiD2017_") and f.path.endswith(".csv")
-
+def is_format(f: os.DirEntry) -> bool:
+    """True, if file name starts with 'MiDxxxx_' and ends with '.csv' """
+    pattern = r"^MiD\d{4}_"
+    return bool(re.match(pattern, f.name)) and f.name.endswith(".csv")
 
 def read_raw(household_file, person_file, trip_file):
     hh = pd.read_csv(household_file, delimiter=";", decimal=",",
@@ -90,6 +90,10 @@ def convert(data: tuple, regio=None):
         if t.W_RBW == 1.0:
             continue
 
+        # holidays ar not accounted
+        if t.feiertag == 1.0:
+            continue
+
         # Person might have multiple days
         p_id = get_int_id(t, "HP_ID")
         t_id = p_id + "%d%d" % (get(t, "ST_WOCHE", "ST_MONAT"), t.ST_WOTAG)
@@ -122,7 +126,6 @@ def convert(data: tuple, regio=None):
 def flip(x, y):
     """Flips the x and y coordinate values"""
     return y, x
-
 
 class Mid2017:
     """ Converter for 2017 MID format """

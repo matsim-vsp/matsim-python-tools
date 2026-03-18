@@ -203,9 +203,7 @@ def create(survey_dirs, transform_persons, transform_trips,
     aggr.to_csv(output_prefix + "mode_share_ref.csv")
 
     # Also normalize per distance group
-    for dist_group in aggr.index.get_level_values(0).categories:
-        sub = aggr.loc[dist_group, :]
-        sub.share /= sub.share.sum()
+    aggr["share"] = aggr.groupby(level=0)["share"].transform(lambda x: x / x.sum())
 
     aggr.to_csv(output_prefix + "mode_share_per_dist_ref.csv")
 
