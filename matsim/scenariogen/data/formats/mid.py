@@ -90,10 +90,6 @@ def convert(data: tuple, regio=None):
         if t.W_RBW == 1.0:
             continue
 
-        # holidays ar not accounted
-        if t.feiertag == 1.0:
-            continue
-
         # Person might have multiple days
         p_id = get_int_id(t, "HP_ID")
         t_id = p_id + "%d%d" % (get(t, "ST_WOCHE", "ST_MONAT"), t.ST_WOTAG)
@@ -106,7 +102,7 @@ def convert(data: tuple, regio=None):
         trip = Trip(
             t_id + "_" + str(n),
             get(t, "W_GEW", "gew_wege"), p_id, str(get_int_id(t, "H_ID")),
-            n, int(t.ST_WOTAG), depature, int(t.wegmin), float(t.wegkm),
+            n, int(t.ST_WOTAG), bool(t.feiertag), depature, int(t.wegmin), float(t.wegkm),
             Mid2017.main_mode(t), Mid2017.purpose(t), None,
             float(t.wegkm) < 9994 and int(t.wegmin) < 9994 and depature is not None
         )

@@ -400,6 +400,8 @@ class Trip:
     day_of_week: int
     """ Day of the week between 1-7. 1 is Monday. """
 
+    holiday: bool
+
     departure: int
     duration: int
     gis_length: float

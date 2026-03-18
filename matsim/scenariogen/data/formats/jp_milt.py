@@ -126,6 +126,8 @@ def convert(data: tuple, regio=None):
             int(t.trip_no),
             # Weekday is not present in the trip, only for person
             weekdays.get(person_number, pd.NA),
+            # holiday attribute not set
+            None,
             t.dep_hour * 60 + t.dep_minute,
             t.arr_hour * 60 + t.arr_minute - (t.dep_hour * 60 + t.dep_minute),
             # Only approximate distance between zones, in km
