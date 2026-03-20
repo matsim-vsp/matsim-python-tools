@@ -115,6 +115,8 @@ def convert(data: tuple, regio=None):
                 str(int(t.HHNR)),
                 int(t.WNR),
                 int(t.STICHTAG_WTAG),
+                # holiday attribute not set
+                None,
                 int(t.E_BEGINN),
                 int(t.E_DAUER),
                 float(t.GIS_LAENGE),
