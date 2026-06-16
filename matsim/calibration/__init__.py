@@ -103,7 +103,7 @@ def create_calibration(name: str, calibrate: Union[CalibratorBase, Sequence[Cali
                        chain_runs: Union[bool, int, Callable] = False,
                        termination: TerminationCondition = None,
                        storage: optuna.storages.RDBStorage = None,
-                       clean_iters: bool = True,
+                       clean_iters: bool = False,
                        custom_cli: Callable = None,
                        base_params: Union[str, os.PathLike] = None,
                        debug: bool = False
