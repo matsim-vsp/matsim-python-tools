@@ -59,7 +59,7 @@ def convert(data: tuple, regio=None):
                 SrV2023.yes_no(p.V_FUEHR_PKW),
                 SrV2023.veh_avail(p.V_PKW_VERFUEG),
                 Availability.YES if SrV2023.veh_avail(p.V_RAD_VERFUEG) == Availability.YES or SrV2023.veh_avail(
-                    p.V_ERAD_VERFUEG) == Availability.YES else SrV2023.veh_avail(p.V_RAD_VERFUEG),
+                    p.V_ERAD_VERFUEG) == Availability.YES  or p.LASTENRAD_VERFUEG == Availability.YES else SrV2023.veh_avail(p.V_RAD_VERFUEG),
                 SrV2023.veh_avail(p.V_FK_VERFUEG),
                 p.V_WOHNUNG == 1,
                 p.V_WOHNORT == 1,
@@ -87,9 +87,9 @@ def convert(data: tuple, regio=None):
                 hh_id,
                 h.GEWICHT_HH,
                 pint(h.V_ANZ_PERS),
-                pint(h.V_ANZ_PKW), # TODO Now using V_ANZ_PKW is already sum of priv + dienst.
-                pint(h.V_ANZ_RAD_GESAMT),  # TODO now using V_ANZ_RAD_GESAMT. Note that this excludes lastenräder.
-                pint(h.V_ANZ_LASTENRAD + h.V_ANZ_MOT125 + h.V_ANZ_MOPMOT + h.V_ANZ_ETRETROL + h.V_ANZ_SONST), # TODO now using ETRETROL as well and V_ANZ_LASTENRAD
+                pint(h.V_ANZ_PKW),
+                pint(h.V_ANZ_RAD_GESAMT) + pint(h.V_ANZ_LASTENRAD),
+                pint(h.V_ANZ_MOT125) + pint(h.V_ANZ_MOPMOT) + pint(h.V_ANZ_ETRETROL) + pint(h.V_ANZ_SONST),
                 SrV2023.parking_position(h.V_STELLPL1),
                 SrV2023.economic_status(h.E_OEK_STATUS if "E_OEK_STATUS" in hh.keys() else -1, h.V_EINK,
                                         hh_persons),
@@ -210,7 +210,7 @@ class SrV2023:
         return ParkingPosition.NA
 
     @staticmethod
-    def economic_status(status, eink, persons):  # TODO this changed: the translation from income and #persons is now different, and there exists a new income category 11 for 6600 and above.
+    def economic_status(status, eink, persons):
 
         if status >= 1:
             return list(EconomicStatus)[int(status) - 1]

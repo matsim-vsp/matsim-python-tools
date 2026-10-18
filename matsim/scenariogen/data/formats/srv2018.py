@@ -87,9 +87,9 @@ def convert(data: tuple, regio=None):
                 hh_id,
                 h.GEWICHT_HH,
                 pint(h.V_ANZ_PERS),
-                pint(h.V_ANZ_PKW_PRIV + h.V_ANZ_PKW_DIENST), # TODO this could be messed up if one of the numbers is negative. It was changed, in 2018, -10: unplausibel exists, in 2023 we have instead the fields E_ANZ_PKW_PRIV and E_ANZ_PKW_DIENST where -7: berechnung nicht möglich. Also, there now exists V_ANZ_PKW which seems to already be this sum. So tecnically we only need to change it for 2018 and use the new field in 2023
-                pint(h.V_ANZ_RAD + h.V_ANZ_ERAD),  # TODO the first one no longer exists. We can either use V_ANZ_RAD_GESAMT, which is already this sum and excludes lastenräder, or we can use E_ANZ_RAD + E_ANZ_ERAD, which is the sum of the two and includes lastenräder.
-                pint(h.V_ANZ_MOT125 + h.V_ANZ_MOPMOT + h.V_ANZ_SONST), # TODO here, we should add ETRETROL as well, and probably V_ANZ_LASTENRAD if excluded above
+                pint(h.V_ANZ_PKW_PRIV) + pint(h.V_ANZ_PKW_DIENST),
+                pint(h.V_ANZ_RAD) + pint(h.V_ANZ_ERAD),
+                pint(h.V_ANZ_MOT125) + pint(h.V_ANZ_MOPMOT) + pint(h.V_ANZ_SONST),
                 SrV2018.parking_position(h.V_STELLPL1),
                 SrV2018.economic_status(h.E_OEK_STATUS if "E_OEK_STATUS" in hh.keys() else -1, h.V_EINK,
                                         hh_persons),
@@ -198,7 +198,7 @@ class SrV2018:
     ]
 
     @staticmethod
-    def parking_position(x): # TODO this is still the same
+    def parking_position(x):
 
         if x == 1:
             return ParkingPosition.PRIVATE
@@ -210,7 +210,7 @@ class SrV2018:
         return ParkingPosition.NA
 
     @staticmethod
-    def economic_status(status, eink, persons):  # TODO this changed: 10 is now for 5600 to under 6600, 11 for 6600 and above.
+    def economic_status(status, eink, persons):
 
         if status >= 1:
             return list(EconomicStatus)[int(status) - 1]
@@ -292,7 +292,7 @@ class SrV2018:
         return EconomicStatus.UNKNOWN
 
     @staticmethod
-    def household_type(x):  # TODO this stayed the same
+    def household_type(x):
         if x == 1:
             return HouseholdType.MULTI_W_CHILDREN
         elif x == 2:
@@ -301,7 +301,7 @@ class SrV2018:
         return HouseholdType.SINGLE
 
     @staticmethod
-    def gender(x): # TODO das hat sich theoretisch geändert, es gibt jetzt 3: divers, 4: keine Angabe im Geburtenregister; also eigentlich bleibt es wohl gleich
+    def gender(x):
         if x == 1:
             return Gender.M
         elif x == 2:
@@ -310,7 +310,7 @@ class SrV2018:
         return Gender.OTHER
 
     @staticmethod
-    def employment(x):  # TODO das ist auch gleich geblieben, außer dass es -9: keine Angabe gibt
+    def employment(x):
         if x == 1:
             return Employment.CHILD
         elif x == 2:
@@ -342,7 +342,7 @@ class SrV2018:
         return Availability.UNKNOWN
 
     @staticmethod
-    def veh_avail(x):  # TODO das ist auch gleich geblieben, außer dass es nicht mehr -9: keine Angabe gibt
+    def veh_avail(x):
         if x == 1 or x == 2:
             return Availability.YES
         elif x == 3:
@@ -351,7 +351,7 @@ class SrV2018:
         return Availability.UNKNOWN
 
     @staticmethod
-    def trip_mode(x):  # TODO hat sich geändert
+    def trip_mode(x):
         if x == 1:
             return TripMode.WALK
         elif x == 2 or x == 18 or x == 19:
@@ -368,7 +368,7 @@ class SrV2018:
         return TripMode.OTHER
 
     @staticmethod
-    def trip_purpose(x): # TODO kodierung hat sich geändert
+    def trip_purpose(x):
         if x == 1:
             return Purpose.WORK
         elif x == 2:
@@ -403,7 +403,7 @@ class SrV2018:
         return Purpose.OTHER
 
     @staticmethod
-    def sd_group(x): # TODO das scheint gleich geblieben zu sein
+    def sd_group(x):
         if x <= 0:
             return SourceDestinationGroup.UNKNOWN
 
@@ -433,7 +433,7 @@ class SrV2018:
             return SrV2018.CODES[name]
 
     @staticmethod
-    def income(x):  # TODO this changed: 10 is now for 5600 to under 6600, 11 for 6600 and above.
+    def income(x):
         # Original groups are
         # 0, 500, 900, 1500, 2000, 2600, 3000, 3600, 4600, 5600
 
