@@ -4,4 +4,5 @@ shapely>=1.8.0
 xopen>=1.7.0
 protobuf>=3.20.0
 optuna>=3.5.0
+scikit-learn>=1.7.2
 scipy>=1.2.0
