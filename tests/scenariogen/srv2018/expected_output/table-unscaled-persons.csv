@@ -1,0 +1,6 @@
+p_id,p_weight,hh_id,age,gender,employment,restricted_mobility,driving_license,car_avail,bike_avail,pt_abo_avail,mobile_on_day,present_on_day,reporting_day,n_trips
+12345_1,0.123,12345,23,m,student,False,yes,no,yes,yes,True,True,1,1
+23456_2,0.234,23456,25,f,job_full_time,True,yes,no,yes,yes,True,True,4,1
+34567_3,0.345,34567,65,m,retiree,False,no,yes,yes,yes,True,True,4,1
+45678_1,0.456,45678,27,f,student,True,yes,yes,yes,no,True,True,4,1
+56789_1,2.345,56789,53,m,job_part_time,False,no,yes,yes,yes,True,False,4,1

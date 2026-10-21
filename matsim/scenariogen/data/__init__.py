@@ -44,7 +44,7 @@ def _check_header(path: os.PathLike, keywords: List[str]) -> bool:
 def read_all(dirs: Union[str, List[str]], regio=None) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """ Scan directories and read everything into one dataframe """
 
-    from .formats import srv, mid, jp_milt
+    from .formats import srv2018, srv2023, mid, jp_milt
 
     hh = []
     pp = []
@@ -57,7 +57,7 @@ def read_all(dirs: Union[str, List[str]], regio=None) -> Tuple[pd.DataFrame, pd.
     found = False
     for d in dirs:
 
-        for format in (srv, mid, jp_milt):
+        for format in (srv2018, srv2023, mid, jp_milt):
 
             files = []
 
