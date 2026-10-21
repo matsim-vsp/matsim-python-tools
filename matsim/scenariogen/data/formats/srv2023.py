@@ -59,7 +59,7 @@ def convert(data: tuple, regio=None):
                 SrV2023.yes_no(p.V_FUEHR_PKW),
                 SrV2023.veh_avail(p.V_PKW_VERFUEG),
                 Availability.YES if SrV2023.veh_avail(p.V_RAD_VERFUEG) == Availability.YES or SrV2023.veh_avail(
-                    p.V_ERAD_VERFUEG) == Availability.YES  or p.V_LASTENRAD_VERFUEG == Availability.YES else SrV2023.veh_avail(p.V_RAD_VERFUEG),
+                    p.V_ERAD_VERFUEG) == Availability.YES  or SrV2023.veh_avail(p.V_LASTENRAD_VERFUEG) or SrV2023.veh_avail(p.V_ELASTRAD_VERFUEG) == Availability.YES else SrV2023.veh_avail(p.V_RAD_VERFUEG),
                 SrV2023.veh_avail(p.V_FK_VERFUEG),
                 p.V_WOHNUNG == 1,
                 p.V_WOHNORT == 1,
