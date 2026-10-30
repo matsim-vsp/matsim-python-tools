@@ -48,6 +48,16 @@ def get(series, *names):
 
     raise Exception("No value found for %s" % names)
 
+def try_get(series, *names):
+    """
+    Get value from series. Trying possible values until one exists.
+    If none exists, return "unknown"
+    """
+    for name in names:
+        if name in series._fields:
+            return getattr(series, name)
+
+    return "unknown"
 
 def convert(data: tuple, regio=None):
     hh, pp, tt = data
@@ -104,7 +114,11 @@ def convert(data: tuple, regio=None):
             get(t, "W_GEW", "gew_wege"), p_id, str(get_int_id(t, "H_ID")),
             n, int(t.ST_WOTAG), bool(t.feiertag), depature, int(t.wegmin), float(t.wegkm),
             Mid2017.main_mode(t), Mid2017.purpose(t), Mid2017.sd_group(t),
-            float(t.wegkm) < 9994 and int(t.wegmin) < 9994 and depature is not None
+            float(t.wegkm) < 9994 and int(t.wegmin) < 9994 and depature is not None,
+            "not_surveyed", # from_location
+            str(try_get(t, "GITTER_SO_500m", "GITTER_SO_1km", "GITTER_SO_5km")),  # from_zone
+            "not_surveyed", # to_location
+            str(try_get(t, "GITTER_ZO_500m", "GITTER_ZO_1km", "GITTER_ZO_5km")),  # to_zone
         )
 
         if trip.purpose == Purpose.WAYBACK:
