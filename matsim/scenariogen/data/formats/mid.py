@@ -103,7 +103,7 @@ def convert(data: tuple, regio=None):
             t_id + "_" + str(n),
             get(t, "W_GEW", "gew_wege"), p_id, str(get_int_id(t, "H_ID")),
             n, int(t.ST_WOTAG), bool(t.feiertag), depature, int(t.wegmin), float(t.wegkm),
-            Mid2017.main_mode(t), Mid2017.purpose(t), None,
+            Mid2017.main_mode(t), Mid2017.purpose(t), Mid2017.sd_group(t),
             float(t.wegkm) < 9994 and int(t.wegmin) < 9994 and depature is not None
         )
 
@@ -362,3 +362,27 @@ class Mid2017:
             return Purpose.WAYBACK
 
         return Purpose.OTHER
+
+
+    @staticmethod
+    def sd_group(t):
+        """
+        Determine the source-destination group for the trip.
+        As destination, we take the purpose of the trip.
+        For the source, we can't take the purpose of the previous trip, since there may not be a previous trip.
+        Instead, we use the W_SO1 variable, which indicates whether the first trip starts from home or another location.
+
+        Note:
+            for the later trips, W_SO1 always gets the value 809: "not surveyed for second trip and later".
+            This will always be mapped to Purpose.OTHER.
+            But this is no problem, since the sd_group is only read for the first trip of each person anyway, for the
+            later trips, instead the purpose of the previous trip is used (see the `convert` function in preparation.py)
+        """
+
+        # W_SO1 is the start of the first trip (home or other)
+        if get(t, "W_SO1") == 1:
+            source_purpose = Purpose.HOME
+        else:
+            source_purpose = Purpose.OTHER
+
+        return SourceDestinationGroup.parse(source_purpose, Mid2017.purpose(t))
