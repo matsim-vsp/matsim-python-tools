@@ -382,9 +382,15 @@ class Mid2017:
     def sd_group(t):
         """
         Determine the source-destination group for the trip.
-        As destination, we take the purpose of the trip.
         For the source, we can't take the purpose of the previous trip, since there may not be a previous trip.
         Instead, we use the W_SO1 variable, which indicates whether the first trip starts from home or another location.
+        For the destination, we simply use Purpose.OTHER for all trips.
+        While we could use the purpose field of the trip as destination, this will
+        sometimes lead to the result SourceDestinationGroup.UNKNOWN, since for example the
+        sd group HOME_TRANSPORT doesn't exist.
+        And in that case, when later on the sd group is used to extract the source purpose,
+        we would always get Purpose.OTHER, even though W_SO1 might have specified that the first trip
+        started at HOME.
 
         Note:
             for the later trips, W_SO1 always gets the value 809: "not surveyed for second trip and later".
@@ -399,4 +405,4 @@ class Mid2017:
         else:
             source_purpose = Purpose.OTHER
 
-        return SourceDestinationGroup.parse(source_purpose, Mid2017.purpose(t))
+        return SourceDestinationGroup.parse(source_purpose, Purpose.OTHER)
