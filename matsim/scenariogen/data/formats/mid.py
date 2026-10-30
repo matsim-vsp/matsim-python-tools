@@ -67,7 +67,7 @@ def convert(data: tuple, regio=None):
     for p in pp.itertuples():
         p_id = get_int_id(p, "HP_ID")
 
-        if "H_ID" in p._fields:
+        if "H_ID" in p._fields or "H_ID_Lok" in p._fields:
             hh_id = get_int_id(p, "H_ID")
         else:
             # Remove last character from person id
