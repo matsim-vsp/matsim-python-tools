@@ -48,13 +48,13 @@ def get(series, *names):
 
     raise Exception("No value found for %s" % names)
 
-def try_get(series, *names):
+def try_get_and_ignore_whitespace(series, *names):
     """
     Get value from series. Trying possible values until one exists.
     If none exists, return "unknown"
     """
     for name in names:
-        if name in series._fields:
+        if name in series._fields and getattr(series, name) is not " ":
             return getattr(series, name)
 
     return "unknown"
@@ -116,9 +116,9 @@ def convert(data: tuple, regio=None):
             Mid2017.main_mode(t), Mid2017.purpose(t), Mid2017.sd_group(t),
             float(t.wegkm) < 9994 and int(t.wegmin) < 9994 and depature is not None,
             "not_surveyed", # from_location
-            str(try_get(t, "GITTER_SO_500m", "GITTER_SO_1km", "GITTER_SO_5km")),  # from_zone
+            str(try_get_and_ignore_whitespace(t, "GITTER_SO_500m", "GITTER_SO_1km", "GITTER_SO_5km")),  # from_zone
             "not_surveyed", # to_location
-            str(try_get(t, "GITTER_ZO_500m", "GITTER_ZO_1km", "GITTER_ZO_5km")),  # to_zone
+            str(try_get_and_ignore_whitespace(t, "GITTER_ZO_500m", "GITTER_ZO_1km", "GITTER_ZO_5km")),  # to_zone
         )
 
         if trip.purpose == Purpose.WAYBACK:
