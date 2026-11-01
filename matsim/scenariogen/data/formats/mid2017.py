@@ -54,7 +54,7 @@ def try_get_and_ignore_whitespace(series, *names):
     If none exists, return "unknown"
     """
     for name in names:
-        if name in series._fields and getattr(series, name) is not " ":
+        if name in series._fields and getattr(series, name) != " ":
             return getattr(series, name)
 
     return "unknown"
