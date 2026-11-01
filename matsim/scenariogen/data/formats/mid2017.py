@@ -384,17 +384,16 @@ class Mid2017:
         Determine the source-destination group for the trip.
         For the source, we can't take the purpose of the previous trip, since there may not be a previous trip.
         Instead, we use the W_SO1 variable, which indicates whether the first trip starts from home or another location.
-        For the destination, we simply use Purpose.OTHER for all trips.
-        While we could use the purpose field of the trip as destination, this will
-        sometimes lead to the result SourceDestinationGroup.UNKNOWN, since for example the
-        sd group HOME_TRANSPORT doesn't exist.
-        And in that case, when later on the sd group is used to extract the source purpose,
-        we would always get Purpose.OTHER, even though W_SO1 might have specified that the first trip
-        started at HOME.
+        For the destination, we try to use the purpose of the trip. So if W_SO1 indicates that the first trip starts at
+        home, and the purpose of the trip is WORK, then the sd_group will be HOME_WORK.
+        However, there are some purposes for which there is no corresponding sd_group, such as TRANSPORT; there is no
+        sd_group HOME_TRANSPORT. Then, we would get the sd_group UNKNOWN instead. Since this would lead to the
+        information about the source to be lost, we will use Purpose.OTHER for the destination instead, so that the
+        sd_group will be HOME_OTHER. This way, we can still extract the source purpose from the sd_group.
 
         Note:
             for the later trips, W_SO1 always gets the value 809: "not surveyed for second trip and later".
-            This will always be mapped to Purpose.OTHER.
+            In these cases, the sd group UNKNOWN is returned.
             But this is no problem, since the sd_group is only read for the first trip of each person anyway, for the
             later trips, instead the purpose of the previous trip is used (see the `convert` function in preparation.py)
         """
@@ -408,4 +407,10 @@ class Mid2017:
         else:
             source_purpose = Purpose.OTHER
 
-        return SourceDestinationGroup.parse(source_purpose, Purpose.OTHER)
+        sd_group = SourceDestinationGroup.parse(source_purpose, Mid2017.purpose(t))
+        if sd_group == SourceDestinationGroup.UNKNOWN:
+            # If the sd_group is unknown, we return a group with the source purpose and Purpose.OTHER as destination,
+            # in order to not lose the information about the source purpose
+            return SourceDestinationGroup.parse(source_purpose, Purpose.OTHER)
+        else:
+            return sd_group
