@@ -402,6 +402,9 @@ class Mid2017:
         # W_SO1 is the start of the first trip (home or other)
         if get(t, "W_SO1") == 1:
             source_purpose = Purpose.HOME
+        # 809 is the code for "not surveyed for second trip and later"; in this case, we don't know the source destination group
+        elif get(t, "W_SO1") == 809:
+            return SourceDestinationGroup.UNKNOWN
         else:
             source_purpose = Purpose.OTHER
 
