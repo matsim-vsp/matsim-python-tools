@@ -1,0 +1,6 @@
+hh_id,h_weight,n_persons,n_cars,n_bikes,n_other_vehicles,car_parking,economic_status,type,region_type,location,zone,equivalent_size,income
+12345,0.123,5,0,6,1,na,very_high,multi_wo_children,1,Berlin,1-140-14010,1.0,4100
+23456,0.234,3,1,4,0,public,high,multi_w_children,1,Berlin,5-520-52006,1.0,3300
+34567,0.345,4,2,3,2,different,medium,single,1,Berlin,3-350-35009,1.0,2800
+45678,0.456,2,3,2,3,public,low,multi_wo_children,1,Berlin,1-120-12006,1.0,2300
+56789,2.345,1,1,2,1,private,very_low,single,1,Berlin,5-520-52006,1.0,1750
