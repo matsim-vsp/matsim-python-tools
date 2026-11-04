@@ -5,7 +5,6 @@
 __all__ = ["create_calibration", "study_as_df", "TerminationCondition", "constraints",
            "ASCCalibrator", "ASCDistCalibrator", "ASCGroupCalibrator", "utils"]
 
-import glob
 import os
 import shutil
 import subprocess
@@ -18,6 +17,7 @@ import optuna
 import yaml
 
 from . import utils, constraints
+from ..utils import glob_file
 from .analysis import calc_mode_stats
 from .analysis import calc_mode_stats
 from .base import CalibratorBase, TerminationCondition, to_float
@@ -197,6 +197,11 @@ def create_calibration(name: str, calibrate: Union[CalibratorBase, Sequence[Cali
         # Call args if necessary
         run_args = args(completed) if callable(args) else args
 
+        # Arguments that the calibrators set directly
+        calib_args = [a for c in calibrate for a in c.update_args(study, trial, c.name + "-")]
+        if calib_args:
+            run_args = " ".join([run_args] + calib_args)
+
         if custom_cli:
             cmd = custom_cli(jvm_args, jar, config, params_path, run_dir, trial.number, run_args)
         else:
@@ -210,10 +215,11 @@ def create_calibration(name: str, calibrate: Union[CalibratorBase, Sequence[Cali
 
             out = None
             for t in reversed(completed):
-                out = glob.glob("runs/%03d/*.output_plans.xml.gz" % t.number)
-                if out:
-                    out = path.abspath(out[0])
+                try:
+                    out = path.abspath(glob_file("runs/%03d" % t.number, "*.output_plans.xml"))
                     break
+                except FileNotFoundError:
+                    out = None
 
             if out:
                 last_chained = study.user_attrs.get("last_chained_run", None)

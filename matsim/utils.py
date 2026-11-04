@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+import glob
+import os
+
 from google.protobuf.internal.encoder import _EncodeVarint
 
 from xopen import xopen
@@ -10,6 +13,51 @@ from .pb.Events_pb2 import EventBatch
 PB_VERSION = {
     ContentType.EVENTS: (1, EventBatch)
 }
+
+# Suffixes of compressed files that MATSim may write, in the order they are tried
+COMPRESSION_SUFFIXES = ("", ".zst", ".gz", ".lz4", ".bz2", ".xz")
+
+
+def _strip_compression(path: str) -> str:
+    for suffix in COMPRESSION_SUFFIXES[1:]:
+        if path.endswith(suffix):
+            return path[:-len(suffix)]
+
+    return path
+
+
+def find_file(path) -> str:
+    """ Find a file, which may exist uncompressed or with any compression suffix.
+    E.g. for 'output_plans.xml' or 'output_plans.xml.gz' also 'output_plans.xml.zst' is found.
+
+    :raises FileNotFoundError: if no such file exists
+    """
+    path = str(path)
+    if os.path.exists(path):
+        return path
+
+    base = _strip_compression(path)
+    for suffix in COMPRESSION_SUFFIXES:
+        if os.path.exists(base + suffix):
+            return base + suffix
+
+    raise FileNotFoundError("Could not find %s with any of the suffixes %s" % (base, COMPRESSION_SUFFIXES))
+
+
+def glob_file(directory, pattern: str) -> str:
+    """ Find a file matching a glob pattern in a directory, which may exist uncompressed or with any compression suffix.
+    E.g. pattern '*.output_trips.csv' finds 'run.output_trips.csv.zst'.
+
+    :raises FileNotFoundError: if no such file exists
+    """
+    base = _strip_compression(pattern)
+    for suffix in COMPRESSION_SUFFIXES:
+        matches = sorted(glob.glob(os.path.join(str(directory), base + suffix)))
+        if matches:
+            return matches[0]
+
+    raise FileNotFoundError("No %s file found in %s" % (base, directory))
+
 
 # Parses attributes of an element and adds them to the given dictionary
 def parse_attributes(elem, dict):

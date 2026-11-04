@@ -10,7 +10,7 @@ from xopen import xopen
 from .pb.Ids_pb2 import ProtoId
 from .pb.Model_pb2 import Coordinate
 
-from matsim.utils import read_pb
+from matsim.utils import read_pb, find_file
 
 
 def event_reader(filepath, types=None):
@@ -34,6 +34,8 @@ def event_reader(filepath, types=None):
 
     if isinstance(filepath, Path):
         filepath = str(filepath)
+
+    filepath = find_file(filepath)
 
     if '.xml' in filepath:
         reader = _event_reader_xml

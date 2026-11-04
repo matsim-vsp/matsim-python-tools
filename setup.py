@@ -27,6 +27,7 @@ setup(
     install_requires=[
         "protobuf >= 3.20.0",
         "xopen >= 1.7.0",
+        "zstandard",
         "pandas >= 2.1.0",
     ],
     extras_require={
