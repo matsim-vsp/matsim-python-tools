@@ -4,6 +4,8 @@ import xopen
 import xml.etree.ElementTree as ET
 import pandas as pd
 
+from .utils import find_file
+
 
 class Network:
 
@@ -65,7 +67,7 @@ def read_network(filename, skip_attributes=False):
     """Read a MATSim network.xml.gz file. Returns a Network object with dataframes
     for nodes, links, node_attributes, and link_attributes. If the network has a CRS
     projection set, it will be available in network_attrs."""
-    tree = ET.iterparse(xopen.xopen(filename, 'r'), events=['start', 'end'])
+    tree = ET.iterparse(xopen.xopen(find_file(filename), 'r'), events=['start', 'end'])
     nodes = []
     links = []
     node_attrs = []

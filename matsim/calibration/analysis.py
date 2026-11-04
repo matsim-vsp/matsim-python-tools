@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import glob
-
 from typing import Any, Tuple
 
 import geopandas
 import numpy as np
 import pandas as pd
+
+from ..utils import glob_file
 
 
 def calc_adjusted_mode_share(sim: pd.DataFrame, survey: pd.DataFrame,
@@ -68,8 +68,8 @@ def read_trips_and_persons(run, transform_persons=None, transform_trips=None) ->
     if type(run) is tuple and len(run) == 2:
         return run
 
-    trips = glob.glob(run.rstrip("/") + "/*.output_trips.csv.gz")[0]
-    persons = glob.glob(run.rstrip("/") + "/*.output_persons.csv.gz")[0]
+    trips = glob_file(run, "*.output_trips.csv")
+    persons = glob_file(run, "*.output_persons.csv")
 
     # TODO: sep=None does not work
     df = pd.read_csv(trips, sep=";", dtype={"person": "str"}, low_memory=False)
@@ -100,8 +100,8 @@ def read_trips_and_persons(run, transform_persons=None, transform_trips=None) ->
 def read_leg_stats(run : str, transform_persons=None, transform_legs=None):
     """ Reads leg statistic from run directory """
 
-    legs = glob.glob(run.rstrip("/") + "/*.output_trips.csv.gz")[0]
-    persons = glob.glob(run.rstrip("/") + "/*.output_persons.csv.gz")[0]
+    legs = glob_file(run, "*.output_trips.csv")
+    persons = glob_file(run, "*.output_persons.csv")
 
     df = pd.read_csv(legs, sep=";")
     dfp = pd.read_csv(persons, sep=";", index_col=0)

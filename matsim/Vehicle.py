@@ -11,7 +11,7 @@ class Vehicle:
 # Returns vehicle_types and vehicles dataframes
 # <vehicleType> attributes and children attributes are récursively added to the dataframe
 def vehicle_reader(filename, convert_dataframes_types=True):
-    tree = ET.iterparse(xopen.xopen(filename, 'r'), events=['start','end'])
+    tree = ET.iterparse(xopen.xopen(utils.find_file(filename), 'r'), events=['start','end'])
     
     vehicle_types = []
     vehicles = []

@@ -9,7 +9,7 @@ class Facility:
 
 # Returns facilities as a dataframe
 def facility_reader(filename, convert_dataframes_types=True):
-    tree = ET.iterparse(xopen.xopen(filename, 'r'), events=['start','end'])
+    tree = ET.iterparse(xopen.xopen(utils.find_file(filename), 'r'), events=['start','end'])
     
     facilities = []
     current_facility = {}
