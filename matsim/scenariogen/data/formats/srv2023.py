@@ -25,14 +25,18 @@ def is_format(f: os.DirEntry):
 def read_raw(household_file, person_file, trip_file):
     """ Read the input files into format used by conversion """
 
+    dtype_for_bezirks = {"OBERBEZIRK": str, "UNTERBEZIRK": str, "TEILBEZIRK": str,
+                         "V_START_OBERBEZIRK": str, "V_START_UNTERBEZIRK": str, "V_START_TEILBEZIRK": str,
+                         "V_ZIEL_OBERBEZIRK": str, "V_ZIEL_UNTERBEZIRK": str, "V_ZIEL_TEILBEZIRK": str}
+
     hh = pd.read_csv(household_file, encoding="windows-1252", delimiter=";", decimal=",",
-                     quotechar="\"", low_memory=False, quoting=2)
+                     quotechar="\"", low_memory=False, quoting=2, dtype=dtype_for_bezirks)
 
     p = pd.read_csv(person_file, encoding="windows-1252", delimiter=";", decimal=",",
-                    quotechar="\"", low_memory=False, quoting=2)
+                    quotechar="\"", low_memory=False, quoting=2, dtype=dtype_for_bezirks)
 
     t = pd.read_csv(trip_file, encoding="windows-1252", delimiter=";", decimal=",",
-                    quotechar="\"", low_memory=False, quoting=2)
+                    quotechar="\"", low_memory=False, quoting=2, dtype=dtype_for_bezirks)
 
     return hh, p, t
 
@@ -152,6 +156,21 @@ def parse_int_str(x):
             return None
         return x
 
+def parse_str_if_exists(x: str) -> str:
+    """ Return parsed int or string """
+    print(f"parse_str_if_exists: x={x}")
+    try:
+        i = int(x)
+        if i >= 0:
+            # x is already a string
+            # We need to keep it that way to not lose leading zeros
+            return x #str(i)
+        # if we can convert x to an int but it is negative, we return None
+        return None
+    except ValueError:
+        if not x:
+            return None
+        return x
 
 class SrV2023:
     """ Maps SrV data to standard format"""
@@ -464,15 +483,15 @@ class SrV2023:
 
     @staticmethod
     def parse_zone(h, prefix=""):
-        ob = parse_int_str(getattr(h, prefix + "OBERBEZIRK"))
+        ob = parse_str_if_exists(getattr(h, prefix + "OBERBEZIRK"))
 
         zone = pd.NA
         if ob and hasattr(h, prefix + "UNTERBEZIRK"):
             zone = ob
-            ub = parse_int_str(getattr(h, prefix + "UNTERBEZIRK"))
+            ub = parse_str_if_exists(getattr(h, prefix + "UNTERBEZIRK"))
             if ub:
                 zone += "-" + ub
-                tb = parse_int_str(getattr(h, prefix + "TEILBEZIRK"))
+                tb = parse_str_if_exists(getattr(h, prefix + "TEILBEZIRK"))
                 if tb:
                     zone += "-" + tb
 
