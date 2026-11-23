@@ -22,6 +22,7 @@ def test_mid_2017():
     # We cannot compare the geom column, since it seems to have slightly different values depending on the environment.
     # And since it is a string, we cannot compare it with a tolerance.
     assert expected_households.drop("geom", axis=1).equals(pd.read_csv("tests/scenariogen/mid2017/test_output/table-households.csv").drop("geom", axis=1))
-    assert expected_persons.equals(pd.read_csv("tests/scenariogen/mid2017/test_output/table-persons.csv"))
+    # Same for persons
+    assert expected_persons.drop("geom", axis=1).equals(pd.read_csv("tests/scenariogen/mid2017/test_output/table-persons.csv").drop("geom", axis=1))
     assert expected_trips.equals(pd.read_csv("tests/scenariogen/mid2017/test_output/table-trips.csv"))
     assert expected_unscaled_persons.equals(pd.read_csv("tests/scenariogen/mid2017/test_output/table-unscaled-persons.csv"))
