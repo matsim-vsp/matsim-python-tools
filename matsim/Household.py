@@ -9,7 +9,7 @@ class Household:
 
 # Returns households as a dataframe
 def houshold_reader(filename, convert_dataframes_types=True):
-    tree = ET.iterparse(xopen.xopen(filename, 'r'), events=['start','end'])
+    tree = ET.iterparse(xopen.xopen(utils.find_file(filename), 'r'), events=['start','end'])
     
     households = []
     current_persons = []

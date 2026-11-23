@@ -2,6 +2,8 @@ import xopen
 import xml.etree.ElementTree as ET
 import pandas as pd
 
+from .utils import find_file
+
 
 class Plans:
     def __init__(self, persons, plans, activities, legs, routes):
@@ -13,7 +15,7 @@ class Plans:
 
 def plan_reader(filename, selected_plans_only = False):
     person = None
-    tree = ET.iterparse(xopen.xopen(filename), events=['start','end'])
+    tree = ET.iterparse(xopen.xopen(find_file(filename)), events=['start','end'])
     
     for xml_event, elem in tree:
         if elem.tag == 'person' and xml_event == 'start':
@@ -53,7 +55,7 @@ def _parseAttributes(elem, dict):
 # Route :leg_id
 # The column names of the dataframes are the same as the attribute names (<name:'value'> and <attribute> are parsed)
 def plan_reader_dataframe(filename, selected_plans_only = False):
-    tree = ET.iterparse(xopen.xopen(filename), events=['start','end'])
+    tree = ET.iterparse(xopen.xopen(find_file(filename)), events=['start','end'])
     
     persons = []
     plans = []

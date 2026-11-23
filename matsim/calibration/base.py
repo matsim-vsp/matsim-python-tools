@@ -150,6 +150,11 @@ class CalibratorBase(ABC):
          `trial.suggest_float` and by using the given prefix . """
         raise NotImplemented
 
+    def update_args(self, study: optuna.Study, trial: optuna.Trial, prefix: str) -> Sequence[str]:
+        """ Additional command line arguments for this trial, will be called after `update_config`.
+         This can be used for parameters that can not be set via the yaml config. """
+        return []
+
     @abstractmethod
     def sample_initial(self, param: str) -> float:
         """  Sample initial value for parameter """
