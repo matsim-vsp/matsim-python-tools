@@ -18,6 +18,8 @@ def test_mid_2017():
     expected_trips = pd.read_csv("tests/scenariogen/mid2017/expected_output/table-trips.csv")
     expected_unscaled_persons = pd.read_csv("tests/scenariogen/mid2017/expected_output/table-unscaled-persons.csv")
 
+    pd.set_option("display.max_columns", None)
+    pd.set_option("display.max_colwidth", None)
     assert expected_activities.equals(pd.read_csv("tests/scenariogen/mid2017/test_output/table-activities.csv"))
     assert expected_households.equals(pd.read_csv("tests/scenariogen/mid2017/test_output/table-households.csv"))
     assert expected_persons.equals(pd.read_csv("tests/scenariogen/mid2017/test_output/table-persons.csv"))
