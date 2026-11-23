@@ -48,6 +48,16 @@ def get(series, *names):
 
     raise Exception("No value found for %s" % names)
 
+def try_get_and_ignore_whitespace(series, *names):
+    """
+    Get value from series. Trying possible values until one exists.
+    If none exists, return "unknown"
+    """
+    for name in names:
+        if name in series._fields and getattr(series, name) != " ":
+            return getattr(series, name)
+
+    return "unknown"
 
 def convert(data: tuple, regio=None):
     hh, pp, tt = data
@@ -67,7 +77,7 @@ def convert(data: tuple, regio=None):
     for p in pp.itertuples():
         p_id = get_int_id(p, "HP_ID")
 
-        if "H_ID" in p._fields:
+        if "H_ID" in p._fields or "H_ID_Lok" in p._fields:
             hh_id = get_int_id(p, "H_ID")
         else:
             # Remove last character from person id
@@ -103,8 +113,12 @@ def convert(data: tuple, regio=None):
             t_id + "_" + str(n),
             get(t, "W_GEW", "gew_wege"), p_id, str(get_int_id(t, "H_ID")),
             n, int(t.ST_WOTAG), bool(t.feiertag), depature, int(t.wegmin), float(t.wegkm),
-            Mid2017.main_mode(t), Mid2017.purpose(t), None,
-            float(t.wegkm) < 9994 and int(t.wegmin) < 9994 and depature is not None
+            Mid2017.main_mode(t), Mid2017.purpose(t), Mid2017.sd_group(t),
+            float(t.wegkm) < 9994 and int(t.wegmin) < 9994 and depature is not None,
+            "not_surveyed", # from_location
+            str(try_get_and_ignore_whitespace(t, "GITTER_SO_500m", "GITTER_SO_1km", "GITTER_SO_5km")),  # from_zone
+            "not_surveyed", # to_location
+            str(try_get_and_ignore_whitespace(t, "GITTER_ZO_500m", "GITTER_ZO_1km", "GITTER_ZO_5km")),  # to_zone
         )
 
         if trip.purpose == Purpose.WAYBACK:
@@ -362,3 +376,41 @@ class Mid2017:
             return Purpose.WAYBACK
 
         return Purpose.OTHER
+
+
+    @staticmethod
+    def sd_group(t):
+        """
+        Determine the source-destination group for the trip.
+        For the source, we can't take the purpose of the previous trip, since there may not be a previous trip.
+        Instead, we use the W_SO1 variable, which indicates whether the first trip starts from home or another location.
+        For the destination, we try to use the purpose of the trip. So if W_SO1 indicates that the first trip starts at
+        home, and the purpose of the trip is WORK, then the sd_group will be HOME_WORK.
+        However, there are some purposes for which there is no corresponding sd_group, such as TRANSPORT; there is no
+        sd_group HOME_TRANSPORT. Then, we would get the sd_group UNKNOWN instead. Since this would lead to the
+        information about the source to be lost, we will use Purpose.OTHER for the destination instead, so that the
+        sd_group will be HOME_OTHER. This way, we can still extract the source purpose from the sd_group.
+
+        Note:
+            for the later trips, W_SO1 always gets the value 809: "not surveyed for second trip and later".
+            In these cases, the sd group UNKNOWN is returned.
+            But this is no problem, since the sd_group is only read for the first trip of each person anyway, for the
+            later trips, instead the purpose of the previous trip is used (see the `convert` function in preparation.py)
+        """
+
+        # W_SO1 is the start of the first trip (home or other)
+        if get(t, "W_SO1") == 1:
+            source_purpose = Purpose.HOME
+        # 809 is the code for "not surveyed for second trip and later"; in this case, we don't know the source destination group
+        elif get(t, "W_SO1") == 809:
+            return SourceDestinationGroup.UNKNOWN
+        else:
+            source_purpose = Purpose.OTHER
+
+        sd_group = SourceDestinationGroup.parse(source_purpose, Mid2017.purpose(t))
+        if sd_group == SourceDestinationGroup.UNKNOWN:
+            # If the sd_group is unknown, we return a group with the source purpose and Purpose.OTHER as destination,
+            # in order to not lose the information about the source purpose
+            return SourceDestinationGroup.parse(source_purpose, Purpose.OTHER)
+        else:
+            return sd_group

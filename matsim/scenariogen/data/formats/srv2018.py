@@ -19,7 +19,7 @@ def is_format(f: os.DirEntry):
     if "MiD" in f.name:
         return False
 
-    return "_HH" in fp or "_P" in fp or "_W" in fp or "H2018" in fp or "P2018" in fp or "W2018" in fp or "_H" in fp
+    return ("_HH" in fp or "_P" in fp or "_W" in fp or "H2018" in fp or "P2018" in fp or "W2018" in fp or "_H" in fp) and "2018" in fp
 
 
 def read_raw(household_file, person_file, trip_file):
@@ -87,9 +87,9 @@ def convert(data: tuple, regio=None):
                 hh_id,
                 h.GEWICHT_HH,
                 pint(h.V_ANZ_PERS),
-                pint(h.V_ANZ_PKW_PRIV + h.V_ANZ_PKW_DIENST),
-                pint(h.V_ANZ_RAD + h.V_ANZ_ERAD),
-                pint(h.V_ANZ_MOT125 + h.V_ANZ_MOPMOT + h.V_ANZ_SONST),
+                pint(h.V_ANZ_PKW_PRIV) + pint(h.V_ANZ_PKW_DIENST),
+                pint(h.V_ANZ_RAD) + pint(h.V_ANZ_ERAD),
+                pint(h.V_ANZ_MOT125) + pint(h.V_ANZ_MOPMOT) + pint(h.V_ANZ_SONST),
                 SrV2018.parking_position(h.V_STELLPL1),
                 SrV2018.economic_status(h.E_OEK_STATUS if "E_OEK_STATUS" in hh.keys() else -1, h.V_EINK,
                                         hh_persons),
