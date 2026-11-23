@@ -8,6 +8,8 @@
 import os
 import re
 import shutil
+import glob
+
 from argparse import ArgumentParser
 
 METADATA = "clean-iters", "Remove all iterations directories except the last one"
@@ -18,6 +20,8 @@ def setup(parser: ArgumentParser):
     parser.add_argument("-f", "--force", action='store_true', default=False, help="Don't ask for confirmation")
     parser.add_argument("-d", "--dry-run", action='store_true', default=False,
                         help="Don't remove anything, only print for information")
+    parser.add_argument( "--full-clean", action='store_true', default=False,
+                         help="Remove the whole iteration directory, otherwise only remove large files")
 
 
 def main(args):
@@ -50,14 +54,33 @@ def main(args):
                         print("Unknown answer, don't delete")
 
                 if delete:
-
                     # Delete all except last
                     for iter, n in iters[:-1]:
-                        path = os.path.join(dirpath, iter)
-                        try:
-                            shutil.rmtree(path)
-                        except Exception as e:
-                            print("Error removing %s:" % path, e)
+
+                        if args.full_clean:
+                            path = os.path.join(dirpath, iter)
+                            try:
+                                shutil.rmtree(path)
+                            except Exception as e:
+                                print("Error removing %s:" % path, e)
+
+                        else:
+
+                            # Delete large files
+                            rm = []
+                            rm.extend(glob.glob(os.path.join(dirpath, iter, "*.events.xml*")))
+                            rm.extend(glob.glob(os.path.join(dirpath, iter, "*.plans.xml*")))
+                            rm.extend(glob.glob(os.path.join(dirpath, iter, "*.legs.csv*")))
+                            rm.extend(glob.glob(os.path.join(dirpath, iter, "*.activities.csv*")))
+
+                            if rm:
+                                print("Removing files:", rm)
+
+                            for f in rm:
+                                try:
+                                    os.remove(f)
+                                except Exception as e:
+                                    print("Error removing %s:" % f, e)
 
 
 if __name__ == "__main__":

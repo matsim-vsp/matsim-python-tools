@@ -1,19 +1,20 @@
 #!/bin/bash --login
-#$ -l h_rt=700000
-#$ -j y
-#$ -m a
-#$ -o ./logfile/logfile_$JOB_NAME.log
-#$ -cwd
-#$ -pe mp 6
-#$ -l mem_free=4G
-#$ -l cpuflag_avx2=1
-#$ -N network-opt
+#SBATCH --time=200:00:00
+#SBATCH --partition=smp
+#SBATCH --output=./logfile/logfile_%x-%j.log
+#SBATCH --nodes=1                       # How many computing nodes do you need (for MATSim usually 1)
+#SBATCH --ntasks=1                      # How many tasks should be run (For MATSim usually 1)
+#SBATCH --cpus-per-task=6              # Number of CPUs per task (For MATSim usually 8 - 12)
+#SBATCH --mem=12G                       # RAM for the job
+#SBATCH --job-name=network-opt         # name of your run, will be displayed in the joblist
+#SBATCH --constraint=cpuflag_avx2:1
+#SBATCH --mail-type=END,FAIL
 
 date
 hostname
 
 source venv/bin/activate
-module add java/17
+module add java/21
 
 jar="matsim-[name]-SNAPSHOT.jar"
 input="input/*"

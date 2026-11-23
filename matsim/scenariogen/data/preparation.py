@@ -10,19 +10,11 @@ from sklearn.utils import shuffle
 
 from . import *
 
-
 def prepare_persons(hh, pp, tt, augment=5, max_hh_size=5, core_weekday=False, remove_with_invalid_trips=False):
-    """ Cleans common data errors and fill missing values """
+    """ Cleans common data errors and fill missing values. This method is very specific.
+        Functionality is now split up into smaller functions, which is more reusable.
+    """
     df = pp.join(hh, on="hh_id", lsuffix="hh_")
-
-    # Replace unknown income group
-    fill(df, "income", -1)
-
-    # Replace unknown economic status
-    df["economic_status"] = df.apply(
-        lambda x: income_to_economic_status(x.income, df[df.hh_id == x.hh_id])
-        if x.economic_status == EconomicStatus.UNKNOWN else x.economic_status, axis=1
-    )
 
     # Augment data using p_weight
     if augment > 1:
@@ -70,6 +62,23 @@ def prepare_persons(hh, pp, tt, augment=5, max_hh_size=5, core_weekday=False, re
 
     return df
 
+def join_person_with_household(persons, households):
+    """  Join persons withhold table so that household attributes will be available for each person """
+    return persons.join(households, on="hh_id", lsuffix="hh_")
+
+
+def remove_persons_with_invalid_trips(persons, trips):
+    """ Remove persons that have invalid trips  """
+
+    df = persons.reset_index()
+    tt = trips.reset_index()
+
+    invalid = set(tt[~tt.valid].p_id)
+    df = df[~df.p_id.isin(invalid)]
+    mobile = set(tt[tt.valid].p_id)
+
+    # Filter persons that are supposed to be mobile but have no trips
+    return df[(df.p_id.isin(mobile) | (~df.mobile_on_day))]
 
 def bins_to_labels(bins):
     """ Convert bins to labels """
@@ -125,12 +134,35 @@ def augment_persons(pp, factor=1, permute_age=0.5):
     # Filter invalid options
     return duplicated[check_age_employment(None, duplicated)]
 
+def equivalent_household_size(persons):
+    """ Calculate equivalent household size, see https://stat.fi/meta/kas/ekvivalentti_tu_en.html
 
-def income_to_economic_status(income, persons):
+    :param persons: persons of one household
+    """
+    children = (persons.age < 14).sum()
+    rest = len(persons) - children - 1
+
+    w = 0.3 * children + 1 + 0.5 * rest
+
+    return w
+
+def compute_economic_status(df):
+    """ Compute missing economic status value.
+
+    :param df: joined table of persons and households
+    """
+
+    # Replace unknown economic status
+    df["economic_status"] = df.apply(
+        lambda x: income_to_economic_status(x.income, x.equivalent_size)
+        if x.economic_status == EconomicStatus.UNKNOWN else x.economic_status, axis=1
+    )
+
+def income_to_economic_status(income, w):
     """ Convert income to economic status
 
      :param income: income in Euro
-     :param persons: persons table
+     :param w: equivalent_size
      """
 
     if income < 0:
@@ -138,11 +170,6 @@ def income_to_economic_status(income, persons):
 
     # Calculated according to Srv 2018
     # https://tu-dresden.de/bu/verkehr/ivs/srv/ressourcen/dateien/SrV2018_Tabellenbericht_Oberzentren_500TEW-_flach.pdf?lang=de
-
-    children = (persons.age < 14).sum()
-    rest = len(persons) - children - 1
-
-    w = 0.3 * children + 1 + 0.5 * rest
 
     if income < 1500:
         if w < 1.3:
@@ -239,8 +266,11 @@ def fill(df, col, val=None, random_state=0):
 
 
 def create_activities(all_persons: pd.DataFrame, tt: pd.DataFrame, core_weekday=True, cut_groups=True,
-                      include_person_context=True):
-    """ Create activity representation from trip table """
+                      include_person_context=True, use_index_as_pid=True, cores=1):
+    """ Create activity representation from trip table
+
+    :param use_index_as_pid, if True, the p_id will be the index of the persons table.
+    """
 
     tt = tt.reset_index().set_index("p_id")
 
@@ -275,16 +305,18 @@ def create_activities(all_persons: pd.DataFrame, tt: pd.DataFrame, core_weekday=
                 if (trips.day_of_week > 4).any():
                     continue
 
+            use_id = p.Index if use_index_as_pid else p_id
+
             # id generator
             def a_id(t_i):
-                return "%s_%d" % (p.Index, t_i)
+                return "%s_%d" % (use_id, t_i)
 
             if len(trips) == 0:
-                acts.append(Activity(a_id(0), p.p_weight, p.Index, 0, Purpose.HOME, 1440, 0, 0, TripMode.OTHER))
+                acts.append(Activity(a_id(0), p.p_weight, use_id, 0, Purpose.HOME, 1440, 0, 0, TripMode.OTHER))
             else:
                 trip_0 = trips.iloc[0]
-                acts.append(Activity(a_id(0), p.p_weight, p.Index, 0, trip_0.sd_group.source(), trip_0.departure, 0, 0,
-                             TripMode.OTHER, trip_0.from_location, trip_0.from_zone))
+                acts.append(Activity(a_id(0), p.p_weight, use_id, 0, trip_0.sd_group.source(), trip_0.departure, 0, 0,
+                                     TripMode.OTHER, trip_0.from_location, trip_0.from_zone))
 
             for i in range(len(trips) - 1):
                 t0 = trips.iloc[i]
@@ -295,7 +327,7 @@ def create_activities(all_persons: pd.DataFrame, tt: pd.DataFrame, core_weekday=
                 if duration < 0 or t0.gis_length < 0:
                     valid = False
 
-                acts.append(Activity(a_id(i + 1), p.p_weight, p.Index, i + 1, t0.purpose,duration, t0.gis_length,
+                acts.append(Activity(a_id(i + 1), p.p_weight, use_id, i + 1, t0.purpose, duration, t0.gis_length,
                                      t0.duration, t0.main_mode, t0.to_location, t0.to_zone))
 
             if len(trips) > 1:
@@ -307,7 +339,7 @@ def create_activities(all_persons: pd.DataFrame, tt: pd.DataFrame, core_weekday=
                     valid = False
 
                 # Duration is set to rest of day
-                acts.append(Activity(a_id(i + 1), p.p_weight, p.Index, i + 1, tl.purpose, 1440, tl.gis_length, tl.duration, tl.main_mode,
+                acts.append(Activity(a_id(i + 1), p.p_weight, use_id, i + 1, tl.purpose, 1440, tl.gis_length, tl.duration, tl.main_mode,
                                      tl.to_location, tl.to_zone))
 
             if valid:
@@ -315,9 +347,12 @@ def create_activities(all_persons: pd.DataFrame, tt: pd.DataFrame, core_weekday=
 
         return res
 
-    with mp.Pool(8) as pool:
-        docs = pool.map(convert, np.array_split(all_persons, 16))
-        result = functools.reduce(lambda a, b: a + b, docs)
+    if cores == 1:
+        result = convert(all_persons)
+    else:
+        with mp.Pool(cores) as pool:
+            docs = pool.map(convert, np.array_split(all_persons, cores))
+            result = functools.reduce(lambda a, b: a + b, docs)
 
     activities = pd.DataFrame(result).set_index("a_id")
     # Reverse columns because it will be reversed again at the end

@@ -33,6 +33,11 @@ class AggregationResult:
     trips: pd.DataFrame
     share: pd.DataFrame
 
+    # These are the original read dataframes
+    all_hh: pd.DataFrame
+    all_persons: pd.DataFrame
+    all_trips: pd.DataFrame
+
     groups: pd.DataFrame = None
 
 
@@ -120,6 +125,8 @@ def mode_share_distance_distribution(trips, dist_groups):
     for m in set(trips.main_mode):
         df = trips[trips.main_mode == m]
         hist, bins = np.histogram(df.gis_length * 1000, bins=x, weights=df.t_weight)
+        # (gis_length is an SrV attribute which contains GIS-computed trip length rather than self-reported trip length.  From the description it is not clear what is used here in
+        # particular for PT trips ... possibly, routed walk lengths for (walk) access/egress and routed car lengths for the in-vehicle legs. ????)
 
         yout = lowess(hist, x[:-1], frac=0.05, is_sorted=True, return_sorted=False, it=0)
         data[m] = np.maximum(0, yout)
@@ -196,9 +203,7 @@ def create(survey_dirs, transform_persons, transform_trips,
     aggr.to_csv(output_prefix + "mode_share_ref.csv")
 
     # Also normalize per distance group
-    for dist_group in aggr.index.get_level_values(0).categories:
-        sub = aggr.loc[dist_group, :]
-        sub.share /= sub.share.sum()
+    aggr["share"] = aggr.groupby(level=0)["share"].transform(lambda x: x / x.sum())
 
     aggr.to_csv(output_prefix + "mode_share_per_dist_ref.csv")
 
@@ -208,6 +213,9 @@ def create(survey_dirs, transform_persons, transform_trips,
 
     aggr = summarize_mode_usage(persons, trips)
     aggr.to_csv(output_prefix + "mode_users_ref.csv")
+
+    aggr = grouped_share(trips, ["purpose", "main_mode"])
+    aggr.to_csv(output_prefix + "mode_share_per_purpose_ref.csv")
 
     mode_share_distance_distribution(trips, dist_groups).to_csv(output_prefix + "mode_share_distance_distribution.csv")
 
@@ -228,7 +236,7 @@ def create(survey_dirs, transform_persons, transform_trips,
             aggr = grouped_share(trips, [g, "main_mode"])
             groups.append(aggr.reset_index())
 
-            aggr = grouped_share(trips, [g, "dist_group", "main_mode"])
+            aggr = grouped_share(trips, [g, "dist_group", "main_mode"], normalize=False)
             dist.append(aggr.reset_index())
 
         groups = pd.concat(groups, sort=False)
@@ -240,7 +248,8 @@ def create(survey_dirs, transform_persons, transform_trips,
         dist = dist[ref_groups + ["dist_group", "main_mode", "share"]]
         dist.to_csv(output_prefix + "mode_share_per_group_dist_ref.csv", index=False)
 
-    return AggregationResult(persons, trips, share.groupby("main_mode").sum(), groups=groups)
+    return AggregationResult(persons, trips, share.groupby("main_mode").sum(),
+                             all_hh, all_persons, all_trips, groups=groups)
 
 
 def main(args):

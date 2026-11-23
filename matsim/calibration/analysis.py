@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import glob
-
 from typing import Any, Tuple
 
 import geopandas
 import numpy as np
 import pandas as pd
+
+from ..utils import glob_file
 
 
 def calc_adjusted_mode_share(sim: pd.DataFrame, survey: pd.DataFrame,
@@ -68,13 +68,14 @@ def read_trips_and_persons(run, transform_persons=None, transform_trips=None) ->
     if type(run) is tuple and len(run) == 2:
         return run
 
-    trips = glob.glob(run.rstrip("/") + "/*.output_trips.csv.gz")[0]
-    persons = glob.glob(run.rstrip("/") + "/*.output_persons.csv.gz")[0]
+    trips = glob_file(run, "*.output_trips.csv")
+    persons = glob_file(run, "*.output_persons.csv")
 
-    df = pd.read_csv(trips, sep=None, dtype={"person": "str"})
-    dfp = pd.read_csv(persons, sep=None, dtype={"person": "str"})
+    # TODO: sep=None does not work
+    df = pd.read_csv(trips, sep=";", dtype={"person": "str"}, low_memory=False)
+    dfp = pd.read_csv(persons, sep=";", dtype={"person": "str"}, low_memory=False)
 
-    gdf = geopandas.GeoDataFrame(dfp, 
+    gdf = geopandas.GeoDataFrame(dfp,
             geometry=geopandas.points_from_xy(dfp.first_act_x, dfp.first_act_y)
     )
 
@@ -91,18 +92,21 @@ def read_trips_and_persons(run, transform_persons=None, transform_trips=None) ->
     if transform_trips is not None:
         df = transform_trips(df)
 
+    if len(df) == 0:
+        raise ValueError("No trips obtained after filtering. Check if your custom filters and attributes are correct (e.g subpopulation): %s" % trips)
+
     return df, gdf
 
 def read_leg_stats(run : str, transform_persons=None, transform_legs=None):
     """ Reads leg statistic from run directory """
 
-    legs = glob.glob(run.rstrip("/") + "/*.output_trips.csv.gz")[0]
-    persons = glob.glob(run.rstrip("/") + "/*.output_persons.csv.gz")[0]
+    legs = glob_file(run, "*.output_trips.csv")
+    persons = glob_file(run, "*.output_persons.csv")
 
     df = pd.read_csv(legs, sep=";")
     dfp = pd.read_csv(persons, sep=";", index_col=0)
 
-    gdf = geopandas.GeoDataFrame(dfp, 
+    gdf = geopandas.GeoDataFrame(dfp,
             geometry=geopandas.points_from_xy(dfp.first_act_x, dfp.first_act_y)
     )
 
@@ -115,30 +119,30 @@ def read_leg_stats(run : str, transform_persons=None, transform_legs=None):
     return df
 
 def calc_mode_share(run, transform_persons=None, transform_trips=None):
-    """ Calculates the mode share from output directory """    
+    """ Calculates the mode share from output directory """
     df, _ = read_trips_and_persons(run, transform_persons, transform_trips)
 
     return df.groupby("main_mode").count()["trip_number"] / len(df)
 
-def calc_mode_stats(run, attrs=[], 
+def calc_mode_stats(run, attrs=[],
                     dist_bins = [0, 1000, 2000, 5000, 10000, 20000, np.inf],
                     dist_labels = ["0 - 1000", "1000 - 2000", "2000 - 5000", "5000 - 10000", "10000 - 20000", "20000+"],
-                    transform_persons=None, transform_trips=None) -> pd.DataFrame:    
+                    transform_persons=None, transform_trips=None) -> pd.DataFrame:
     """ Calculate detailed mode statistics """
 
     trips, _ = read_trips_and_persons(run, transform_persons, transform_trips)
     trips["dist_group"] = pd.cut(trips.traveled_distance, dist_bins, labels=dist_labels, right=False)
 
     def aggr(x):
-        data = dict(n=len(x), mean_dist=np.average(x.traveled_distance))               
+        data = dict(n=len(x), mean_dist=np.average(x.traveled_distance))
         return pd.Series(data=data)
 
     aggr = trips.groupby(attrs + ["dist_group", "main_mode"], observed=True).apply(aggr)
-    
-    aggr["n"].fillna(0, inplace=True)
+
+    aggr["n"] = aggr["n"].fillna(0)
 
     aggr["share"] = aggr.n / aggr.n.sum()
-    aggr["share"].fillna(0, inplace=True)
+    aggr["share"] = aggr["share"].fillna(0)
 
     return aggr
 
@@ -150,35 +154,35 @@ def calc_population_stats(run, attrs=[], transform_persons=None, transform_trips
 
     def mode_usage(mode):
         def f(x):
-            return (x == mode).any()        
+            return (x == mode).any()
         return f
-    
+
     n_trips = trips.groupby("person").agg(n_trips=("trip_number", "max"))
-    
+
     persons = persons.join(n_trips, on="person")
     persons.n_trips.fillna(0, inplace=True)
 
     def summarize(x):
-        
+
         total = len(x)
         total_mobile = (x.n_trips > 0).sum()
-        
-        mobile = total_mobile / total        
-        
+
+        mobile = total_mobile / total
+
         args = {"%s_user" % k: ("main_mode", mode_usage(k)) for k in set(trips.main_mode)}
-        
+
         p_trips = trips[trips.person.isin(x.person)]
-        
-        mode_user = p_trips.groupby(["person"]).agg(**args)    
+
+        mode_user = p_trips.groupby(["person"]).agg(**args)
         joined = x.join(mode_user, on="person", how="inner")
 
         data = {}
         for c in mode_user.columns:
             share = joined[c].sum() / total_mobile
-            data[c] = share    
-        
+            data[c] = share
+
         data.update({"mobile": mobile, "n": len(x), "avg_trips": np.average(x.n_trips)})
-        
+
         return pd.Series(data=data)
 
     if attrs:
@@ -188,7 +192,7 @@ def calc_population_stats(run, attrs=[], transform_persons=None, transform_trips
         aggr = aggr.to_frame(0).T
 
     aggr["population_share"] = aggr.n / aggr.n.sum()
-    
+
     return aggr
 
 if __name__ == "__main__":

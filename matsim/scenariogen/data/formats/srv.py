@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 
 from .. import *
+from ..preparation import equivalent_household_size
 
 # Has households, persons and trips
 INPUT_FILES = 3
@@ -18,7 +19,7 @@ def is_format(f: os.DirEntry):
     if "MiD" in f.name:
         return False
 
-    return "_HH" in fp or "_P" in fp or "_W" in fp or "H2018" in fp or "P2018" in fp or "W2018" in fp
+    return "_HH" in fp or "_P" in fp or "_W" in fp or "H2018" in fp or "P2018" in fp or "W2018" in fp or "_H" in fp
 
 
 def read_raw(household_file, person_file, trip_file):
@@ -79,6 +80,8 @@ def convert(data: tuple, regio=None):
             continue
 
         hh_id = str(int(h.HHNR))
+        hh_persons = ps[ps.hh_id == hh_id]
+
         hhs.append(
             Household(
                 hh_id,
@@ -89,11 +92,12 @@ def convert(data: tuple, regio=None):
                 pint(h.V_ANZ_MOT125 + h.V_ANZ_MOPMOT + h.V_ANZ_SONST),
                 SrV2018.parking_position(h.V_STELLPL1),
                 SrV2018.economic_status(h.E_OEK_STATUS if "E_OEK_STATUS" in hh.keys() else -1, h.V_EINK,
-                                        ps[ps.hh_id == hh_id]),
+                                        hh_persons),
                 SrV2018.household_type(h.E_HHTYP),
                 SrV2018.region_type(h, regio, random_state),
                 h.ST_CODE_NAME,
                 zone=SrV2018.parse_zone(h),
+                equivalent_size=equivalent_household_size(hh_persons),
                 income=SrV2018.income(h.V_EINK),
             )
         )
@@ -111,6 +115,8 @@ def convert(data: tuple, regio=None):
                 str(int(t.HHNR)),
                 int(t.WNR),
                 int(t.STICHTAG_WTAG),
+                # holiday attribute not set
+                None,
                 int(t.E_BEGINN),
                 int(t.E_DAUER),
                 float(t.GIS_LAENGE),
@@ -175,8 +181,21 @@ class SrV2018:
         'Eberswalde': 3,
         'Lübben/Lübbenau': 6,
         'Ludwigsfelde': 3,
-        'Leipzig': 1
+        'Leipzig': 1,
+        'Dresden': 1
     }
+
+    # Aggregated locations needed to remap
+    LOCATIONS = [
+        "Blankenfelde-Mahlow/Rangsdorf",
+        "Dallgow/Falkensee/Wustermark",
+        "Eichwalde/Zeuthen",
+        "Hennigsdorf/Velten",
+        "Kleinmachnow/Stahnsdorf/Teltow",
+        "Lübben/Lübbenau",
+        "Werder (Havel)/Schwielowsee",
+        "Fürstenwalde"
+    ]
 
     @staticmethod
     def parking_position(x):
@@ -205,10 +224,7 @@ class SrV2018:
         if eink == 1 or eink == 2:
             return EconomicStatus.VERY_LOW
 
-        children = (persons.age < 14).sum()
-        rest = len(persons) - children - 1
-
-        w = 0.3 * children + 1 + 0.5 * rest
+        w = equivalent_household_size(persons)
 
         if eink == 3:
             if w < 1.3:
@@ -418,26 +434,30 @@ class SrV2018:
 
     @staticmethod
     def income(x):
+        # Original groups are
+        # 0, 500, 900, 1500, 2000, 2600, 3000, 3600, 4600, 5600
+
+        # Return the mean between each grop
         if x == 1:
-            return 0
+            return 250
         elif x == 2:
-            return 500
+            return 700
         elif x == 3:
-            return 900
+            return 1200
         elif x == 4:
-            return 1500
+            return 1750
         elif x == 5:
-            return 2000
+            return 2300
         elif x == 6:
-            return 2600
+            return 2800
         elif x == 7:
-            return 3000
+            return 3300
         elif x == 8:
-            return 3600
+            return 4100
         elif x == 9:
-            return 4600
+            return 5100
         elif x == 10:
-            return 5600
+            return 6100
 
         return -1
 
@@ -463,7 +483,32 @@ class SrV2018:
         if not ort:
             return pd.NA
 
+        # Truncate ortsteil, this is redundant and not consistent with zone naming scheme
+        ot = ort.find("OT")
+        if ot > 0:
+            ort = ort[:ot]
+
+        # some kind of ortsteils as well
+        gt = ort.find("GT")
+        if gt > 0:
+            ort = ort[:gt]
+
+        ort = ort.strip()
+
         if "Berlin" in ort:
             return "Berlin"
 
-        return ort
+        if "Lübben (Spreewald)" in ort:
+            ort = "Lübben"
+
+        if "Schwielowsee" in ort:
+            ort = "Schwielowsee"
+
+        if "Brandenburg" in ort and "Havel" in ort:
+            ort = "Brandenburg (Havel)"
+
+        for loc in SrV2018.LOCATIONS:
+            if ort in loc:
+                return loc
+
+        return ort if ort else pd.NA

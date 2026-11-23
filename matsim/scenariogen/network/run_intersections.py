@@ -72,7 +72,7 @@ def writeDetectorFile(f_name, output, lanes):
         f.write(text)
 
 
-def read_result(folder, junctionId, fromEdgeId, toEdgeId):
+def read_result(folder, junctionId, fromEdgeId, toEdgeId, direction):
 
     res = []
     lane = 0
@@ -100,6 +100,7 @@ def read_result(folder, junctionId, fromEdgeId, toEdgeId):
             "junctionId": junctionId,
             "fromEdgeId": fromEdgeId,
             "toEdgeId": toEdgeId,
+            "direction": direction,
             "lane": lane,
             "flow": flow
         })
@@ -168,6 +169,12 @@ def run(args, nodes):
                 if r not in extra_routes:
                     extra_routes.append(r)
 
+            # Store all directions
+            directions = set()
+            for c in node.getConnections():
+                if c.getFrom() == fromEdge and c.getTo() == toEdge:
+                    directions.add(c._direction)
+
             lanes = [fromEdge._id + "_" + str(i) for i in range(len(fromEdge._lanes))]
 
             writeRouteFile(p_routes, routes, extra_routes, args.scenario)
@@ -183,7 +190,8 @@ def run(args, nodes):
             res.extend(read_result(folder,
                                    junctionId=node._id,
                                    fromEdgeId=fromEdge._id,
-                                   toEdgeId=toEdge._id))
+                                   toEdgeId=toEdge._id,
+                                   direction="".join(directions)))
 
         df = pd.DataFrame(res)
         df.to_csv(join(args.output, "%s.csv" % node._id), index=False)
